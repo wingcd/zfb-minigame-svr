@@ -2,3 +2,5 @@
 /alipay-sever/node_modules
 /alipay-server-ts/node_modules
 /alipay-server-ts/dist
+/alipay-admin-sever/node_modules
+/admin-server/AdminServer/miniprogram/node_modules

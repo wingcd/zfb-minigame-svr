@@ -1,0 +1,10 @@
+<view class="page">
+  <view class="page-section">
+      <view>
+        这是一个空白小程序，安装此小程序后修改 index.js 中的环境 ID 为自己的环境 ID 并且部署云函数就可以正常访问函数。
+      </view>
+      <view>
+         {{data}} 
+      </view>
+  </view>
+</view>
