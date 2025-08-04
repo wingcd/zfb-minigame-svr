@@ -39,5 +39,5 @@ require('./leaderboard/deleteLeaderboard');
 require('./stats/getDashboardStats');
 
 // === 公共工具 ===
-require('../common/auth');
+require('./common/auth');
 require('./common/hash');

@@ -6,6 +6,9 @@ const { requirePermission, logOperation } = require("./common/auth");
 async function getDashboardStatsHandler(event, context) {
     let timeRange = event.timeRange || 'week';
 
+    console.log("event:")
+    console.log(event);
+
     // 返回结果
     let ret = {
         "code": 0,

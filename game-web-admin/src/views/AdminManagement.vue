@@ -277,7 +277,7 @@ const fetchAdminList = async () => {
       ...searchForm
     }
     
-    const response = await adminAPI.getAdminList(params)
+    const response = await adminAPI.getList(params)
     
     if (response.code === 0) {
       adminList.value = response.data.list
@@ -296,7 +296,7 @@ const fetchAdminList = async () => {
 // 获取角色列表
 const fetchRoleList = async () => {
   try {
-    const response = await roleAPI.getAllRoles()
+    const response = await roleAPI.getAll()
     
     if (response.code === 0) {
       roleOptions.value = response.data.list || []
@@ -374,12 +374,12 @@ const handleSubmit = async () => {
     
     let response
     if (editingAdmin.value) {
-      response = await adminAPI.updateAdmin({
+      response = await adminAPI.update({
         id: editingAdmin.value._id,
         ...adminForm
       })
     } else {
-      response = await adminAPI.createAdmin(adminForm)
+      response = await adminAPI.create(adminForm)
     }
     
     if (response.code === 0) {
@@ -442,7 +442,7 @@ const handleDelete = async (admin) => {
       }
     )
     
-    const response = await adminAPI.deleteAdmin(admin._id)
+    const response = await adminAPI.delete(admin._id)
     
     if (response.code === 0) {
       ElMessage.success('删除成功')

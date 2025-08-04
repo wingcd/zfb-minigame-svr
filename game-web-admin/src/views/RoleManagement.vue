@@ -230,7 +230,7 @@ const fetchRoleList = async () => {
       ...searchForm
     }
     
-    const response = await roleAPI.getRoleList(params)
+    const response = await roleAPI.getList(params)
     
     if (response.code === 0) {
       roleList.value = response.data.list
@@ -307,9 +307,9 @@ const handleSubmit = async () => {
     
     let response
     if (editingRole.value) {
-      response = await roleAPI.updateRole(roleForm)
+      response = await roleAPI.update(roleForm)
     } else {
-      response = await roleAPI.createRole(roleForm)
+      response = await roleAPI.create(roleForm)
     }
     
     if (response.code === 0) {
@@ -345,7 +345,7 @@ const handleDelete = async (role) => {
       }
     )
     
-    const response = await roleAPI.deleteRole(role.roleCode)
+    const response = await roleAPI.delete(role.roleCode)
     
     if (response.code === 0) {
       ElMessage.success('删除成功')

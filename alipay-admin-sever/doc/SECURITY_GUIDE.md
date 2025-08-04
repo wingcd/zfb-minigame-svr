@@ -108,7 +108,7 @@ exports.main = requirePermission(businessHandler, 'required_permission');
 
 ### 2. Token验证流程
 
-1. **获取Token**: 从请求头 `Authorization: Bearer <token>` 或参数 `token` 获取
+1. **获取Token**: 从请求头 `authorization: Bearer <token>` 或参数 `token` 获取
 2. **验证Token**: 查询数据库验证token有效性
 3. **检查过期**: 验证token是否过期
 4. **获取权限**: 查询管理员角色和权限列表

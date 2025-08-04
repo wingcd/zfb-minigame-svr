@@ -4,12 +4,14 @@
       <h1>用户管理</h1>
       <div class="header-actions">
         <el-select v-model="selectedAppId" placeholder="选择应用" @change="handleAppChange" style="width: 200px; margin-right: 10px;">
-          <el-option
-            v-for="app in appList"
-            :key="app.appId"
-            :label="app.appName"
-            :value="app.appId">
-          </el-option>
+          <template v-if="appList && appList.length > 0">
+            <el-option
+              v-for="app in appList"
+              :key="app.appId"
+              :label="app.appName || '未命名应用'"
+              :value="app.appId">
+            </el-option>
+          </template>
         </el-select>
         <el-button type="primary" @click="refreshUsers">刷新</el-button>
       </div>
@@ -203,16 +205,29 @@ export default {
     // 获取应用列表
     const getAppList = async () => {
       try {
-        const result = await appAPI.getAllApps()
+        const result = await appAPI.getAll()
         if (result.code === 0) {
-          appList.value = result.data || []
+          // 过滤掉无效的应用数据，确保每个应用都有有效的appId和appName
+          const dataList = result.data?.list
+          const validApps = Array.isArray(dataList) ? dataList : []
+          
+          // 确保数组是响应式的，并且在设置前清空之前的数据
+          appList.value = []
+          // 使用 nextTick 确保 DOM 更新
+          await new Promise(resolve => setTimeout(resolve, 0))
+          appList.value = validApps
+          
           if (appList.value.length > 0) {
             selectedAppId.value = appList.value[0].appId
             await getUserList()
           }
+        } else {
+          appList.value = []
+          ElMessage.error(result.msg || '获取应用列表失败')
         }
       } catch (error) {
         console.error('获取应用列表失败:', error)
+        appList.value = []
         ElMessage.error('获取应用列表失败')
       }
     }
@@ -233,15 +248,19 @@ export default {
           ...searchForm
         }
         
-        const result = await userAPI.getAllUsers(params)
+        const result = await userAPI.getAll(params)
         if (result.code === 0) {
-          userList.value = result.data?.list || []
+          // 确保数据是数组格式，防止迭代错误
+          const dataList = result.data?.list
+          userList.value = Array.isArray(dataList) ? dataList : []
           pagination.total = result.data?.total || 0
         } else {
+          userList.value = []
           ElMessage.error(result.msg || '获取用户列表失败')
         }
       } catch (error) {
         console.error('获取用户列表失败:', error)
+        userList.value = []
         ElMessage.error('获取用户列表失败')
       } finally {
         loading.value = false
@@ -265,9 +284,10 @@ export default {
     // 查看用户数据
     const viewUserData = async (user) => {
       try {
-        const result = await userAPI.getUserData({
+        const result = await userAPI.getDetail({
           appId: selectedAppId.value,
-          playerId: user.playerId
+          playerId: user.playerId,
+          openId: user.openId,
         })
         
         if (result.code === 0) {
@@ -301,10 +321,10 @@ export default {
           return
         }
         
-        const result = await userAPI.saveUserData({
+        const result = await userAPI.setDetail({
           appId: selectedAppId.value,
-          playerId: userDataDialog.user.playerId,
-          data: JSON.stringify(data)
+          openId: userDataDialog.user.openId,
+          userData: JSON.stringify(data)  // 后端期望的是 userData 字段，不是 data
         })
         
         if (result.code === 0) {
@@ -325,7 +345,7 @@ export default {
       try {
         await ElMessageBox.confirm(`确定要${action}用户 ${user.playerId} 吗？`, '确认操作')
         
-        const apiCall = user.banned ? userAPI.unbanUser : userAPI.banUser
+        const apiCall = user.banned ? userAPI.unban : userAPI.ban
         const result = await apiCall({
           appId: selectedAppId.value,
           playerId: user.playerId
@@ -354,7 +374,7 @@ export default {
           { type: 'warning' }
         )
         
-        const result = await userAPI.deleteUser({
+        const result = await userAPI.delete({
           appId: selectedAppId.value,
           playerId: user.playerId
         })

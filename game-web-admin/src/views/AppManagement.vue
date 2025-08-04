@@ -333,15 +333,19 @@ export default {
           ...searchForm
         }
         
-        const result = await appAPI.getAllApps(params)
+        const result = await appAPI.getAll(params)
         if (result.code === 0) {
-          appList.value = result.data?.list || []
+          // 确保数据是数组格式，防止迭代错误
+          const dataList = result.data?.list
+          appList.value = Array.isArray(dataList) ? dataList : []
           pagination.total = result.data?.total || 0
         } else {
+          appList.value = []
           ElMessage.error(result.msg || '获取应用列表失败')
         }
       } catch (error) {
         console.error('获取应用列表失败:', error)
+        appList.value = []
         ElMessage.error('获取应用列表失败')
       } finally {
         loading.value = false
@@ -384,7 +388,7 @@ export default {
     // 保存应用
     const saveApp = async () => {
       try {
-        const apiCall = appDialog.isEdit ? appAPI.updateApp : appAPI.initApp
+        const apiCall = appDialog.isEdit ? appAPI.update : appAPI.init
         const data = { ...appDialog.form }
         
         // 如果是创建，使用initApp接口的参数格式
@@ -415,7 +419,7 @@ export default {
       try {
         await ElMessageBox.confirm(`确定要${action}应用 "${app.appName}" 吗？`, '确认操作')
         
-        const result = await appAPI.updateApp({
+        const result = await appAPI.update({
           ...app,
           status: app.status === 'active' ? 'inactive' : 'active'
         })
@@ -443,7 +447,7 @@ export default {
           { type: 'warning' }
         )
         
-        const result = await appAPI.deleteApp(app.appId)
+        const result = await appAPI.delete(app.appId)
         
         if (result.code === 0) {
           ElMessage.success('删除成功')
@@ -470,7 +474,7 @@ export default {
       try {
         const [statsResult, leaderboardResult] = await Promise.all([
           statsAPI.getAppStats(app.appId),
-          appAPI.queryApp({ appId: app.appId })
+          appAPI.query({ appId: app.appId })
         ])
         
         if (statsResult.code === 0) {

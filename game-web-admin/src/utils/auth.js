@@ -40,7 +40,7 @@ export async function verifyToken() {
   }
 
   try {
-    const response = await authAPI.verifyToken(token)
+    const response = await authAPI.verifyToken({ token })
     if (response.code === 0 && response.data.valid) {
       setAdminInfo(response.data.adminInfo)
       return true

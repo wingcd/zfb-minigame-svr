@@ -25,10 +25,19 @@ async function checkPermission(event, requiredPermissions) {
             if (authHeader.startsWith('Bearer ')) {
                 token = authHeader.substring(7);
             }
-        } else if (event.token) {
+        }
+        
+        if (!token) {
             // 直接从参数获取
             token = event.token;
         }
+        
+        // 添加调试日志
+        console.log('Token extraction debug:', {
+            hasHeaders: !!event.headers,
+            authHeader: event.headers?.authorization || event.headers?.Authorization,
+            extractedToken: token ? `${token.substring(0, 8)}...` : null
+        });
 
         if (!token) {
             result.error = {

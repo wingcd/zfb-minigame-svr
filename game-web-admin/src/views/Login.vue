@@ -34,6 +34,12 @@
         </el-form-item>
         
         <el-form-item>
+          <el-checkbox v-model="loginForm.rememberMe">
+            记住我（30天免登录）
+          </el-checkbox>
+        </el-form-item>
+        
+        <el-form-item>
           <el-button
             type="primary"
             class="login-button"
@@ -78,7 +84,8 @@ const initLoading = ref(false)
 // 登录表单数据
 const loginForm = reactive({
   username: '',
-  password: ''
+  password: '',
+  rememberMe: false
 })
 
 // 表单验证规则

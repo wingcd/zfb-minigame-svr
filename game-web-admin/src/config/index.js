@@ -1,8 +1,6 @@
 export default {
   api: {
-    baseURL: process.env.NODE_ENV === 'production' 
-      ? 'https://your-alipay-function-domain.com' 
-      : 'http://localhost:3000/api',
+    baseURL:'https://env-00jxt0uhcb2h.dev-hz.cloudbasefunction.cn',
     timeout: 10000
   },
   pagination: {

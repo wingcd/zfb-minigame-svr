@@ -42,13 +42,6 @@ async function deleteLeaderboardHandler(event, context) {
         "data": {}
     };
 
-    var parmErr = common.hash.CheckParams(event);
-    if(parmErr) {
-        ret.code = 4001;
-        ret.msg = "参数错误, error code:" + parmErr;
-        return ret;
-    }
-
     // 参数校验
     if (!appId || typeof appId !== "string") {
         ret.code = 4001;

@@ -235,10 +235,23 @@ export default {
         const result = await statsAPI.getDashboardStats()
         if (result.code === 0) {
           dashboardStats.value = result.data
+        } else if (result.code === 401 || result.code === 4001) {
+          // Token无效或已过期
+          ElMessage.error('登录已过期，请重新登录')
+        } else {
+          ElMessage.error(result.msg || '获取统计数据失败')
         }
       } catch (error) {
         console.error('获取仪表板统计失败:', error)
-        ElMessage.error('获取统计数据失败')
+        
+        // 检查是否是认证相关错误
+        if (error.response?.status === 401) {
+          ElMessage.error('登录已过期，请重新登录')
+        } else if (error.message?.includes('token') || error.message?.includes('认证')) {
+          ElMessage.error('认证失败，请重新登录')
+        } else {
+          ElMessage.error('获取统计数据失败')
+        }
       }
     }
     
@@ -247,10 +260,19 @@ export default {
       try {
         const result = await statsAPI.getTopApps?.({ limit: 10 })
         if (result?.code === 0) {
-          topApps.value = result.data || []
+          // 确保数据是数组格式，防止迭代错误
+          const dataList = result.data
+          topApps.value = Array.isArray(dataList) ? dataList : []
+        } else if (result?.code === 401 || result?.code === 4001) {
+          // Token无效，不显示错误，让主要的统计接口处理
+          return
         }
       } catch (error) {
         console.error('获取热门应用失败:', error)
+        // 如果是认证错误，不显示错误消息，让主接口处理
+        if (error.response?.status !== 401) {
+          console.warn('获取热门应用数据失败，使用默认数据')
+        }
       }
     }
     
@@ -259,7 +281,12 @@ export default {
       try {
         const result = await statsAPI.getRecentActivity?.({ limit: 10 })
         if (result?.code === 0) {
-          recentActivities.value = result.data || []
+          // 确保数据是数组格式，防止迭代错误
+          const dataList = result.data
+          recentActivities.value = Array.isArray(dataList) ? dataList : []
+        } else if (result?.code === 401 || result?.code === 4001) {
+          // Token无效，不显示错误，让主要的统计接口处理
+          return
         } else {
           // 模拟数据
           recentActivities.value = [
@@ -288,6 +315,10 @@ export default {
         }
       } catch (error) {
         console.error('获取最近活动失败:', error)
+        // 如果是认证错误，不显示错误消息，让主接口处理
+        if (error.response?.status !== 401) {
+          console.warn('获取最近活动数据失败，使用默认数据')
+        }
       }
     }
     

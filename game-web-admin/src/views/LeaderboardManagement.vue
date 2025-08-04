@@ -4,12 +4,14 @@
       <h1>排行榜管理</h1>
       <div class="header-actions">
         <el-select v-model="selectedAppId" placeholder="选择应用" @change="handleAppChange" style="width: 200px; margin-right: 10px;">
-          <el-option
-            v-for="app in appList"
-            :key="app.appId"
-            :label="app.appName"
-            :value="app.appId">
-          </el-option>
+          <template v-if="appList && appList.length > 0">
+            <el-option
+              v-for="app in appList"
+              :key="app.appId || app.id || Math.random()"
+              :label="app.appName || '未命名应用'"
+              :value="app.appId">
+            </el-option>
+          </template>
         </el-select>
         <el-button type="primary" @click="showCreateDialog">创建排行榜</el-button>
         <el-button @click="refreshData">刷新</el-button>
@@ -20,23 +22,20 @@
     <div class="leaderboard-config-section">
       <h2>排行榜配置</h2>
       <el-table :data="leaderboardConfigs" style="width: 100%" v-loading="configLoading">
-        <el-table-column prop="leaderboardType" label="排行榜类型" width="150">
+        <el-table-column prop="leaderboardId" label="排行榜类型" width="150">
         </el-table-column>
         <el-table-column prop="name" label="排行榜名称" width="200">
         </el-table-column>
-        <el-table-column label="排序方式" width="120">
+        <el-table-column label="分数类型" width="140">
           <template #default="scope">
-            <el-tag :type="scope.row.sort === 1 ? 'success' : 'info'">
-              {{ scope.row.sort === 1 ? '降序' : '升序' }}
+            <el-tag :type="scope.row.scoreType === 'higher_better' ? 'success' : 'info'">
+              {{ scope.row.scoreType === 'higher_better' ? '分数越高越好' : '分数越低越好' }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="更新策略" width="150">
-          <template #default="scope">
-            <el-tag :type="getUpdateStrategyType(scope.row.updateStrategy)">
-              {{ getUpdateStrategyText(scope.row.updateStrategy) }}
-            </el-tag>
-          </template>
+        <el-table-column prop="description" label="描述" width="150" show-overflow-tooltip>
+        </el-table-column>
+        <el-table-column prop="maxRank" label="最大排名数" width="100">
         </el-table-column>
         <el-table-column prop="createTime" label="创建时间" width="160">
         </el-table-column>
@@ -131,13 +130,13 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column prop="playerId" label="玩家ID" width="120">
+        <el-table-column prop="openId" label="玩家ID" width="120">
         </el-table-column>
         <el-table-column label="玩家信息" width="200">
           <template #default="scope">
-            <div v-if="scope.row.playerInfo" class="player-info">
-              <el-avatar v-if="scope.row.playerInfo.avatar" :src="scope.row.playerInfo.avatar" size="small"></el-avatar>
-              <span class="player-name">{{ scope.row.playerInfo.name || '未设置' }}</span>
+            <div v-if="scope.row.userInfo" class="player-info">
+              <el-avatar v-if="scope.row.userInfo.avatarUrl" :src="scope.row.userInfo.avatarUrl" size="small"></el-avatar>
+              <span class="player-name">{{ scope.row.userInfo.nickName || '未设置' }}</span>
             </div>
             <span v-else>无信息</span>
           </template>
@@ -168,24 +167,26 @@
       :title="configDialog.isEdit ? '编辑排行榜配置' : '创建排行榜配置'" 
       width="500px">
       <el-form :model="configDialog.form" :rules="configRules" ref="configFormRef" label-width="120px">
-        <el-form-item label="排行榜类型" prop="leaderboardType">
-          <el-input v-model="configDialog.form.leaderboardType" placeholder="如: easy, hard, daily"></el-input>
+        <el-form-item label="排行榜类型" prop="leaderboardId">
+          <el-input v-model="configDialog.form.leaderboardId" placeholder="如: easy, hard, daily"></el-input>
         </el-form-item>
         <el-form-item label="排行榜名称" prop="name">
           <el-input v-model="configDialog.form.name" placeholder="排行榜显示名称"></el-input>
         </el-form-item>
-        <el-form-item label="排序方式" prop="sort">
-          <el-select v-model="configDialog.form.sort" style="width: 100%">
-            <el-option label="降序(分数从高到低)" :value="1"></el-option>
-            <el-option label="升序(分数从低到高)" :value="0"></el-option>
+        <el-form-item label="分数类型" prop="scoreType">
+          <el-select v-model="configDialog.form.scoreType" style="width: 100%">
+            <el-option label="分数越高越好(降序)" value="higher_better"></el-option>
+            <el-option label="分数越低越好(升序)" value="lower_better"></el-option>
           </el-select>
         </el-form-item>
-        <el-form-item label="更新策略" prop="updateStrategy">
-          <el-select v-model="configDialog.form.updateStrategy" style="width: 100%">
-            <el-option label="历史最高值" :value="0"></el-option>
-            <el-option label="最近记录" :value="1"></el-option>
-            <el-option label="历史总和" :value="2"></el-option>
-          </el-select>
+        <el-form-item label="排行榜描述" prop="description">
+          <el-input v-model="configDialog.form.description" placeholder="排行榜描述信息" type="textarea" :rows="2"></el-input>
+        </el-form-item>
+        <el-form-item label="最大排名数" prop="maxRank">
+          <el-input-number v-model="configDialog.form.maxRank" :min="10" :max="10000" style="width: 100%"></el-input-number>
+        </el-form-item>
+        <el-form-item label="分类" prop="category">
+          <el-input v-model="configDialog.form.category" placeholder="排行榜分类"></el-input>
         </el-form-item>
         <el-form-item label="状态" prop="enabled">
           <el-switch v-model="configDialog.form.enabled"></el-switch>
@@ -238,8 +239,7 @@ export default {
     
     const rankParams = reactive({
       startRank: 0,
-      count: 20,
-      sort: 1
+      count: 20
     })
     
     const playerSearchForm = reactive({
@@ -250,10 +250,12 @@ export default {
       visible: false,
       isEdit: false,
       form: {
-        leaderboardType: '',
+        leaderboardId: '',
         name: '',
-        sort: 1,
-        updateStrategy: 0,
+        description: '',
+        scoreType: 'higher_better',
+        maxRank: 100,
+        category: 'default',
         enabled: true
       }
     })
@@ -268,33 +270,47 @@ export default {
     })
     
     const configRules = {
-      leaderboardType: [
+      leaderboardId: [
         { required: true, message: '请输入排行榜类型', trigger: 'blur' }
       ],
       name: [
         { required: true, message: '请输入排行榜名称', trigger: 'blur' }
       ],
-      sort: [
-        { required: true, message: '请选择排序方式', trigger: 'change' }
+      scoreType: [
+        { required: true, message: '请选择分数类型', trigger: 'change' }
       ],
-      updateStrategy: [
-        { required: true, message: '请选择更新策略', trigger: 'change' }
+      maxRank: [
+        { required: true, message: '请输入最大排名数', trigger: 'blur' },
+        { type: 'number', min: 10, max: 10000, message: '最大排名数必须在10-10000之间', trigger: 'blur' }
       ]
     }
     
     // 获取应用列表
     const getAppList = async () => {
       try {
-        const result = await appAPI.getAllApps()
+        const result = await appAPI.getAll()
         if (result.code === 0) {
-          appList.value = result.data || []
+          // 过滤掉无效的应用数据，确保每个应用都有有效的appId和appName
+          const dataList = result.data?.list
+          const validApps = Array.isArray(dataList) ? dataList : []
+          
+          // 确保数组是响应式的，并且在设置前清空之前的数据
+          appList.value = []
+          // 使用 nextTick 确保 DOM 更新
+          await new Promise(resolve => setTimeout(resolve, 0))
+          appList.value = validApps
+          
           if (appList.value.length > 0) {
             selectedAppId.value = appList.value[0].appId
             await loadLeaderboardConfigs()
           }
+        } else {
+          appList.value = []
+          ElMessage.error(result.msg || '获取应用列表失败')
         }
       } catch (error) {
         console.error('获取应用列表失败:', error)
+        appList.value = []
         ElMessage.error('获取应用列表失败')
       }
     }
@@ -305,17 +321,21 @@ export default {
       
       configLoading.value = true
       try {
-        const result = await leaderboardAPI.getAllLeaderboards({
+        const result = await leaderboardAPI.getAll({
           appId: selectedAppId.value
         })
         
         if (result.code === 0) {
-          leaderboardConfigs.value = result.data || []
+          // 确保数据是数组格式，防止迭代错误
+          const dataList = result.data.list;
+          leaderboardConfigs.value = Array.isArray(dataList) ? dataList : []
         } else {
+          leaderboardConfigs.value = []
           ElMessage.error(result.msg || '获取排行榜配置失败')
         }
       } catch (error) {
         console.error('获取排行榜配置失败:', error)
+        leaderboardConfigs.value = []
         ElMessage.error('获取排行榜配置失败')
       } finally {
         configLoading.value = false
@@ -325,7 +345,6 @@ export default {
     // 查看排行榜数据
     const viewLeaderboard = async (config) => {
       selectedLeaderboard.value = config
-      rankParams.sort = config.sort
       await loadLeaderboardData()
       await loadLeaderboardStats()
     }
@@ -336,21 +355,25 @@ export default {
       
       dataLoading.value = true
       try {
-        const result = await leaderboardAPI.getTopRank({
+        const result = await leaderboardAPI.getData({
           appId: selectedAppId.value,
-          type: selectedLeaderboard.value.leaderboardType,
-          startRank: rankParams.startRank,
-          count: rankParams.count,
-          sort: rankParams.sort
+          leaderboardId: selectedLeaderboard.value.leaderboardId,
+          offset: rankParams.startRank,
+          limit: rankParams.count,
+          includeUserInfo: true
         })
         
         if (result.code === 0) {
-          leaderboardData.value = result.data?.list || []
+          // 确保数据是数组格式，防止迭代错误
+          const dataList = result.data?.scores
+          leaderboardData.value = Array.isArray(dataList) ? dataList : []
         } else {
+          leaderboardData.value = []
           ElMessage.error(result.msg || '获取排行榜数据失败')
         }
       } catch (error) {
         console.error('获取排行榜数据失败:', error)
+        leaderboardData.value = []
         ElMessage.error('获取排行榜数据失败')
       } finally {
         dataLoading.value = false
@@ -362,7 +385,7 @@ export default {
       if (!selectedAppId.value) return
       
       try {
-        const result = await statsAPI.getLeaderboardStats(selectedAppId.value)
+        const result = await statsAPI.leaderboardStats(selectedAppId.value)
         if (result.code === 0) {
           leaderboardStats.value = result.data
         }
@@ -382,7 +405,7 @@ export default {
         const result = await leaderboardAPI.queryScore({
           appId: selectedAppId.value,
           playerId: playerSearchForm.playerId,
-          leaderboardType: selectedLeaderboard.value.leaderboardType
+          leaderboardId: selectedLeaderboard.value.leaderboardId
         })
         
         if (result.code === 0) {
@@ -402,10 +425,12 @@ export default {
     const showCreateDialog = () => {
       configDialog.isEdit = false
       configDialog.form = {
-        leaderboardType: '',
+        leaderboardId: '',
         name: '',
-        sort: 1,
-        updateStrategy: 0,
+        description: '',
+        scoreType: 'higher_better',
+        maxRank: 100,
+        category: 'default',
         enabled: true
       }
       configDialog.visible = true
@@ -422,8 +447,8 @@ export default {
     const saveConfig = async () => {
       try {
         const apiCall = configDialog.isEdit 
-          ? leaderboardAPI.updateLeaderboard 
-          : leaderboardAPI.createLeaderboard
+          ? leaderboardAPI.update 
+          : leaderboardAPI.create
         
         const data = {
           appId: selectedAppId.value,
@@ -454,15 +479,15 @@ export default {
           { type: 'warning' }
         )
         
-        const result = await leaderboardAPI.deleteLeaderboard({
+        const result = await leaderboardAPI.delete({
           appId: selectedAppId.value,
-          leaderboardType: config.leaderboardType
+          leaderboardType: config.leaderboardId
         })
         
         if (result.code === 0) {
           ElMessage.success('删除成功')
           await loadLeaderboardConfigs()
-          if (selectedLeaderboard.value?.leaderboardType === config.leaderboardType) {
+          if (selectedLeaderboard.value?.leaderboardId === config.leaderboardId) {
             selectedLeaderboard.value = null
             leaderboardData.value = []
           }
@@ -480,7 +505,7 @@ export default {
     // 编辑分数
     const editScore = (scoreData) => {
       scoreDialog.form = {
-        playerId: scoreData.playerId,
+        playerId: scoreData.openId,
         score: scoreData.score
       }
       scoreDialog.originalData = scoreData
@@ -493,9 +518,9 @@ export default {
         const result = await leaderboardAPI.commitScore({
           appId: selectedAppId.value,
           playerId: scoreDialog.form.playerId,
-          type: selectedLeaderboard.value.leaderboardType,
+          leaderboardId: selectedLeaderboard.value.leaderboardId,
           score: scoreDialog.form.score,
-          playerInfo: scoreDialog.originalData.playerInfo || {}
+          playerInfo: scoreDialog.originalData.userInfo || {}
         })
         
         if (result.code === 0) {
@@ -515,15 +540,15 @@ export default {
     const deleteScore = async (scoreData) => {
       try {
         await ElMessageBox.confirm(
-          `确定要删除玩家 ${scoreData.playerId} 的分数记录吗？`, 
+          `确定要删除玩家 ${scoreData.openId} 的分数记录吗？`, 
           '确认删除', 
           { type: 'warning' }
         )
         
         const result = await leaderboardAPI.deleteScore({
           appId: selectedAppId.value,
-          playerId: scoreData.playerId,
-          leaderboardType: selectedLeaderboard.value.leaderboardType
+          playerId: scoreData.openId,
+          leaderboardId: selectedLeaderboard.value.leaderboardId
         })
         
         if (result.code === 0) {
@@ -541,24 +566,6 @@ export default {
     }
     
     // 工具函数
-    const getUpdateStrategyText = (strategy) => {
-      const strategies = {
-        0: '历史最高值',
-        1: '最近记录',
-        2: '历史总和'
-      }
-      return strategies[strategy] || '未知'
-    }
-    
-    const getUpdateStrategyType = (strategy) => {
-      const types = {
-        0: 'warning',
-        1: 'info',
-        2: 'success'
-      }
-      return types[strategy] || 'info'
-    }
-    
     const getRankClass = (rank) => {
       if (rank === 1) return 'rank-gold'
       if (rank === 2) return 'rank-silver'
@@ -609,8 +616,6 @@ export default {
       editScore,
       saveScore,
       deleteScore,
-      getUpdateStrategyText,
-      getUpdateStrategyType,
       getRankClass,
       handleAppChange,
       refreshData

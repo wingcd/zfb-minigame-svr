@@ -85,7 +85,7 @@
 ```bash
 curl -X POST https://your-domain/admin/callAPI \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer your_token" \
+  -H "authorization: Bearer your_token" \
   -d '{
     "action": "admin.getList",
     "params": {
@@ -101,7 +101,7 @@ curl -X POST https://your-domain/admin/callAPI \
 ```bash
 curl -X POST https://your-domain/admin/callAPI \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer your_token" \
+  -H "authorization: Bearer your_token" \
   -d '{
     "action": "admin.create",
     "params": {
@@ -119,7 +119,7 @@ curl -X POST https://your-domain/admin/callAPI \
 ```bash
 curl -X POST https://your-domain/admin/callAPI \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer your_token" \
+  -H "authorization: Bearer your_token" \
   -d '{
     "action": "user.ban",
     "params": {
@@ -146,7 +146,7 @@ curl -X POST https://your-domain/admin/callAPI \
 ```bash
 curl -X POST https://your-domain/admin/callAPI \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer your_token" \
+  -H "authorization: Bearer your_token" \
   -d '{
     "action": "app.init",
     "params": {
@@ -164,7 +164,7 @@ curl -X POST https://your-domain/admin/callAPI \
 ```bash
 curl -X POST https://your-domain/admin/callAPI \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer your_token" \
+  -H "authorization: Bearer your_token" \
   -d '{
     "action": "app.query",
     "params": {
@@ -178,7 +178,7 @@ curl -X POST https://your-domain/admin/callAPI \
 ```bash
 curl -X POST https://your-domain/admin/callAPI \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer your_token" \
+  -H "authorization: Bearer your_token" \
   -d '{
     "action": "user.ban",
     "params": {
@@ -206,7 +206,7 @@ fetch('/admin/callAPI', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${token}`
+    'authorization': `Bearer ${token}`
   },
   body: JSON.stringify({
     action: 'admin.getList',
@@ -285,7 +285,7 @@ class AdminAPI {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${this.token}`
+        'authorization': `Bearer ${this.token}`
       },
       body: JSON.stringify({ action, params })
     });

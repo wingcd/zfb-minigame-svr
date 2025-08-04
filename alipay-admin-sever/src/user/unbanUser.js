@@ -43,13 +43,6 @@ async function unbanUserHandler(event, context) {
         "data": {}
     };
 
-    var parmErr = common.hash.CheckParams(event);
-    if(parmErr) {
-        ret.code = 4001;
-        ret.msg = "参数错误, error code:" + parmErr;
-        return ret;
-    }
-
     // 参数校验
     if (!appId || typeof appId !== "string") {
         ret.code = 4001;
@@ -142,7 +135,3 @@ async function unbanUserHandler(event, context) {
 // 导出带权限校验的函数
 const mainFunc = requirePermission(unbanUserHandler, 'user_manage');
 exports.main = mainFunc;
-
-// 自动注册API
-const { autoRegister } = require('../api-factory');
-autoRegister('user.unban')(mainFunc);
