@@ -10,7 +10,7 @@ const { requirePermission, logOperation } = require("./common/auth");
     | 参数名 | 类型 | 必选 | 说明 |
     | --- | --- | --- | --- |
     | appId | string | 是 | 应用ID |
-    | leaderboardId | string | 是 | 排行榜ID（唯一标识） |
+    | leaderboardType | string | 是 | 排行榜ID（唯一标识） |
     | name | string | 是 | 排行榜名称 |
     | description | string | 否 | 排行榜描述 |
     | scoreType | string | 否 | 分数类型 (higher_better/lower_better) |
@@ -21,7 +21,7 @@ const { requirePermission, logOperation } = require("./common/auth");
  * 测试数据：
     {
         "appId": "test_game_001",
-        "leaderboardId": "weekly_score",
+        "leaderboardType": "weekly_score",
         "name": "周榜",
         "description": "每周重置的积分排行榜",
         "scoreType": "higher_better",
@@ -38,7 +38,7 @@ const { requirePermission, logOperation } = require("./common/auth");
         "data": {
             "id": "leaderboard_id_123456",
             "appId": "test_game_001",
-            "leaderboardId": "weekly_score",
+            "leaderboardType": "weekly_score",
             "name": "周榜",
             "description": "每周重置的积分排行榜",
             "scoreType": "higher_better",
@@ -59,7 +59,7 @@ const { requirePermission, logOperation } = require("./common/auth");
 // 原始处理函数
 async function createLeaderboardHandler(event, context) {
     let appId = event.appId;
-    let leaderboardId = event.leaderboardId;
+    let leaderboardType = event.leaderboardType;
     let name = event.name;
     let description = event.description || '';
     let scoreType = event.scoreType || 'higher_better';
@@ -82,9 +82,9 @@ async function createLeaderboardHandler(event, context) {
         return ret;
     }
 
-    if (!leaderboardId || typeof leaderboardId !== "string" || leaderboardId.length < 2) {
+    if (!leaderboardType || typeof leaderboardType !== "string" || leaderboardType.length < 2) {
         ret.code = 4001;
-        ret.msg = "排行榜ID必须至少2个字符";
+        ret.msg = "排行榜类型必须至少2个字符";
         return ret;
     }
 
@@ -127,7 +127,7 @@ async function createLeaderboardHandler(event, context) {
         const existingLeaderboards = await db.collection('leaderboard_config')
             .where({ 
                 appId: appId,
-                leaderboardId: leaderboardId 
+                leaderboardType: leaderboardType 
             })
             .get();
 
@@ -140,7 +140,7 @@ async function createLeaderboardHandler(event, context) {
         // 创建排行榜
         const newLeaderboard = {
             appId: appId,
-            leaderboardId: leaderboardId,
+            leaderboardType: leaderboardType,
             name: name,
             description: description,
             scoreType: scoreType,
@@ -161,7 +161,7 @@ async function createLeaderboardHandler(event, context) {
         // 记录操作日志
         await logOperation(event.adminInfo, 'CREATE', 'LEADERBOARD', {
             appId: appId,
-            leaderboardId: leaderboardId,
+            leaderboardType: leaderboardType,
             name: name,
             scoreType: scoreType,
             maxRank: maxRank,
@@ -173,7 +173,7 @@ async function createLeaderboardHandler(event, context) {
         ret.data = {
             id: addResult._id,
             appId: appId,
-            leaderboardId: leaderboardId,
+            leaderboardType: leaderboardType,
             name: name,
             description: description,
             scoreType: scoreType,

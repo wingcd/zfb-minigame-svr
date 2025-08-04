@@ -447,7 +447,9 @@ export default {
           { type: 'warning' }
         )
         
-        const result = await appAPI.delete(app.appId)
+        const result = await appAPI.delete({
+          appId: app.appId
+        })
         
         if (result.code === 0) {
           ElMessage.success('删除成功')

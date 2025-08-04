@@ -145,7 +145,7 @@ export const unifiedAPI = {
     getTopApps: (params) => api.post('/stat/getTopApps', params || {}),
     getRecentActivity: (params) => api.post('/stat/getRecentActivity', params || {}),    
     userGrowth: (params) => api.post('/stat/getUserGrowth', params || {}),
-    appStats: (params) => api.post('/stat/getAppStats', params || {}),
+    getAppStats: (params) => api.post('/stat/getAppStats', params || {}),
     leaderboardStats: (params) => api.post('/stat/getLeaderboardStats', params || {}),
     getUserStats: (params) => api.post('/stat/getUserStats', params || {})
   }

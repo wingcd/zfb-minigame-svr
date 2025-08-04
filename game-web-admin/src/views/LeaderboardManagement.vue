@@ -22,7 +22,7 @@
     <div class="leaderboard-config-section">
       <h2>排行榜配置</h2>
       <el-table :data="leaderboardConfigs" style="width: 100%" v-loading="configLoading">
-        <el-table-column prop="leaderboardId" label="排行榜类型" width="150">
+        <el-table-column prop="leaderboardType" label="排行榜类型" width="150">
         </el-table-column>
         <el-table-column prop="name" label="排行榜名称" width="200">
         </el-table-column>
@@ -167,8 +167,8 @@
       :title="configDialog.isEdit ? '编辑排行榜配置' : '创建排行榜配置'" 
       width="500px">
       <el-form :model="configDialog.form" :rules="configRules" ref="configFormRef" label-width="120px">
-        <el-form-item label="排行榜类型" prop="leaderboardId">
-          <el-input v-model="configDialog.form.leaderboardId" placeholder="如: easy, hard, daily"></el-input>
+        <el-form-item label="排行榜类型" prop="leaderboardType">
+          <el-input v-model="configDialog.form.leaderboardType" placeholder="如: easy, hard, daily"></el-input>
         </el-form-item>
         <el-form-item label="排行榜名称" prop="name">
           <el-input v-model="configDialog.form.name" placeholder="排行榜显示名称"></el-input>
@@ -250,7 +250,7 @@ export default {
       visible: false,
       isEdit: false,
       form: {
-        leaderboardId: '',
+        leaderboardType: '',
         name: '',
         description: '',
         scoreType: 'higher_better',
@@ -270,7 +270,7 @@ export default {
     })
     
     const configRules = {
-      leaderboardId: [
+      leaderboardType: [
         { required: true, message: '请输入排行榜类型', trigger: 'blur' }
       ],
       name: [
@@ -358,6 +358,7 @@ export default {
         const result = await leaderboardAPI.getData({
           appId: selectedAppId.value,
           leaderboardId: selectedLeaderboard.value.leaderboardId,
+          leaderboardType: selectedLeaderboard.value.leaderboardType,
           offset: rankParams.startRank,
           limit: rankParams.count,
           includeUserInfo: true
@@ -405,7 +406,8 @@ export default {
         const result = await leaderboardAPI.queryScore({
           appId: selectedAppId.value,
           playerId: playerSearchForm.playerId,
-          leaderboardId: selectedLeaderboard.value.leaderboardId
+          leaderboardId: selectedLeaderboard.value.leaderboardId,
+          leaderboardType: selectedLeaderboard.value.leaderboardType,
         })
         
         if (result.code === 0) {
@@ -426,6 +428,7 @@ export default {
       configDialog.isEdit = false
       configDialog.form = {
         leaderboardId: '',
+        leaderboardType: '',
         name: '',
         description: '',
         scoreType: 'higher_better',
@@ -481,7 +484,7 @@ export default {
         
         const result = await leaderboardAPI.delete({
           appId: selectedAppId.value,
-          leaderboardType: config.leaderboardId
+          leaderboardType: config.leaderboardType
         })
         
         if (result.code === 0) {
@@ -519,6 +522,7 @@ export default {
           appId: selectedAppId.value,
           playerId: scoreDialog.form.playerId,
           leaderboardId: selectedLeaderboard.value.leaderboardId,
+          leaderboardType: selectedLeaderboard.value.leaderboardType,
           score: scoreDialog.form.score,
           playerInfo: scoreDialog.originalData.userInfo || {}
         })
@@ -548,7 +552,8 @@ export default {
         const result = await leaderboardAPI.deleteScore({
           appId: selectedAppId.value,
           playerId: scoreData.openId,
-          leaderboardId: selectedLeaderboard.value.leaderboardId
+          leaderboardId: selectedLeaderboard.value.leaderboardId,
+          leaderboardType: selectedLeaderboard.value.leaderboardType,
         })
         
         if (result.code === 0) {
