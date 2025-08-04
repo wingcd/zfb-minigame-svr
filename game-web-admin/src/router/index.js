@@ -10,6 +10,8 @@ const CounterManagement = () => import('../views/CounterManagement.vue')
 const UserManagement = () => import('../views/UserManagement.vue')
 const AdminManagement = () => import('../views/AdminManagement.vue')
 const RoleManagement = () => import('../views/RoleManagement.vue')
+const MailManagement = () => import('../views/MailManagement.vue')
+const MailTest = () => import('../views/MailTest.vue')
 const Login = () => import('../views/Login.vue')
 
 const routes = [
@@ -98,6 +100,28 @@ const routes = [
       requiresAuth: true,
       icon: 'Key',
       permissions: ['role_manage']
+    }
+  },
+  {
+    path: '/mails',
+    name: 'MailManagement',
+    component: MailManagement,
+    meta: { 
+      title: '邮件管理',
+      requiresAuth: true,
+      icon: 'Message',
+      permissions: ['mail_manage']
+    }
+  },
+  {
+    path: '/mail-test',
+    name: 'MailTest',
+    component: MailTest,
+    meta: { 
+      title: '邮件测试',
+      requiresAuth: true,
+      icon: 'Monitor',
+      permissions: ['mail_manage']
     }
   },
   {

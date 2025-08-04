@@ -3,6 +3,7 @@ import { Http } from "./http";
 import { Leaderboard } from "./leaderboard";
 import { User } from "./user";
 import { Counter } from "./counter";
+import { Mail } from "./mail";
 
 type ZYSDKOptions = {
     appId: string,
@@ -25,6 +26,7 @@ class _ZYSDK {
     public readonly user = new User();
     public readonly leaderboard = new Leaderboard();
     public readonly counter = new Counter();
+    public readonly mail = new Mail();
 
     public init(opts: ZYSDKOptions) {
         Env.baseUrl = opts.baseUrl || 'https://env-00jxt0uhcb2h.dev-hz.cloudbasefunction.cn';

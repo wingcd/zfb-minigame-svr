@@ -156,6 +156,18 @@ export const unifiedAPI = {
     getAppStats: (params) => api.post('/stat/getAppStats', params || {}),
     leaderboardStats: (params) => api.post('/stat/getLeaderboardStats', params || {}),
     getUserStats: (params) => api.post('/stat/getUserStats', params || {})
+  },
+  
+  // 邮件相关
+  mail: {
+    getAll: (params) => api.post('/mail/getAll', params || {}),
+    create: (data) => api.post('/mail/create', data),
+    update: (data) => api.post('/mail/update', data),
+    delete: (mailId) => api.post('/mail/delete', { mailId }),
+    publish: (mailId) => api.post('/mail/send', { mailId }),
+    getStats: (params) => api.post('/mail/getStats', params || {}),
+    getUserMails: (params) => api.post('/mail/getUserMails', params),
+    initSystem: (params) => api.post('/mail/initSystem', params || {})
   }
 }
 
@@ -183,5 +195,8 @@ export const counterAPI = unifiedAPI.counter
 
 // 统计数据API
 export const statsAPI = unifiedAPI.stats
+
+// 邮件管理API
+export const mailAPI = unifiedAPI.mail
 
 export default api

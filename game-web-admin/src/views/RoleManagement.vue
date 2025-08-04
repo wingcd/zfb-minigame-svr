@@ -181,6 +181,7 @@ const allPermissions = [
   { code: 'app_manage', name: '应用管理' },
   { code: 'user_manage', name: '用户管理' },
   { code: 'leaderboard_manage', name: '排行榜管理' },
+  { code: 'mail_manage', name: '邮件管理' },
   { code: 'stats_view', name: '统计查看' },
   { code: 'system_config', name: '系统配置' }
 ]

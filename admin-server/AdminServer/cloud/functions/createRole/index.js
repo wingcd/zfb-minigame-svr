@@ -81,7 +81,7 @@ async function createRoleHandler(event, context) {
     // 验证权限列表
     const validPermissions = [
         'admin_manage', 'role_manage', 'app_manage', 'user_manage', 
-        'leaderboard_manage', 'stats_view', 'system_config'
+        'leaderboard_manage', 'mail_manage', 'stats_view', 'system_config'
     ];
     
     for (let permission of permissions) {

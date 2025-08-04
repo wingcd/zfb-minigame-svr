@@ -105,21 +105,21 @@ const initAdminHandler = async (event, context) => {
             {
                 roleCode: 'super_admin',
                 roleName: '超级管理员',
-                permissions: ['admin_manage', 'role_manage', 'app_manage', 'user_manage', 'leaderboard_manage', 'stats_view', 'system_config'],
+                permissions: ['admin_manage', 'role_manage', 'app_manage', 'user_manage', 'leaderboard_manage', 'mail_manage', 'stats_view', 'system_config'],
                 description: '系统最高权限，拥有所有操作权限',
                 createTime: moment().format("YYYY-MM-DD HH:mm:ss")
             },
             {
                 roleCode: 'admin',
                 roleName: '管理员',
-                permissions: ['app_manage', 'user_manage', 'leaderboard_manage', 'stats_view'],
+                permissions: ['app_manage', 'user_manage', 'leaderboard_manage', 'mail_manage', 'stats_view'],
                 description: '管理员权限，可管理应用、用户、排行榜',
                 createTime: moment().format("YYYY-MM-DD HH:mm:ss")
             },
             {
                 roleCode: 'operator',
                 roleName: '运营人员',
-                permissions: ['user_manage', 'leaderboard_manage', 'stats_view'],
+                permissions: ['user_manage', 'leaderboard_manage', 'mail_manage', 'stats_view'],
                 description: '运营人员权限，可管理用户和排行榜',
                 createTime: moment().format("YYYY-MM-DD HH:mm:ss")
             },

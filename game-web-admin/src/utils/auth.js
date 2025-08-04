@@ -102,6 +102,7 @@ export const PERMISSIONS = {
   APP_MANAGE: 'app_manage',            // 应用管理
   USER_MANAGE: 'user_manage',          // 用户管理
   LEADERBOARD_MANAGE: 'leaderboard_manage', // 排行榜管理
+  MAIL_MANAGE: 'mail_manage',          // 邮件管理
   STATS_VIEW: 'stats_view',            // 统计查看
   SYSTEM_CONFIG: 'system_config'       // 系统配置
 } 
