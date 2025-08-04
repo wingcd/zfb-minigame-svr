@@ -67,7 +67,7 @@ async function getMailStatsHandler(event, context) {
 async function getSingleMailStats(db, mailId) {
     // 获取邮件信息
     const mailResult = await db.collection('mails').where({ mailId }).get();
-    if (!mailResult.data || mailResult.data.length === 0) {
+    if (!mailResult || mailResult.length === 0) {
         return {
             code: 404,
             msg: "邮件不存在",
@@ -75,7 +75,7 @@ async function getSingleMailStats(db, mailId) {
         };
     }
 
-    const mail = mailResult.data[0];
+    const mail = mailResult[0];
     
     // 获取用户状态统计
     const statusResult = await db.collection('user_mail_status')
@@ -92,11 +92,11 @@ async function getSingleMailStats(db, mailId) {
         deleteRate: 0
     };
 
-    if (statusResult.data && statusResult.data.length > 0) {
-        stats.totalUsers = statusResult.data.length;
-        stats.readUsers = statusResult.data.filter(item => item.isRead).length;
-        stats.receivedUsers = statusResult.data.filter(item => item.isReceived).length;
-        stats.deletedUsers = statusResult.data.filter(item => item.isDeleted).length;
+    if (statusResult && statusResult.length > 0) {
+        stats.totalUsers = statusResult.length;
+        stats.readUsers = statusResult.filter(item => item.isRead).length;
+        stats.receivedUsers = statusResult.filter(item => item.isReceived).length;
+        stats.deletedUsers = statusResult.filter(item => item.isDeleted).length;
         
         stats.readRate = stats.totalUsers > 0 ? (stats.readUsers / stats.totalUsers * 100).toFixed(2) : 0;
         stats.receiveRate = stats.totalUsers > 0 ? (stats.receivedUsers / stats.totalUsers * 100).toFixed(2) : 0;

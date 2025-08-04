@@ -1,5 +1,6 @@
 const cloud = require("@alipay/faas-server-sdk");
 const moment = require("moment");
+const { requirePermission } = require("./common/auth");
 
 /**
  * 函数：initMailSystem

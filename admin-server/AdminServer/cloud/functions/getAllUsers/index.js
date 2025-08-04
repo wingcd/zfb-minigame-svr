@@ -78,9 +78,9 @@ async function getAllUsersHandler(event, context) {
             // 解析游戏数据
             if (user.data && typeof user.data === 'string') {
                 try {
-                    user.gameData = JSON.parse(user.data);
+                    user.playerInfo = JSON.parse(user.data);  // 改为playerInfo字段以匹配前端
                 } catch (e) {
-                    user.gameData = null;
+                    user.playerInfo = null;
                 }
             }
 

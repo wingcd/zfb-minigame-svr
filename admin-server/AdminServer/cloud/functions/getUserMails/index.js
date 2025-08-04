@@ -6,7 +6,7 @@ const cloud = require("@alipay/faas-server-sdk");
  * 参数：
     | 参数名 | 类型 | 必选 | 说明 |
     | --- | --- | --- | --- |
-    | openId | string | 是 | 用户openId |
+    | playerId | string | 是 | 用户playerId |
     | appId | string | 是 | 游戏ID |
     | status | string | 否 | 邮件状态筛选 |
     | page | number | 否 | 页码，默认1 |
@@ -29,10 +29,10 @@ const cloud = require("@alipay/faas-server-sdk");
 
 async function getUserMailsHandler(event, context) {
     // 请求参数
-    const { openId, appId, status, page = 1, pageSize = 20 } = event;
+    const { playerId, appId, status, page = 1, pageSize = 20 } = event;
 
     // 参数验证
-    if (!openId || !appId) {
+    if (!playerId || !appId) {
         return {
             code: 400,
             msg: "缺少必要参数",
@@ -45,8 +45,13 @@ async function getUserMailsHandler(event, context) {
         const now = new Date();
         
         // 获取用户信息
-        const userResult = await db.collection('users').where({ openId, appId }).get();
-        if (!userResult.data || userResult.data.length === 0) {
+        const userTableName = `user_${appId}`;
+        const userResult = await db
+            .collection(userTableName)
+            .where({ playerId })
+            .get();
+            
+        if (!userResult || userResult.length === 0) {
             return {
                 code: 404,
                 msg: "用户不存在",
@@ -54,7 +59,7 @@ async function getUserMailsHandler(event, context) {
             };
         }
         
-        const user = userResult.data[0];
+        const user = userResult[0];
         const userLevel = user.level || 0;
 
         // 构建查询条件
@@ -68,7 +73,7 @@ async function getUserMailsHandler(event, context) {
         const mailsResult = await mailsQuery.get();
         
         // 筛选符合条件的邮件
-        const availableMails = mailsResult.data.filter(mail => {
+        const availableMails = mailsResult.filter(mail => {
             // 检查过期时间
             if (mail.expireTime && new Date(mail.expireTime) < now) {
                 return false;
@@ -83,7 +88,7 @@ async function getUserMailsHandler(event, context) {
             if (mail.targetType === 'all') {
                 return true;
             } else if (mail.targetType === 'user') {
-                return mail.targetUsers && mail.targetUsers.includes(openId);
+                return mail.targetUsers && mail.targetUsers.includes(playerId);
             } else if (mail.targetType === 'level') {
                 const minLevel = mail.minLevel || 0;
                 const maxLevel = mail.maxLevel || 999;
@@ -95,11 +100,11 @@ async function getUserMailsHandler(event, context) {
 
         // 获取用户邮件状态
         const userMailsResult = await db.collection('user_mail_status')
-            .where({ openId, appId })
+            .where({ playerId, appId })
             .get();
         
         const userMailStatus = {};
-        userMailsResult.data.forEach(item => {
+        userMailsResult.forEach(item => {
             userMailStatus[item.mailId] = item;
         });
 

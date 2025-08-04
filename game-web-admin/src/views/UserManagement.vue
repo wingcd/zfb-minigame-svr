@@ -3,16 +3,6 @@
     <div class="page-header">
       <h1>用户管理</h1>
       <div class="header-actions">
-        <el-select v-model="selectedAppId" placeholder="选择应用" @change="handleAppChange" style="width: 200px; margin-right: 10px;">
-          <template v-if="appList && appList.length > 0">
-            <el-option
-              v-for="app in appList"
-              :key="app.appId"
-              :label="app.appName || '未命名应用'"
-              :value="app.appId">
-            </el-option>
-          </template>
-        </el-select>
         <el-button type="primary" @click="refreshUsers">刷新</el-button>
       </div>
     </div>
@@ -171,16 +161,15 @@
 </template>
 
 <script>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { userAPI, appAPI, statsAPI } from '../services/api.js'
+import { selectedAppId, getAppName } from '../utils/appStore.js'
 
 export default {
   name: 'UserManagement',
   setup() {
     const loading = ref(false)
-    const appList = ref([])
-    const selectedAppId = ref('')
     const userList = ref([])
     const userStats = ref(null)
     
@@ -202,35 +191,6 @@ export default {
       dataStr: ''
     })
     
-    // 获取应用列表
-    const getAppList = async () => {
-      try {
-        const result = await appAPI.getAll()
-        if (result.code === 0) {
-          // 过滤掉无效的应用数据，确保每个应用都有有效的appId和appName
-          const dataList = result.data?.list
-          const validApps = Array.isArray(dataList) ? dataList : []
-          
-          // 确保数组是响应式的，并且在设置前清空之前的数据
-          appList.value = []
-          // 使用 nextTick 确保 DOM 更新
-          await new Promise(resolve => setTimeout(resolve, 0))
-          appList.value = validApps
-          
-          if (appList.value.length > 0) {
-            selectedAppId.value = appList.value[0].appId
-            await getUserList()
-          }
-        } else {
-          appList.value = []
-          ElMessage.error(result.msg || '获取应用列表失败')
-        }
-      } catch (error) {
-        console.error('获取应用列表失败:', error)
-        appList.value = []
-        ElMessage.error('获取应用列表失败')
-      }
-    }
     
     // 获取用户列表
     const getUserList = async () => {
@@ -393,12 +353,14 @@ export default {
       }
     }
     
-    // 事件处理
-    const handleAppChange = () => {
-      pagination.current = 1
-      getUserList()
-      getUserStats()
-    }
+    // 监听全局app选择变化
+    watch(selectedAppId, () => {
+      if (selectedAppId.value) {
+        pagination.current = 1
+        getUserList()
+        getUserStats()
+      }
+    }, { immediate: true })
     
     const refreshUsers = () => {
       getUserList()
@@ -441,33 +403,34 @@ export default {
     }
     
     onMounted(() => {
-      getAppList()
+      // 组件挂载时如果已有选择的app，则获取数据
+      if (selectedAppId.value) {
+        getUserList()
+        getUserStats()
+      }
     })
     
     return {
       loading,
-      appList,
-      selectedAppId,
       userList,
       userStats,
       searchForm,
       pagination,
       userDataDialog,
-      getAppList,
       getUserList,
       viewUserData,
       editUserData,
       saveUserData,
       toggleUserBan,
       deleteUser,
-      handleAppChange,
       refreshUsers,
       searchUsers,
       resetSearch,
       handleSortChange,
       handleSizeChange,
       handleCurrentChange,
-      closeUserDataDialog
+      closeUserDataDialog,
+      getAppName
     }
   }
 }

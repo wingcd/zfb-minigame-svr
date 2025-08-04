@@ -18,16 +18,38 @@
           text-color="#fff"
           active-text-color="#1890ff"
         >
-          <el-menu-item
-            v-for="route in visibleRoutes"
-            :key="route.path"
-            :index="route.path"
-          >
-            <el-icon v-if="route.meta.icon">
-              <component :is="route.meta.icon" />
-            </el-icon>
-            <span>{{ route.meta.title }}</span>
-          </el-menu-item>
+          <template v-for="item in menuItems" :key="item.key">
+            <!-- 分组菜单 -->
+            <el-sub-menu v-if="item.isGroup" :index="item.key">
+              <template #title>
+                <el-icon v-if="item.icon">
+                  <component :is="item.icon" />
+                </el-icon>
+                <span>{{ item.title }}</span>
+              </template>
+              <el-menu-item
+                v-for="child in item.children"
+                :key="child.path"
+                :index="child.path"
+              >
+                <el-icon v-if="child.meta?.icon">
+                  <component :is="child.meta.icon" />
+                </el-icon>
+                <span>{{ child.meta?.title }}</span>
+              </el-menu-item>
+            </el-sub-menu>
+            
+            <!-- 普通菜单项 -->
+            <el-menu-item
+              v-else
+              :index="item.path"
+            >
+              <el-icon v-if="item.meta?.icon">
+                <component :is="item.meta.icon" />
+              </el-icon>
+              <span>{{ item.meta?.title }}</span>
+            </el-menu-item>
+          </template>
         </el-menu>
       </el-aside>
 
@@ -40,6 +62,24 @@
           </div>
           
           <div class="header-right">
+            <!-- 全局应用选择器 -->
+            <el-select 
+              v-model="globalSelectedAppId" 
+              placeholder="选择应用" 
+              @change="handleAppChange" 
+              style="width: 200px; margin-right: 15px;"
+              :loading="appLoading"
+            >
+              <template v-if="globalAppList && globalAppList.length > 0">
+                <el-option
+                  v-for="app in globalAppList"
+                  :key="app.appId"
+                  :label="app.appName || '未命名应用'"
+                  :value="app.appId">
+                </el-option>
+              </template>
+            </el-select>
+            
             <el-dropdown @command="handleCommand">
               <span class="user-info">
                 <el-icon><Avatar /></el-icon>
@@ -129,6 +169,7 @@ import {
 } from '@element-plus/icons-vue'
 import { getAdminInfo, hasAnyPermission, logout, verifyToken } from './utils/auth.js'
 import { adminAPI } from './services/api.js'
+import { appList, selectedAppId, loading, getAppList, setSelectedAppId } from './utils/appStore.js'
 
 const router = useRouter()
 const route = useRoute()
@@ -137,6 +178,11 @@ const adminInfo = ref(null)
 const showChangePasswordDialog = ref(false)
 const passwordLoading = ref(false)
 const passwordFormRef = ref()
+
+// 全局app状态
+const globalAppList = appList
+const globalSelectedAppId = selectedAppId
+const appLoading = loading
 
 // 修改密码表单
 const passwordForm = reactive({
@@ -182,14 +228,83 @@ const visibleRoutes = computed(() => {
       return false
     }
     
-    // 检查权限
+    // 过滤掉登录页和404页
+    if (route.path === '/login' || route.path === '/:pathMatch(.*)*') {
+      return false
+    }
+    
+    // 如果是分组路由，检查是否有子路由有权限访问
+    if (route.meta?.isGroup && route.children) {
+      const hasVisibleChildren = route.children.some(child => {
+        // 检查子路由权限
+        if (child.meta?.permissions) {
+          return hasAnyPermission(child.meta.permissions)
+        }
+        return !child.meta?.hideInMenu
+      })
+      return hasVisibleChildren
+    }
+    
+    // 检查普通路由权限
     if (route.meta?.permissions) {
       return hasAnyPermission(route.meta.permissions)
     }
     
-    return route.path !== '/login' && route.path !== '/:pathMatch(.*)*'
+    return true
   })
 })
+
+// 生成菜单项结构
+const menuItems = computed(() => {
+  const items = []
+  const groups = new Map()
+  
+  // 处理所有可见路由
+  visibleRoutes.value.forEach(route => {
+    // 检查权限
+    if (route.meta?.permissions && !hasAnyPermission(route.meta.permissions)) {
+      return
+    }
+    
+    if (route.meta?.group) {
+      // 有分组的路由
+      const groupKey = route.meta.group
+      if (!groups.has(groupKey)) {
+        groups.set(groupKey, {
+          key: groupKey,
+          title: route.meta.groupTitle,
+          icon: route.meta.groupIcon,
+          isGroup: true,
+          children: []
+        })
+      }
+      groups.get(groupKey).children.push(route)
+    } else {
+      // 没有分组的路由，直接添加
+      items.push({
+        key: route.path,
+        path: route.path,
+        meta: route.meta,
+        isGroup: false
+      })
+    }
+  })
+  
+  // 将分组添加到菜单项中
+  groups.forEach(group => {
+    if (group.children.length > 0) {
+      items.push(group)
+    }
+  })
+  
+  return items
+})
+
+// 处理应用选择变化
+const handleAppChange = (appId) => {
+  setSelectedAppId(appId)
+  ElMessage.success('已切换应用')
+}
 
 // 处理用户下拉菜单命令
 const handleCommand = (command) => {
@@ -269,6 +384,7 @@ const initUserInfo = async () => {
 
 onMounted(() => {
   initUserInfo()
+  getAppList()
 })
 </script>
 

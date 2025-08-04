@@ -45,9 +45,12 @@ async function createMailHandler(event, context) {
         expireTime,
         appId
     } = event;
+    
+    // 如果没有传递 appId，尝试从上下文中获取
+    const actualAppId = appId || context.appId;
 
     // 参数验证
-    if (!title || !content || !targetType || !appId) {
+    if (!title || !content || !targetType || !actualAppId) {
         return {
             code: 400,
             msg: "缺少必要参数",
@@ -120,34 +123,53 @@ async function createMailHandler(event, context) {
         // 生成邮件ID
         const mailId = `mail_${generateRandomString(16)}`;
         
-        // 准备邮件数据
-        const mailData = {
-            mailId,
-            title,
-            content,
-            type,
-            targetType,
-            targetUsers,
-            minLevel,
-            maxLevel,
-            rewards,
-            publishTime: formatTime(actualpublishTime),
-            expireTime: formatTime(defaultExpireTime),
-            appId,
-            status, // pending(待发送)/scheduled(定时)/active(已发布)/expired(已过期)
-            createTime: formatTime(now),
-            updateTime: formatTime(now),
-            createdBy: adminInfo.username
-        };
+        // 准备邮件数据（逐个构建以确保数据有效）
+        const mailData = {};
+        
+        // 添加必需字段
+        mailData.mailId = mailId;
+        mailData.title = String(title || '');
+        mailData.content = String(content || '');
+        mailData.type = String(type || 'system');
+        mailData.targetType = String(targetType || 'all');
+        mailData.publishTime = formatTime(actualpublishTime);
+        mailData.expireTime = formatTime(defaultExpireTime);
+        mailData.appId = String(actualAppId || '');
+        mailData.status = String(status || 'pending');
+        mailData.createTime = formatTime(now);
+        mailData.updateTime = formatTime(now);
+        mailData.createdBy = String(adminInfo.username || 'system');
 
-        // 插入邮件记录
-        await db.collection('mails').add(mailData);
+        // 根据目标类型添加相应字段
+        if (targetType === 'user' && targetUsers && Array.isArray(targetUsers) && targetUsers.length > 0) {
+            mailData.targetUsers = targetUsers.filter(user => user != null).map(user => String(user));
+        }
+        
+        if (targetType === 'level' && minLevel !== undefined && maxLevel !== undefined) {
+            mailData.minLevel = Number(minLevel);
+            mailData.maxLevel = Number(maxLevel);
+        }
+        
+        // 只有当 rewards 不为空时才添加
+        if (rewards && Array.isArray(rewards) && rewards.length > 0) {
+            mailData.rewards = rewards.filter(reward => reward != null);
+        }
+        
+        // 验证 mailData 不为空
+        if (!mailData || Object.keys(mailData).length === 0) {
+            throw new Error('mailData 为空或无有效字段');
+        }
+        
+        // 使用正确的SDK格式插入数据
+        const result = await db.collection('mails').add({
+            data: mailData
+        });
         
         // 记录操作日志
         await logOperation(adminInfo.username, 'create_mail', {
             mailId,
             title,
-            appId,
+            appId: actualAppId,
             publishTime: formatTime(actualpublishTime),
             status
         });

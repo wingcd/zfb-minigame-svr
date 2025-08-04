@@ -28,7 +28,7 @@ async function deleteMailHandler(event, context) {
         
         // 查找邮件是否存在
         const mailResult = await db.collection('mails').where({ mailId }).get();
-        if (!mailResult.data || mailResult.data.length === 0) {
+        if (!mailResult || mailResult.length === 0) {
             return {
                 code: 404,
                 msg: "邮件不存在",
@@ -36,22 +36,23 @@ async function deleteMailHandler(event, context) {
             };
         }
 
-        const mail = mailResult.data[0];
+        const mail = mailResult[0];
         
         // 检查邮件状态，已发布的邮件不允许删除
-        if (mail.status === 'active') {
-            return {
-                code: 400,
-                msg: "已发布的邮件不能删除",
-                timestamp: Date.now()
-            };
-        }
+        // if (mail.status === 'active') {
+        //     return {
+        //         code: 400,
+        //         msg: "已发布的邮件不能删除",
+        //         timestamp: Date.now()
+        //     };
+        // }
 
         // 删除邮件
         await db.collection('mails').where({ mailId }).remove();
         
         // 记录操作日志
-        await logOperation(authResult.admin.username, 'delete_mail', {
+        const adminInfo = context.adminInfo || { username: 'system' };
+        await logOperation(adminInfo.username, 'delete_mail', {
             mailId,
             title: mail.title
         });

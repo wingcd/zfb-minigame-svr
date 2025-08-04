@@ -11,8 +11,8 @@
     <div class="test-section">
       <el-card header="测试用户设置">
         <el-form :model="testUser" :inline="true">
-          <el-form-item label="openId:">
-            <el-input v-model="testUser.openId" placeholder="输入测试用户openId" style="width: 200px"></el-input>
+          <el-form-item label="playerId:">
+            <el-input v-model="testUser.playerId" placeholder="输入测试用户playerId" style="width: 200px"></el-input>
           </el-form-item>
           <el-form-item label="游戏:">
             <el-select v-model="testUser.appId" placeholder="选择游戏" style="width: 180px">
@@ -129,19 +129,19 @@
 </template>
 
 <script>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { mailAPI, appAPI } from '../services/api.js'
+import { appList } from '../utils/appStore.js'
 
 export default {
   name: 'MailTest',
   setup() {
     const loading = ref(false)
     const userMails = ref([])
-    const appList = ref([])
     
     const testUser = reactive({
-      openId: 'test_user_001',
+      playerId: 'test_user_001',
       appId: ''
     })
     
@@ -150,24 +150,9 @@ export default {
       mail: null
     })
     
-    // 获取应用列表
-    const getAppList = async () => {
-      try {
-        const result = await appAPI.getAll({ page: 1, pageSize: 1000 })
-        if (result.code === 0) {
-          appList.value = result.data?.list || []
-          if (appList.value.length > 0) {
-            testUser.appId = appList.value[0].appId
-          }
-        }
-      } catch (error) {
-        console.error('获取应用列表失败:', error)
-      }
-    }
-    
     // 获取用户邮件列表
     const getUserMails = async () => {
-      if (!testUser.openId || !testUser.appId) {
+      if (!testUser.playerId || !testUser.appId) {
         ElMessage.warning('请输入完整的测试用户信息')
         return
       }
@@ -175,7 +160,7 @@ export default {
       loading.value = true
       try {
         const result = await mailAPI.getUserMails({
-          openId: testUser.openId,
+          playerId: testUser.playerId,
           appId: testUser.appId,
           page: 1,
           pageSize: 100
@@ -201,7 +186,7 @@ export default {
     const readMail = async (mail) => {
       try {
         const result = await mailAPI.updateStatus({
-          openId: testUser.openId,
+          playerId: testUser.playerId,
           appId: testUser.appId,
           mailId: mail.mailId,
           action: 'read'
@@ -229,7 +214,7 @@ export default {
     const receiveMail = async (mail) => {
       try {
         const result = await mailAPI.updateStatus({
-          openId: testUser.openId,
+          playerId: testUser.playerId,
           appId: testUser.appId,
           mailId: mail.mailId,
           action: 'receive'
@@ -261,7 +246,7 @@ export default {
         await ElMessageBox.confirm(`确定要删除邮件 "${mail.title}" 吗？`, '确认删除')
         
         const result = await mailAPI.updateStatus({
-          openId: testUser.openId,
+          playerId: testUser.playerId,
           appId: testUser.appId,
           mailId: mail.mailId,
           action: 'delete'
@@ -292,7 +277,7 @@ export default {
     
     // 刷新用户邮件
     const refreshUserMails = () => {
-      if (testUser.openId && testUser.appId) {
+      if (testUser.playerId && testUser.appId) {
         getUserMails()
       }
     }
@@ -337,8 +322,15 @@ export default {
     }
     
     onMounted(() => {
-      getAppList()
+      // getAppList() // This line is removed as per the edit hint
     })
+    
+    // 监听全局app列表变化，自动设置第一个app
+    watch(appList, () => {
+      if (appList.value.length > 0 && !testUser.appId) {
+        testUser.appId = appList.value[0].appId
+      }
+    }, { immediate: true })
     
     return {
       loading,
@@ -346,7 +338,6 @@ export default {
       appList,
       testUser,
       detailDialog,
-      getAppList,
       getUserMails,
       readMail,
       receiveMail,

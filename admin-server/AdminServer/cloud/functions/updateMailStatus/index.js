@@ -1,5 +1,27 @@
 const cloud = require("@alipay/faas-server-sdk");
-const { formatTime, generateId } = require("./common");
+
+/**
+ * 格式化时间
+ * @param {Date|string} date - 日期对象或字符串
+ * @returns {string} - 格式化后的时间字符串
+ */
+function formatTime(date = new Date()) {
+    const d = new Date(date);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    const seconds = String(d.getSeconds()).padStart(2, '0');
+    
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+}
+
+
+function generateId() {
+    return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+}
+
 
 /**
  * 函数：updateMailStatus
@@ -7,7 +29,7 @@ const { formatTime, generateId } = require("./common");
  * 参数：
     | 参数名 | 类型 | 必选 | 说明 |
     | --- | --- | --- | --- |
-    | openId | string | 是 | 用户openId |
+    | playerId | string | 是 | 用户id |
     | appId | string | 是 | 游戏ID |
     | mailId | string | 是 | 邮件ID |
     | action | string | 是 | 操作类型：read/receive/delete |
@@ -15,7 +37,7 @@ const { formatTime, generateId } = require("./common");
 
 async function updateMailStatusHandler(event, context) {
     // 请求参数
-    const { openId, appId, mailId, action } = event;
+    const { playerId, appId, mailId, action } = event;
 
     const validActions = ['read', 'receive', 'delete'];
     if (!validActions.includes(action)) {
@@ -31,8 +53,8 @@ async function updateMailStatusHandler(event, context) {
         const now = new Date();
         
         // 验证用户存在
-        const userResult = await db.collection('users').where({ openId, appId }).get();
-        if (!userResult.data || userResult.data.length === 0) {
+        const userResult = await db.collection('users').where({ playerId, appId }).get();
+        if (!userResult || userResult.length === 0) {
             return {
                 code: 404,
                 msg: "用户不存在",
@@ -47,7 +69,7 @@ async function updateMailStatusHandler(event, context) {
             status: 'active' 
         }).get();
         
-        if (!mailResult.data || mailResult.data.length === 0) {
+        if (!mailResult || mailResult.length === 0) {
             return {
                 code: 404,
                 msg: "邮件不存在或不可用",
@@ -55,8 +77,8 @@ async function updateMailStatusHandler(event, context) {
             };
         }
 
-        const mail = mailResult.data[0];
-        const user = userResult.data[0];
+        const mail = mailResult[0];
+        const user = userResult[0];
         const userLevel = user.level || 0;
 
         // 检查邮件是否过期
@@ -73,7 +95,7 @@ async function updateMailStatusHandler(event, context) {
         if (mail.targetType === 'all') {
             hasPermission = true;
         } else if (mail.targetType === 'user') {
-            hasPermission = mail.targetUsers && mail.targetUsers.includes(openId);
+            hasPermission = mail.targetUsers && mail.targetUsers.includes(playerId);
         } else if (mail.targetType === 'level') {
             const minLevel = mail.minLevel || 0;
             const maxLevel = mail.maxLevel || 999;
@@ -90,10 +112,10 @@ async function updateMailStatusHandler(event, context) {
 
         // 查找用户邮件状态记录
         const statusResult = await db.collection('user_mail_status')
-            .where({ openId, appId, mailId })
+            .where({ playerId, appId, mailId })
             .get();
 
-        let statusRecord = statusResult.data[0];
+        let statusRecord = statusResult[0];
         const updateData = {
             updateTime: formatTime(now)
         };
@@ -136,13 +158,15 @@ async function updateMailStatusHandler(event, context) {
         if (statusRecord) {
             // 更新现有记录
             await db.collection('user_mail_status')
-                .where({ openId, appId, mailId })
-                .update(updateData);
+                .where({ playerId, appId, mailId })
+                .update({
+                    data: updateData
+                });
         } else {
             // 创建新记录
             const newStatus = {
                 statusId: generateId(),
-                openId,
+                playerId,
                 appId,
                 mailId,
                 isRead: action === 'read',

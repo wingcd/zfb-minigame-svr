@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { verifyToken, isLoggedIn } from '../utils/auth.js'
 import { ElMessage } from 'element-plus'
 
-// 懒加载页面组件
+// 懒加载组件
 const Dashboard = () => import('../views/Dashboard.vue')
 const AppManagement = () => import('../views/AppManagement.vue')
 const LeaderboardManagement = () => import('../views/LeaderboardManagement.vue')
@@ -12,6 +12,7 @@ const AdminManagement = () => import('../views/AdminManagement.vue')
 const RoleManagement = () => import('../views/RoleManagement.vue')
 const MailManagement = () => import('../views/MailManagement.vue')
 const MailTest = () => import('../views/MailTest.vue')
+
 const Login = () => import('../views/Login.vue')
 
 const routes = [
@@ -36,6 +37,7 @@ const routes = [
       permissions: ['stats_view']
     }
   },
+  // 游戏管理相关页面
   {
     path: '/apps',
     name: 'AppManagement',
@@ -44,7 +46,10 @@ const routes = [
       title: '应用管理',
       requiresAuth: true,
       icon: 'Grid',
-      permissions: ['app_manage']
+      permissions: ['app_manage'],
+      group: 'game',
+      groupTitle: '游戏管理',
+      groupIcon: 'Grid'
     }
   },
   {
@@ -55,7 +60,10 @@ const routes = [
       title: '排行榜管理',
       requiresAuth: true,
       icon: 'Trophy',
-      permissions: ['leaderboard_manage']
+      permissions: ['leaderboard_manage'],
+      group: 'game',
+      groupTitle: '游戏管理',
+      groupIcon: 'Grid'
     }
   },
   {
@@ -66,7 +74,10 @@ const routes = [
       title: '计数器管理',
       requiresAuth: true,
       icon: 'Timer',
-      permissions: ['leaderboard_manage']
+      permissions: ['leaderboard_manage'],
+      group: 'game',
+      groupTitle: '游戏管理',
+      groupIcon: 'Grid'
     }
   },
   {
@@ -77,29 +88,10 @@ const routes = [
       title: '用户管理',
       requiresAuth: true,
       icon: 'UserFilled',
-      permissions: ['user_manage']
-    }
-  },
-  {
-    path: '/admins',
-    name: 'AdminManagement',
-    component: AdminManagement,
-    meta: { 
-      title: '管理员管理',
-      requiresAuth: true,
-      icon: 'Avatar',
-      permissions: ['admin_manage']
-    }
-  },
-  {
-    path: '/roles',
-    name: 'RoleManagement',
-    component: RoleManagement,
-    meta: { 
-      title: '角色管理',
-      requiresAuth: true,
-      icon: 'Key',
-      permissions: ['role_manage']
+      permissions: ['user_manage'],
+      group: 'game',
+      groupTitle: '游戏管理',
+      groupIcon: 'Grid'
     }
   },
   {
@@ -110,7 +102,10 @@ const routes = [
       title: '邮件管理',
       requiresAuth: true,
       icon: 'Message',
-      permissions: ['mail_manage']
+      permissions: ['mail_manage'],
+      group: 'game',
+      groupTitle: '游戏管理',
+      groupIcon: 'Grid'
     }
   },
   {
@@ -121,7 +116,39 @@ const routes = [
       title: '邮件测试',
       requiresAuth: true,
       icon: 'Monitor',
-      permissions: ['mail_manage']
+      permissions: ['mail_manage'],
+      group: 'game',
+      groupTitle: '游戏管理',
+      groupIcon: 'Grid'
+    }
+  },
+  // 系统管理相关页面
+  {
+    path: '/admins',
+    name: 'AdminManagement',
+    component: AdminManagement,
+    meta: { 
+      title: '管理员管理',
+      requiresAuth: true,
+      icon: 'Avatar',
+      permissions: ['admin_manage'],
+      group: 'system',
+      groupTitle: '系统管理',
+      groupIcon: 'Setting'
+    }
+  },
+  {
+    path: '/roles',
+    name: 'RoleManagement',
+    component: RoleManagement,
+    meta: { 
+      title: '角色管理',
+      requiresAuth: true,
+      icon: 'Key',
+      permissions: ['role_manage'],
+      group: 'system',
+      groupTitle: '系统管理',
+      groupIcon: 'Setting'
     }
   },
   {

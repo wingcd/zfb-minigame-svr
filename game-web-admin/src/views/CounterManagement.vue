@@ -3,14 +3,6 @@
     <div class="page-header">
       <h1>计数器管理</h1>
       <div class="header-actions">
-        <el-select v-model="filters.appId" placeholder="选择应用" @change="loadCounters" style="width: 200px; margin-right: 10px;">
-          <el-option
-            v-for="app in apps"
-            :key="app.appId"
-            :label="app.appName"
-            :value="app.appId"
-          />
-        </el-select>
         <el-button type="primary" @click="showCreateDialog">
           <el-icon><Plus /></el-icon>
           新建计数器
@@ -172,10 +164,11 @@
 </template>
 
 <script>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { counterAPI, appAPI } from '@/services/api'
+import { selectedAppId, appList } from '@/utils/appStore.js'
 
 export default {
   name: 'CounterManagement',
@@ -190,7 +183,6 @@ export default {
     const formRef = ref(null)
     
     const counters = ref([])
-    const apps = ref([])
     
     const filters = reactive({
       appId: '',
@@ -226,25 +218,17 @@ export default {
       ]
     }
     
-    // 加载应用列表
-    const loadApps = async () => {
-      try {
-        const response = await appAPI.getAll()
-        if (response.code === 0) {
-          apps.value = response.data.list || []
-          if (apps.value.length > 0 && !filters.appId) {
-            filters.appId = apps.value[0].appId
-            await loadCounters()
-          }
-        }
-      } catch (error) {
-        console.error('加载应用列表失败:', error)
+    // 监听全局app选择变化
+    watch(selectedAppId, () => {
+      if (selectedAppId.value) {
+        filters.appId = selectedAppId.value
+        loadCounters()
       }
-    }
+    }, { immediate: true })
     
     // 加载计数器列表
     const loadCounters = async () => {
-      if (!filters.appId) {
+      if (!selectedAppId.value) {
         ElMessage.warning('请先选择应用')
         return
       }
@@ -252,7 +236,7 @@ export default {
       loading.value = true
       try {
         const params = {
-          appId: filters.appId,
+          appId: selectedAppId.value,
           page: pagination.page,
           pageSize: pagination.pageSize
         }
@@ -277,14 +261,14 @@ export default {
     
     // 显示创建对话框
     const showCreateDialog = () => {
-      if (!filters.appId) {
+      if (!selectedAppId.value) {
         ElMessage.warning('请先选择应用')
         return
       }
       
       isEdit.value = false
       Object.assign(form, {
-        appId: filters.appId,
+        appId: selectedAppId.value,
         key: '',
         description: '',
         resetType: 'permanent',
@@ -415,7 +399,7 @@ export default {
     }
     
     onMounted(() => {
-      loadApps()
+      // loadApps() // Removed local apps state
     })
     
     return {
@@ -425,7 +409,7 @@ export default {
       isEdit,
       formRef,
       counters,
-      apps,
+      // apps, // Removed local apps state
       filters,
       pagination,
       form,

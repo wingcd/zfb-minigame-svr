@@ -44,29 +44,6 @@ async function getAllMailsHandler(event, context) {
             where.appId = appId;
         }
 
-        // 创建必要的集合（表）
-        const requiredCollections = [
-            'mails',                // 邮件信息表
-            'user_mail_status'      // 用户邮件状态表
-        ];
-
-        let createdCollections = 0;
-        
-        for (let collectionName of requiredCollections) {
-            try {
-                await db.getCollection(collectionName);
-                console.log(`集合 ${collectionName} 已存在`);
-            } catch (e) {
-                if (e.message == "not found collection") {
-                    await db.createCollection(collectionName);
-                    createdCollections++;
-                    console.log(`集合 ${collectionName} 创建成功`);
-                } else {
-                    console.log(`集合 ${collectionName} 检查失败:`, e.message);
-                }
-            }
-        }
-
         // 查询总数
         const countResult = await db.collection('mails').where(where).count();
         const total = countResult.total;
@@ -84,7 +61,7 @@ async function getAllMailsHandler(event, context) {
             msg: "success",
             timestamp: Date.now(),
             data: {
-                list: listResult.data || [],
+                list: listResult || [],
                 total,
                 page,
                 pageSize,

@@ -176,14 +176,8 @@ async function setDetailHandler(event, context) {
         }
 
         if (userData !== undefined && userData !== null && userData !== "") {
-            let userInfo = userData.userInfo;
-            if(userInfo) {
-                let keys = Object.keys(userInfo);
-                for (let key of keys) {
-                    updateData[key] = userInfo[key];
-                    updatedFields.push(key);
-                }
-            }
+            updateData.data = userData;
+            updatedFields.push('data');
         }
 
         // 处理封禁状态

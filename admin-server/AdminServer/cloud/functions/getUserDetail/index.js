@@ -165,7 +165,7 @@ async function getUserDetailHandler(event, context) {
                 gender: userInfo.gender || 0,
                 province: userInfo.province || '',
                 city: userInfo.city || '',
-                userData: userInfo.userData || '{}',
+                userData: userInfo.data || '{}',
                 banned: userInfo.banned || false,
                 gmtCreate: userInfo.gmtCreate,
                 gmtModify: userInfo.gmtModify

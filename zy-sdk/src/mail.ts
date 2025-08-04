@@ -45,7 +45,8 @@ export interface GetMailsResponse {
 }
 
 export interface UpdateMailStatusParams {
-    openId: string;
+    appId: string;
+    playerId: string;
     mailId: string;
     action: 'read' | 'receive' | 'delete';
 }
@@ -105,7 +106,7 @@ export class Mail {
     public async updateStatus(params: UpdateMailStatusParams): Promise<UpdateMailStatusResponse> {
         const requestData = {
             appId: Env.appId,
-            openId: params.openId,
+            playerId: params.playerId,
             mailId: params.mailId,
             action: params.action
         };
@@ -119,9 +120,10 @@ export class Mail {
      * @param mailId 邮件ID
      * @returns 操作结果
      */
-    public async readMail(openId: string, mailId: string): Promise<UpdateMailStatusResponse> {
+    public async readMail(mailId: string): Promise<UpdateMailStatusResponse> {
         return this.updateStatus({
-            openId,
+            appId: Env.appId,
+            playerId: Env.playerId,
             mailId,
             action: 'read'
         });
@@ -129,13 +131,13 @@ export class Mail {
 
     /**
      * 领取邮件奖励
-     * @param openId 用户openId
      * @param mailId 邮件ID
      * @returns 领取结果，包含奖励信息
      */
-    public async receiveMail(openId: string, mailId: string): Promise<UpdateMailStatusResponse> {
+    public async receiveMail(mailId: string): Promise<UpdateMailStatusResponse> {
         return this.updateStatus({
-            openId,
+            appId: Env.appId,
+            playerId: Env.playerId,
             mailId,
             action: 'receive'
         });
@@ -147,9 +149,10 @@ export class Mail {
      * @param mailId 邮件ID
      * @returns 操作结果
      */
-    public async deleteMail(openId: string, mailId: string): Promise<UpdateMailStatusResponse> {
+    public async deleteMail(mailId: string): Promise<UpdateMailStatusResponse> {
         return this.updateStatus({
-            openId,
+            appId: Env.appId,
+            playerId: Env.playerId,
             mailId,
             action: 'delete'
         });

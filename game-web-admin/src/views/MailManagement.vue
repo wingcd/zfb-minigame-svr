@@ -14,7 +14,7 @@
         <el-button 
           type="warning" 
           @click="initMailSystem"
-          v-if="hasPermission(PERMISSIONS.MAIL_MANAGE)"
+          v-if="hasPermission(PERMISSIONS.MAIL_MANAGE) && !mailSystemInitialized"
         >
           初始化邮件系统
         </el-button>
@@ -39,9 +39,11 @@
         </el-form-item>
         <el-form-item label="状态:">
           <el-select v-model="searchForm.status" placeholder="选择状态" clearable style="width: 150px">
-            <el-option label="草稿" value="draft"></el-option>
+            <el-option label="待发布" value="pending"></el-option>
+            <el-option label="定时发布" value="scheduled"></el-option>
             <el-option label="已发布" value="active"></el-option>
             <el-option label="已过期" value="expired"></el-option>
+            <el-option label="草稿" value="draft"></el-option>
           </el-select>
         </el-form-item>
         <el-form-item label="类型:">
@@ -96,12 +98,49 @@
       </el-row>
     </div>
 
+    <!-- 批量操作 -->
+    <div class="batch-actions" v-if="selectedMails.length > 0">
+      <div class="batch-info">
+        已选择 {{ selectedMails.length }} 个邮件
+      </div>
+      <div class="batch-buttons">
+        <el-button 
+          type="primary" 
+          @click="batchPublish" 
+          v-if="hasPermission(PERMISSIONS.MAIL_MANAGE)"
+          :disabled="!canBatchPublish"
+        >
+          批量发布
+        </el-button>
+        <el-button 
+          type="warning" 
+          @click="batchExpire" 
+          v-if="hasPermission(PERMISSIONS.MAIL_MANAGE)"
+          :disabled="!canBatchExpire"
+        >
+          批量下线
+        </el-button>
+        <el-button 
+          type="danger" 
+          @click="batchDelete" 
+          v-if="hasPermission(PERMISSIONS.MAIL_MANAGE)"
+          :disabled="!canBatchDelete"
+        >
+          批量删除
+        </el-button>
+        <el-button @click="clearSelection">取消选择</el-button>
+      </div>
+    </div>
+
     <!-- 邮件表格 -->
     <el-table 
       :data="mailList" 
       style="width: 100%" 
       v-loading="loading"
-      @sort-change="handleSortChange">
+      @sort-change="handleSortChange"
+      @selection-change="handleSelectionChange"
+      ref="mailTableRef">
+      <el-table-column type="selection" width="55"></el-table-column>
       <el-table-column prop="title" label="邮件标题" width="200" sortable="custom">
         <template #default="scope">
           <div class="mail-info">
@@ -158,14 +197,15 @@
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="260" fixed="right">
+      <el-table-column label="操作" width="320" fixed="right">
         <template #default="scope">
           <el-button type="text" @click="viewMailDetail(scope.row)">详情</el-button>
           <el-button type="text" @click="viewMailStats(scope.row)" v-if="scope.row.status === 'active'">统计</el-button>
+          <el-button type="text" @click="copyMail(scope.row)" v-if="hasPermission(PERMISSIONS.MAIL_MANAGE)">复制</el-button>
           <el-button 
             type="text" 
             @click="editMail(scope.row)" 
-            v-if="scope.row.status === 'draft' && hasPermission(PERMISSIONS.MAIL_MANAGE)"
+            v-if="(scope.row.status === 'pending' || scope.row.status === 'scheduled') && hasPermission(PERMISSIONS.MAIL_MANAGE)"
           >
             编辑
           </el-button>
@@ -173,7 +213,7 @@
             type="text" 
             class="success"
             @click="publishMail(scope.row)" 
-            v-if="scope.row.status === 'draft' && hasPermission(PERMISSIONS.MAIL_MANAGE)"
+            v-if="(scope.row.status === 'pending' || scope.row.status === 'scheduled') && hasPermission(PERMISSIONS.MAIL_MANAGE)"
           >
             发布
           </el-button>
@@ -187,9 +227,17 @@
           </el-button>
           <el-button 
             type="text" 
+            class="primary"
+            @click="republishMail(scope.row)" 
+            v-if="scope.row.status === 'expired' && hasPermission(PERMISSIONS.MAIL_MANAGE)"
+          >
+            重新发布
+          </el-button>
+          <el-button 
+            type="text" 
             class="danger" 
             @click="deleteMail(scope.row)" 
-            v-if="scope.row.status === 'draft' && hasPermission(PERMISSIONS.MAIL_MANAGE)"
+            v-if="hasPermission(PERMISSIONS.MAIL_MANAGE)"
           >
             删除
           </el-button>
@@ -216,15 +264,9 @@
       :title="mailDialog.isEdit ? '编辑邮件' : '创建邮件'" 
       width="800px">
       <el-form :model="mailDialog.form" :rules="mailRules" ref="mailFormRef" label-width="120px">
-        <el-form-item label="游戏" prop="appId">
-          <el-select v-model="mailDialog.form.appId" placeholder="选择游戏" style="width: 200px">
-            <el-option 
-              v-for="app in appList" 
-              :key="app.appId" 
-              :label="app.appName" 
-              :value="app.appId">
-            </el-option>
-          </el-select>
+        <!-- 游戏信息显示，不可选择 -->
+        <el-form-item label="游戏">
+          <span class="selected-app-info">{{ getAppName(selectedAppId) }}</span>
         </el-form-item>
         <el-form-item label="邮件标题" prop="title">
           <el-input v-model="mailDialog.form.title" placeholder="请输入邮件标题" style="width: 400px"></el-input>
@@ -248,9 +290,9 @@
             v-model="targetUsersText" 
             type="textarea" 
             :rows="3" 
-            placeholder="请输入用户openId，一行一个">
+            placeholder="请输入用户playerId，一行一个">
           </el-input>
-          <div class="form-tip">每行输入一个用户openId</div>
+          <div class="form-tip">每行输入一个用户playerId</div>
         </el-form-item>
         <el-form-item label="等级范围" v-if="mailDialog.form.targetType === 'level'">
           <el-input-number v-model="mailDialog.form.minLevel" :min="0" placeholder="最小等级" style="width: 120px"></el-input-number>
@@ -407,6 +449,7 @@ import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { mailAPI, appAPI } from '../services/api.js'
 import { hasPermission, PERMISSIONS } from '../utils/auth.js'
+import { appList, getAppName, selectedAppId } from '../utils/appStore.js'
 
 export default {
   name: 'MailManagement',
@@ -414,7 +457,9 @@ export default {
     const loading = ref(false)
     const mailList = ref([])
     const mailStats = ref(null)
-    const appList = ref([])
+    const mailSystemInitialized = ref(false) // 邮件系统初始化状态，默认为未知，需要检测
+    const selectedMails = ref([]) // 选中的邮件列表
+    const mailTableRef = ref(null) // 表格引用
     
     const searchForm = reactive({
       title: '',
@@ -433,7 +478,7 @@ export default {
       visible: false,
       isEdit: false,
       form: {
-        appId: '',
+        appId: '', // 这个会在 showCreateDialog 中设置为当前选择的应用ID
         title: '',
         content: '',
         type: 'system',
@@ -459,10 +504,20 @@ export default {
     
     const targetUsersText = ref('')
     
+    // 批量操作的计算属性
+    const canBatchPublish = computed(() => {
+      return selectedMails.value.some(mail => mail.status === 'pending' || mail.status === 'scheduled')
+    })
+    
+    const canBatchExpire = computed(() => {
+      return selectedMails.value.some(mail => mail.status === 'active')
+    })
+    
+    const canBatchDelete = computed(() => {
+      return selectedMails.value.some(mail => mail.status === 'pending' || mail.status === 'scheduled' || mail.status === 'expired')
+    })
+    
     const mailRules = {
-      appId: [
-        { required: true, message: '请选择游戏', trigger: 'change' }
-      ],
       title: [
         { required: true, message: '请输入邮件标题', trigger: 'blur' }
       ],
@@ -477,17 +532,6 @@ export default {
       ]
     }
     
-    // 获取应用列表
-    const getAppList = async () => {
-      try {
-        const result = await appAPI.getAll({ page: 1, pageSize: 1000 })
-        if (result.code === 0) {
-          appList.value = result.data?.list || []
-        }
-      } catch (error) {
-        console.error('获取应用列表失败:', error)
-      }
-    }
     
     // 获取邮件列表
     const getMailList = async () => {
@@ -496,21 +540,33 @@ export default {
         const params = {
           page: pagination.current,
           pageSize: pagination.pageSize,
-          ...searchForm
+          ...searchForm,
+          // 如果没有选择特定应用，则查询当前选择的应用
+          appId: searchForm.appId || selectedAppId.value
         }
         
         const result = await mailAPI.getAll(params)
         if (result.code === 0) {
           mailList.value = result.data?.list || []
           pagination.total = result.data?.total || 0
+          // 如果成功获取邮件列表，说明邮件系统已经初始化
+          mailSystemInitialized.value = true
         } else {
           mailList.value = []
-          ElMessage.error(result.msg || '获取邮件列表失败')
+          // 检查是否是因为系统未初始化导致的错误
+          if (result.msg && result.msg.includes('集合') && result.msg.includes('不存在')) {
+            mailSystemInitialized.value = false
+            ElMessage.warning('邮件系统尚未初始化，请先初始化邮件系统')
+          } else {
+            ElMessage.error(result.msg || '获取邮件列表失败')
+          }
         }
       } catch (error) {
         console.error('获取邮件列表失败:', error)
         mailList.value = []
-        ElMessage.error('获取邮件列表失败')
+        // 如果是网络错误或其他错误，也可能表示系统未初始化
+        mailSystemInitialized.value = false
+        ElMessage.error('获取邮件列表失败，请检查邮件系统是否已初始化')
       } finally {
         loading.value = false
       }
@@ -518,21 +574,29 @@ export default {
     
     // 获取邮件统计
     const getMailStats = async () => {
+      // 如果邮件系统未初始化，跳过统计获取
+      if (!mailSystemInitialized.value) {
+        return
+      }
+      
       try {
         const result = await mailAPI.getStats()
         if (result.code === 0) {
           mailStats.value = result.data
+        } else {
+          // 如果获取统计失败，可能是系统未初始化
+          if (result.msg && result.msg.includes('集合')) {
+            mailSystemInitialized.value = false
+          }
         }
       } catch (error) {
         console.error('获取邮件统计失败:', error)
+        // 如果获取统计失败，可能是系统未初始化
+        mailSystemInitialized.value = false
       }
     }
     
     // 工具函数
-    const getAppName = (appId) => {
-      const app = appList.value.find(app => app.appId === appId)
-      return app ? app.appName : appId
-    }
     
     const getTypeText = (type) => {
       const types = {
@@ -563,18 +627,22 @@ export default {
     
     const getStatusText = (status) => {
       const statuses = {
-        'draft': '草稿',
+        'pending': '待发布',
+        'scheduled': '定时发布',
         'active': '已发布',
-        'expired': '已过期'
+        'expired': '已过期',
+        'draft': '草稿' // 保留兼容性
       }
       return statuses[status] || status
     }
     
     const getStatusColor = (status) => {
       const colors = {
-        'draft': 'info',
+        'pending': 'warning',
+        'scheduled': 'info',
         'active': 'success',
-        'expired': 'danger'
+        'expired': 'danger',
+        'draft': 'info' // 保留兼容性
       }
       return colors[status] || 'info'
     }
@@ -583,7 +651,7 @@ export default {
     const showCreateDialog = () => {
       mailDialog.isEdit = false
       mailDialog.form = {
-        appId: '',
+        appId: selectedAppId.value, // 使用全局选择的应用ID
         title: '',
         content: '',
         type: 'system',
@@ -601,7 +669,10 @@ export default {
     
     const editMail = (mail) => {
       mailDialog.isEdit = true
-      mailDialog.form = { ...mail }
+      mailDialog.form = { 
+        ...mail,
+        appId: selectedAppId.value // 使用当前选择的应用ID，而不是邮件原有的应用ID
+      }
       if (mail.targetUsers && mail.targetUsers.length > 0) {
         targetUsersText.value = mail.targetUsers.join('\n')
       }
@@ -650,7 +721,10 @@ export default {
           if (publish && !mailDialog.isEdit) {
             const mailId = result.data?.mailId
             if (mailId) {
-              await publishMail({ mailId })
+              await publishMail({ 
+                mailId, 
+                title: mailDialog.form.title 
+              })
             }
           }
           
@@ -668,7 +742,8 @@ export default {
     
     const publishMail = async (mail) => {
       try {
-        await ElMessageBox.confirm(`确定要发布邮件 "${mail.title}" 吗？发布后不可修改内容。`, '确认发布')
+        const title = mail.title || '该邮件'
+        await ElMessageBox.confirm(`确定要发布邮件 "${title}" 吗？发布后不可修改内容。`, '确认发布')
         
         const result = await mailAPI.publish(mail.mailId)
         
@@ -736,6 +811,63 @@ export default {
       }
     }
     
+    const copyMail = (mail) => {
+      mailDialog.isEdit = false
+      mailDialog.form = {
+        appId: selectedAppId.value, // 使用当前选择的应用ID
+        title: `${mail.title} - 副本`,
+        content: mail.content,
+        type: mail.type,
+        targetType: mail.targetType,
+        targetUsers: mail.targetUsers ? [...mail.targetUsers] : [],
+        minLevel: mail.minLevel || 1,
+        maxLevel: mail.maxLevel || 999,
+        rewards: mail.rewards ? JSON.parse(JSON.stringify(mail.rewards)) : [],
+        publishTime: '', // 清空发布时间
+        expireTime: ''   // 清空过期时间
+      }
+      
+      if (mail.targetUsers && mail.targetUsers.length > 0) {
+        targetUsersText.value = mail.targetUsers.join('\n')
+      } else {
+        targetUsersText.value = ''
+      }
+      
+      mailDialog.visible = true
+      ElMessage.success('邮件已复制，请修改后保存')
+    }
+    
+    const republishMail = async (mail) => {
+      try {
+        await ElMessageBox.confirm(
+          `确定要重新发布邮件 "${mail.title}" 吗？重新发布后邮件状态将变为已发布。`, 
+          '确认重新发布'
+        )
+        
+        // 更新邮件状态为已发布，并重置发布时间
+        const result = await mailAPI.update({
+          mailId: mail.mailId,
+          status: 'active',
+          publishTime: new Date().toISOString().replace('T', ' ').substring(0, 19),
+          // 重新设置过期时间（7天后）
+          expireTime: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().replace('T', ' ').substring(0, 19)
+        })
+        
+        if (result.code === 0) {
+          ElMessage.success('邮件重新发布成功')
+          await getMailList()
+          await getMailStats()
+        } else {
+          ElMessage.error(result.msg || '重新发布失败')
+        }
+      } catch (error) {
+        if (error !== 'cancel') {
+          console.error('重新发布邮件失败:', error)
+          ElMessage.error('重新发布失败')
+        }
+      }
+    }
+    
     const viewMailDetail = (mail) => {
       detailDialog.mail = mail
       detailDialog.visible = true
@@ -776,6 +908,12 @@ export default {
         const result = await mailAPI.initSystem()
         if (result.code === 0) {
           ElMessage.success('邮件系统初始化成功')
+          mailSystemInitialized.value = true // 更新初始化状态
+          refreshMails()
+        } else if (result.code === 4003) {
+          // 系统已经初始化
+          ElMessage.info('邮件系统已经初始化')
+          mailSystemInitialized.value = true
           refreshMails()
         } else {
           ElMessage.error(result.msg || '初始化失败')
@@ -818,8 +956,160 @@ export default {
       getMailList()
     }
     
+    // 批量操作相关方法
+    const handleSelectionChange = (selection) => {
+      selectedMails.value = selection
+    }
+    
+    const clearSelection = () => {
+      mailTableRef.value?.clearSelection()
+      selectedMails.value = []
+    }
+    
+    const batchPublish = async () => {
+      const draftMails = selectedMails.value.filter(mail => 
+        mail.status === 'pending' || mail.status === 'scheduled'
+      )
+      if (draftMails.length === 0) {
+        ElMessage.warning('没有可发布的邮件')
+        return
+      }
+      
+      try {
+        await ElMessageBox.confirm(
+          `确定要批量发布 ${draftMails.length} 个邮件吗？发布后不可修改内容。`,
+          '批量发布确认'
+        )
+        
+        let successCount = 0
+        let failCount = 0
+        
+        for (const mail of draftMails) {
+          try {
+            const result = await mailAPI.publish(mail.mailId)
+            if (result.code === 0) {
+              successCount++
+            } else {
+              failCount++
+            }
+          } catch (error) {
+            failCount++
+          }
+        }
+        
+        if (successCount > 0) {
+          ElMessage.success(`成功发布 ${successCount} 个邮件${failCount > 0 ? `，失败 ${failCount} 个` : ''}`)
+          clearSelection()
+          await getMailList()
+          await getMailStats()
+        } else {
+          ElMessage.error('批量发布失败')
+        }
+      } catch (error) {
+        if (error !== 'cancel') {
+          console.error('批量发布失败:', error)
+          ElMessage.error('批量发布失败')
+        }
+      }
+    }
+    
+    const batchExpire = async () => {
+      const activeMails = selectedMails.value.filter(mail => mail.status === 'active')
+      if (activeMails.length === 0) {
+        ElMessage.warning('没有可下线的邮件')
+        return
+      }
+      
+      try {
+        await ElMessageBox.confirm(
+          `确定要批量下线 ${activeMails.length} 个邮件吗？`,
+          '批量下线确认'
+        )
+        
+        let successCount = 0
+        let failCount = 0
+        
+        for (const mail of activeMails) {
+          try {
+            const result = await mailAPI.update({
+              mailId: mail.mailId,
+              status: 'expired'
+            })
+            if (result.code === 0) {
+              successCount++
+            } else {
+              failCount++
+            }
+          } catch (error) {
+            failCount++
+          }
+        }
+        
+        if (successCount > 0) {
+          ElMessage.success(`成功下线 ${successCount} 个邮件${failCount > 0 ? `，失败 ${failCount} 个` : ''}`)
+          clearSelection()
+          await getMailList()
+          await getMailStats()
+        } else {
+          ElMessage.error('批量下线失败')
+        }
+      } catch (error) {
+        if (error !== 'cancel') {
+          console.error('批量下线失败:', error)
+          ElMessage.error('批量下线失败')
+        }
+      }
+    }
+    
+    const batchDelete = async () => {
+      const deletableMails = selectedMails.value.filter(mail => 
+        mail.status === 'pending' || mail.status === 'scheduled' || mail.status === 'expired'
+      )
+      if (deletableMails.length === 0) {
+        ElMessage.warning('没有可删除的邮件')
+        return
+      }
+      
+      try {
+        await ElMessageBox.confirm(
+          `确定要批量删除 ${deletableMails.length} 个邮件吗？此操作不可恢复！`,
+          '危险操作',
+          { type: 'warning' }
+        )
+        
+        let successCount = 0
+        let failCount = 0
+        
+        for (const mail of deletableMails) {
+          try {
+            const result = await mailAPI.delete(mail.mailId)
+            if (result.code === 0) {
+              successCount++
+            } else {
+              failCount++
+            }
+          } catch (error) {
+            failCount++
+          }
+        }
+        
+        if (successCount > 0) {
+          ElMessage.success(`成功删除 ${successCount} 个邮件${failCount > 0 ? `，失败 ${failCount} 个` : ''}`)
+          clearSelection()
+          await getMailList()
+          await getMailStats()
+        } else {
+          ElMessage.error('批量删除失败')
+        }
+      } catch (error) {
+        if (error !== 'cancel') {
+          console.error('批量删除失败:', error)
+          ElMessage.error('批量删除失败')
+        }
+      }
+    }
+    
     onMounted(() => {
-      getAppList()
       getMailList()
       getMailStats()
     })
@@ -828,6 +1118,9 @@ export default {
       loading,
       mailList,
       mailStats,
+      mailSystemInitialized,
+      selectedMails,
+      mailTableRef,
       appList,
       searchForm,
       pagination,
@@ -836,6 +1129,9 @@ export default {
       statsDialog,
       mailRules,
       targetUsersText,
+      canBatchPublish,
+      canBatchExpire,
+      canBatchDelete,
       getAppName,
       getTypeText,
       getTypeColor,
@@ -851,6 +1147,8 @@ export default {
       publishMail,
       expireMail,
       deleteMail,
+      copyMail,
+      republishMail,
       viewMailDetail,
       viewMailStats,
       refreshMails,
@@ -860,8 +1158,14 @@ export default {
       handleSortChange,
       handleSizeChange,
       handleCurrentChange,
+      handleSelectionChange,
+      clearSelection,
+      batchPublish,
+      batchExpire,
+      batchDelete,
       hasPermission,
-      PERMISSIONS
+      PERMISSIONS,
+      selectedAppId
     }
   }
 }
@@ -991,9 +1295,45 @@ export default {
   color: #67c23a;
 }
 
+.el-button.primary {
+  color: #409eff;
+}
+
 .dialog-footer {
   display: flex;
   justify-content: flex-end;
+  gap: 10px;
+}
+
+.selected-app-info {
+  font-weight: bold;
+  color: #409eff;
+  padding: 8px 12px;
+  background: #f0f9ff;
+  border: 1px solid #d1ecf1;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.batch-actions {
+  background: #f0f9ff;
+  border: 1px solid #d1ecf1;
+  border-radius: 8px;
+  padding: 15px 20px;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.batch-info {
+  font-size: 14px;
+  color: #409eff;
+  font-weight: bold;
+}
+
+.batch-buttons {
+  display: flex;
   gap: 10px;
 }
 </style> 
