@@ -13,6 +13,7 @@ const moment = require("moment");
     | force | boolean | 否 | 强制重新初始化（默认：false） |
  * 
  * 说明：
+ * - 自动创建必要的数据库集合：admin_users, admin_roles, admin_operation_logs
  * - 创建默认角色：super_admin, admin, operator, viewer
  * - 创建默认超级管理员账户：用户名admin，密码123456
  * - 如果系统已初始化，需要设置force=true强制重置
@@ -35,6 +36,7 @@ const moment = require("moment");
         "msg": "初始化完成",
         "timestamp": 1603991234567,
         "data": {
+            "createdCollections": 3,
             "createdRoles": 4,
             "createdAdmins": 1,
             "defaultCredentials": {
@@ -65,6 +67,29 @@ const initAdminHandler = async (event, context) => {
     const db = cloud.database();
 
     try {
+        // 创建必要的集合（表）
+        const requiredCollections = [
+            'admin_users',      // 管理员用户表
+            'admin_roles',      // 角色表
+            'admin_operation_logs'  // 操作日志表
+        ];
+
+        let createdCollections = 0;
+        
+        for (let collectionName of requiredCollections) {
+            try {
+                await db.getCollection(collectionName);
+            } catch (e) {
+                if (e.message == "not found collection") {
+                    await db.createCollection(collectionName);
+                    createdCollections++;
+                    console.log(`集合 ${collectionName} 创建成功`);
+                } else {
+                    console.log(`集合 ${collectionName} 创建失败:`, e.message);
+                }
+            }
+        }
+
         // 安全检查：如果系统已经初始化，且非强制模式，则拒绝
         if (!force) {
             const existingAdmins = await db.collection('admin_users').count();
@@ -212,6 +237,7 @@ const initAdminHandler = async (event, context) => {
 
         ret.msg = "初始化完成";
         ret.data = {
+            createdCollections: createdCollections,
             createdRoles: createdRoles,
             createdAdmins: createdAdmins,
             defaultCredentials: {
@@ -231,7 +257,3 @@ const initAdminHandler = async (event, context) => {
 }; 
 
 exports.main = initAdminHandler;
-
-// 自动注册API
-const { autoRegister } = require('../api-factory');
-autoRegister('admin.init')(initAdminHandler);

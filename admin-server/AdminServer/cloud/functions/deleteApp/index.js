@@ -1,30 +1,8 @@
 const cloud = require("@alipay/faas-server-sdk");
+const { requirePermission, logOperation } = require("./common/auth");
 
-// 请求参数
-/**
- * 函数：deleteApp
- * 说明：删除应用（危险操作，会删除所有相关数据）
- * 参数：
-    | 参数名 | 类型 | 必选 | 说明 |
-    | --- | --- | --- | --- |
-    | appId | string | 是 | 应用ID |
-    | force | boolean | 否 | 是否强制删除，默认false |
-  * 测试数据
-    {
-        "appId": "6a5f86e9-d59b-4a2a-a63b-c06c772bcee9",
-        "force": true
-    }
-    
-    * 返回结果
-    {
-        "code": 0,
-        "msg": "success",
-        "timestamp": 1603991234567,
-        "data": {}
-    }
- */
-
-exports.main = async (event, context) => {
+// 原始处理函数
+async function deleteAppHandler(event, context) {
     let appId = event.appId;
     let force = event.force || false;
 
@@ -43,6 +21,13 @@ exports.main = async (event, context) => {
         return ret;
     }
 
+    // 额外安全检查：只有超级管理员可以删除应用
+    if (event.adminInfo.role !== 'super_admin') {
+        ret.code = 4003;
+        ret.msg = "删除应用需要超级管理员权限";
+        return ret;
+    }
+
     const db = cloud.database();
 
     try {
@@ -56,6 +41,8 @@ exports.main = async (event, context) => {
             ret.msg = "应用不存在";
             return ret;
         }
+
+        const appData = appList[0];
 
         // 如果不是强制删除，检查是否有用户数据
         if (!force) {
@@ -126,6 +113,15 @@ exports.main = async (event, context) => {
             // 排行榜分数表不存在，忽略错误
         }
 
+        // 记录操作日志（重要操作）
+        await logOperation(event.adminInfo, 'DELETE', 'APP', {
+            appId: appId,
+            appName: appData.appName,
+            force: force,
+            deletedCount: deletedCount,
+            severity: 'CRITICAL'  // 标记为关键操作
+        });
+
         ret.msg = "删除成功";
         ret.data = {
             deletedCount: deletedCount,
@@ -139,4 +135,8 @@ exports.main = async (event, context) => {
     }
 
     return ret;
-}; 
+}
+
+// 导出带权限校验的函数（需要应用管理权限）
+const mainFunc = requirePermission(deleteAppHandler, 'app_manage');
+exports.main = mainFunc;

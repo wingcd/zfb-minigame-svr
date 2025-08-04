@@ -120,7 +120,3 @@ async function getAllLeaderboardsHandler(event, context) {
 // 导出带权限校验的函数
 const mainFunc = requirePermission(getAllLeaderboardsHandler, 'leaderboard_manage');
 exports.main = mainFunc;
-
-// 自动注册API
-const { autoRegister } = require('../api-factory');
-autoRegister('leaderboard.getAll')(mainFunc);

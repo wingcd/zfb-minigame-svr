@@ -1,5 +1,6 @@
 const cloud = require("@alipay/faas-server-sdk");
 const common = require("./common");
+const { requirePermission, logOperation } = require("./common/auth");
 
 // 请求参数
 /**
@@ -27,7 +28,8 @@ const common = require("./common");
     }
  */
 
-exports.main = async (event, context) => {
+// 原始处理函数
+async function deleteLeaderboardHandler(event, context) {
     let appId = event.appId;
     let leaderboardType = event.leaderboardType;
     let force = event.force || false;
@@ -60,6 +62,13 @@ exports.main = async (event, context) => {
         return ret;
     }
 
+    // 额外安全检查：删除排行榜需要较高权限
+    if (!['super_admin', 'admin'].includes(event.adminInfo.role)) {
+        ret.code = 4003;
+        ret.msg = "删除排行榜需要管理员或超级管理员权限";
+        return ret;
+    }
+
     const db = cloud.database();
 
     try {
@@ -76,6 +85,8 @@ exports.main = async (event, context) => {
             ret.msg = "排行榜配置不存在";
             return ret;
         }
+
+        const leaderboardConfig = leaderboardList[0];
 
         // 如果不是强制删除，检查是否有分数记录
         if (!force) {
@@ -135,6 +146,20 @@ exports.main = async (event, context) => {
             .remove();
         deletedCount.config = 1;
 
+        // 记录操作日志（重要操作）
+        await logOperation(event.adminInfo, 'DELETE', 'LEADERBOARD', {
+            appId: appId,
+            leaderboardType: leaderboardType,
+            leaderboardConfig: {
+                name: leaderboardConfig.name,
+                updateStrategy: leaderboardConfig.updateStrategy,
+                sort: leaderboardConfig.sort
+            },
+            force: force,
+            deletedCount: deletedCount,
+            severity: 'HIGH'  // 标记为高风险操作
+        });
+
         ret.msg = "删除成功";
         ret.data = {
             appId: appId,
@@ -150,4 +175,8 @@ exports.main = async (event, context) => {
     }
 
     return ret;
-}; 
+}
+
+// 导出带权限校验的函数
+const mainFunc = requirePermission(deleteLeaderboardHandler, 'leaderboard_manage');
+exports.main = mainFunc;

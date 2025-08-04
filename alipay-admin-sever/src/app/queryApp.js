@@ -119,7 +119,3 @@ async function queryAppHandler(event, context) {
 // 导出带权限校验的函数
 const mainFunc = requirePermission(queryAppHandler, 'app_manage');
 exports.main = mainFunc;
-
-// 自动注册API
-const { autoRegister } = require('../api-factory');
-autoRegister('app.query')(mainFunc);

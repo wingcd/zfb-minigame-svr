@@ -1,12 +1,58 @@
 const cloud = require("@alipay/faas-server-sdk");
-const crypto = require("crypto");
 const moment = require("moment");
 
-// 管理员登录（不需要权限校验，但需要安全处理）
-exports.main = async (event, context) => {
-    let username = event.username;
-    let password = event.password;
-    let rememberMe = event.rememberMe || false;
+// 请求参数
+/**
+ * 函数：verifyToken
+ * 说明：验证管理员Token有效性
+ * 权限：无需权限验证
+ * 参数：
+    | 参数名 | 类型 | 必选 | 说明 |
+    | --- | --- | --- | --- |
+    | token | string | 是 | 身份验证Token |
+ * 
+ * 说明：
+ * - 验证Token是否有效且未过期
+ * - 返回管理员信息和权限列表
+ * - 更新最后活跃时间
+ * - 自动记录验证日志（低频率）
+ * 
+ * 测试数据：
+    {
+        "token": "abc123def456ghi789"
+    }
+    
+ * 返回结果：
+    {
+        "code": 0,
+        "msg": "Token验证成功",
+        "timestamp": 1603991234567,
+        "data": {
+            "valid": true,
+            "adminInfo": {
+                "id": "admin_id_123456",
+                "username": "admin",
+                "nickname": "系统管理员",
+                "role": "super_admin",
+                "roleName": "超级管理员",
+                "permissions": ["admin_manage", "role_manage", "app_manage"],
+                "email": "admin@example.com",
+                "phone": "13800138000",
+                "lastLoginTime": "2023-10-01 10:00:00",
+                "createTime": "2023-09-01 10:00:00",
+                "tokenExpire": "2023-10-08 10:00:00"
+            }
+        }
+    }
+    
+ * 错误码：
+ * - 4001: Token为空、无效或已过期
+ * - 5001: 服务器内部错误
+ */
+
+// Token验证（不需要权限校验，但需要安全处理）
+const verifyTokenHandler = async (event, context) => {
+    let token = event.token;
 
     // 返回结果
     let ret = {
@@ -17,49 +63,40 @@ exports.main = async (event, context) => {
     };
 
     // 参数校验
-    if (!username || typeof username !== "string") {
+    if (!token || typeof token !== "string") {
         ret.code = 4001;
-        ret.msg = "用户名不能为空";
+        ret.msg = "Token不能为空";
         return ret;
     }
 
-    if (!password || typeof password !== "string") {
-        ret.code = 4001;
-        ret.msg = "密码不能为空";
-        return ret;
-    }
-
-    // 安全限制：防暴力破解
+    // 获取客户端信息
     const clientIp = context.headers ? context.headers['x-forwarded-for'] : 'unknown';
-    
+    const userAgent = context.headers ? context.headers['user-agent'] : 'unknown';
+
     const db = cloud.database();
 
     try {
-        // 密码加密
-        const passwordHash = crypto.createHash('md5').update(password).digest('hex');
-
-        // 查询管理员
+        // 查询token对应的管理员
         const adminList = await db.collection('admin_users')
             .where({ 
-                username: username,
-                password: passwordHash,
+                token: token,
                 status: 'active'
             })
             .get();
 
         if (adminList.length === 0) {
-            // 记录失败的登录尝试
+            // 记录无效token尝试
             try {
                 await db.collection('admin_operation_logs').add({
                     data: {
                         adminId: 'UNKNOWN',
-                        username: username,
-                        action: 'LOGIN_FAILED',
+                        username: 'UNKNOWN',
+                        action: 'TOKEN_INVALID',
                         resource: 'AUTH',
                         details: {
-                            reason: 'invalid_credentials',
+                            reason: 'token_not_found',
                             ip: clientIp,
-                            userAgent: context.headers ? context.headers['user-agent'] : 'unknown',
+                            userAgent: userAgent,
                             severity: 'MEDIUM'
                         },
                         createTime: moment().format("YYYY-MM-DD HH:mm:ss")
@@ -70,32 +107,44 @@ exports.main = async (event, context) => {
             }
 
             ret.code = 4001;
-            ret.msg = "用户名或密码错误";
+            ret.msg = "无效的Token";
             return ret;
         }
 
         const admin = adminList[0];
 
-        // 生成token（简单实现，实际应用中建议使用JWT）
-        const token = crypto.createHash('md5')
-            .update(admin.username + Date.now() + Math.random())
-            .digest('hex');
-
-        // 设置token过期时间
-        const tokenExpire = rememberMe 
-            ? moment().add(30, 'days').format("YYYY-MM-DD HH:mm:ss")  // 记住我：30天
-            : moment().add(7, 'days').format("YYYY-MM-DD HH:mm:ss");   // 默认：7天
-
-        // 更新管理员信息
-        await db.collection('admin_users').doc(admin._id)
-            .update({
-                data: {
-                    token: token,
-                    tokenExpire: tokenExpire,
-                    lastLoginTime: moment().format("YYYY-MM-DD HH:mm:ss"),
-                    lastLoginIp: clientIp
+        // 检查token是否过期
+        if (admin.tokenExpire) {
+            const now = moment();
+            const tokenExpire = moment(admin.tokenExpire);
+            
+            if (now.isAfter(tokenExpire)) {
+                // 记录token过期
+                try {
+                    await db.collection('admin_operation_logs').add({
+                        data: {
+                            adminId: admin._id,
+                            username: admin.username,
+                            action: 'TOKEN_EXPIRED',
+                            resource: 'AUTH',
+                            details: {
+                                expiredAt: admin.tokenExpire,
+                                ip: clientIp,
+                                userAgent: userAgent,
+                                severity: 'LOW'
+                            },
+                            createTime: moment().format("YYYY-MM-DD HH:mm:ss")
+                        }
+                    });
+                } catch (e) {
+                    // 忽略日志记录错误
                 }
-            });
+
+                ret.code = 4001;
+                ret.msg = "Token已过期";
+                return ret;
+            }
+        }
 
         // 获取角色权限
         const roleList = await db.collection('admin_roles')
@@ -109,32 +158,45 @@ exports.main = async (event, context) => {
             roleName = roleList[0].roleName;
         }
 
-        // 记录成功的登录操作
+        // 更新最后活跃时间（可选，用于活跃度统计）
         try {
-            await db.collection('admin_operation_logs').add({
-                data: {
-                    adminId: admin._id,
-                    username: admin.username,
-                    action: 'LOGIN_SUCCESS',
-                    resource: 'AUTH',
-                    details: {
-                        ip: clientIp,
-                        userAgent: context.headers ? context.headers['user-agent'] : 'unknown',
-                        rememberMe: rememberMe,
-                        tokenExpire: tokenExpire,
-                        severity: 'LOW'
-                    },
-                    createTime: moment().format("YYYY-MM-DD HH:mm:ss")
-                }
-            });
+            await db.collection('admin_users').doc(admin._id)
+                .update({
+                    data: {
+                        lastActiveTime: moment().format("YYYY-MM-DD HH:mm:ss"),
+                        lastActiveIp: clientIp
+                    }
+                });
         } catch (e) {
-            // 忽略日志记录错误
+            // 忽略更新错误
         }
 
-        ret.msg = "登录成功";
+        // 记录Token验证成功（仅在需要时记录，避免日志过多）
+        const shouldLog = Math.random() < 0.1; // 10% 概率记录，减少日志量
+        if (shouldLog) {
+            try {
+                await db.collection('admin_operation_logs').add({
+                    data: {
+                        adminId: admin._id,
+                        username: admin.username,
+                        action: 'TOKEN_VERIFY',
+                        resource: 'AUTH',
+                        details: {
+                            ip: clientIp,
+                            userAgent: userAgent,
+                            severity: 'LOW'
+                        },
+                        createTime: moment().format("YYYY-MM-DD HH:mm:ss")
+                    }
+                });
+            } catch (e) {
+                // 忽略日志记录错误
+            }
+        }
+
+        ret.msg = "Token验证成功";
         ret.data = {
-            token: token,
-            tokenExpire: tokenExpire,
+            valid: true,
             adminInfo: {
                 id: admin._id,
                 username: admin.username,
@@ -145,7 +207,8 @@ exports.main = async (event, context) => {
                 email: admin.email,
                 phone: admin.phone,
                 lastLoginTime: admin.lastLoginTime,
-                createTime: admin.createTime
+                createTime: admin.createTime,
+                tokenExpire: admin.tokenExpire
             }
         };
 
@@ -155,12 +218,13 @@ exports.main = async (event, context) => {
             await db.collection('admin_operation_logs').add({
                 data: {
                     adminId: 'SYSTEM',
-                    username: username,
-                    action: 'LOGIN_ERROR',
+                    username: 'SYSTEM',
+                    action: 'TOKEN_VERIFY_ERROR',
                     resource: 'AUTH',
                     details: {
                         error: e.message,
                         ip: clientIp,
+                        userAgent: userAgent,
                         severity: 'HIGH'
                     },
                     createTime: moment().format("YYYY-MM-DD HH:mm:ss")
@@ -177,3 +241,5 @@ exports.main = async (event, context) => {
 
     return ret;
 }; 
+
+exports.main = verifyTokenHandler;

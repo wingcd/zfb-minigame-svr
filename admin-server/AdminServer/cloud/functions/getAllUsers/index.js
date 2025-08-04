@@ -1,41 +1,9 @@
 const cloud = require("@alipay/faas-server-sdk");
 const common = require("./common");
+const { requirePermission, logOperation } = require("./common/auth");
 
-// 请求参数
-/**
- * 函数：getAllUsers
- * 说明：获取用户列表
- * 参数：
-    | 参数名 | 类型 | 必选 | 说明 |
-    | --- | --- | --- | --- |
-    | appId | string | 是 | 应用ID |
-    | page | number | 否 | 页码，默认1 |
-    | pageSize | number | 否 | 每页数量，默认20 |
-    | playerId | string | 否 | 玩家ID搜索 |
-    | openId | string | 否 | OpenID搜索 |
-  * 测试数据
-    {
-        "appId": "6a5f86e9-d59b-4a2a-a63b-c06c772bcee9",
-        "page": 1,
-        "pageSize": 20,
-        "playerId": "player001"
-    }
-    
-    * 返回结果
-    {
-        "code": 0,
-        "msg": "success",
-        "timestamp": 1603991234567,
-        "data": {
-            "list": [...],
-            "total": 100,
-            "page": 1,
-            "pageSize": 20
-        }
-    }
- */
-
-exports.main = async (event, context) => {
+// 原始处理函数
+async function getAllUsersHandler(event, context) {
     let appId = event.appId;
     let page = event.page || 1;
     let pageSize = event.pageSize || 20;
@@ -135,6 +103,13 @@ exports.main = async (event, context) => {
         ret.data.list = userList;
         ret.data.total = total;
 
+        // 记录操作日志
+        await logOperation(event.adminInfo, 'VIEW', 'USERS', {
+            appId: appId,
+            searchCondition: whereCondition,
+            resultCount: total
+        });
+
     } catch (e) {
         ret.code = 5001;
         ret.msg = e.message;
@@ -142,4 +117,8 @@ exports.main = async (event, context) => {
     }
 
     return ret;
-}; 
+}
+
+// 导出带权限校验的函数
+const mainFunc = requirePermission(getAllUsersHandler, 'user_manage');
+exports.main = mainFunc;

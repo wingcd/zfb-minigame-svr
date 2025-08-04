@@ -1,36 +1,9 @@
 const cloud = require("@alipay/faas-server-sdk");
 const moment = require("moment");
+const { requirePermission, logOperation } = require("./common/auth");
 
-// 请求参数
-/**
- * 函数：updateApp
- * 说明：更新应用信息
- * 参数：
-    | 参数名 | 类型 | 必选 | 说明 |
-    | --- | --- | --- | --- |
-    | appId | string | 是 | 应用ID |
-    | appName | string | 否 | 应用名称 |
-    | description | string | 否 | 应用描述 |
-    | status | string | 否 | 应用状态 |
-    | channelAppKey | string | 否 | 渠道应用密钥 |
-  * 测试数据
-    {
-        "appId": "6a5f86e9-d59b-4a2a-a63b-c06c772bcee9",
-        "appName": "更新的小游戏",
-        "description": "这是一个更新的小游戏",
-        "status": "active"
-    }
-    
-    * 返回结果
-    {
-        "code": 0,
-        "msg": "success",
-        "timestamp": 1603991234567,
-        "data": {}
-    }
- */
-
-exports.main = async (event, context) => {
+// 原始处理函数
+async function updateAppHandler(event, context) {
     let appId = event.appId;
     let appName = event.appName;
     let description = event.description;
@@ -66,6 +39,8 @@ exports.main = async (event, context) => {
             return ret;
         }
 
+        const oldAppData = appList[0];
+
         // 构建更新数据
         let updateData = {
             updateTime: moment().format("YYYY-MM-DD HH:mm:ss")
@@ -94,6 +69,13 @@ exports.main = async (event, context) => {
                 data: updateData
             });
 
+        // 记录操作日志
+        await logOperation(event.adminInfo, 'UPDATE', 'APP', {
+            appId: appId,
+            appName: oldAppData.appName,
+            changes: updateData
+        });
+
         ret.msg = "更新成功";
 
     } catch (e) {
@@ -103,4 +85,8 @@ exports.main = async (event, context) => {
     }
 
     return ret;
-}; 
+}
+
+// 导出带权限校验的函数
+const mainFunc = requirePermission(updateAppHandler, 'app_manage');
+exports.main = mainFunc;

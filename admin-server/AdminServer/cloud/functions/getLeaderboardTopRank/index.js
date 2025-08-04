@@ -45,7 +45,7 @@ const common = require("./common");
     }
 */
 
-exports.main = async (event, context) => {
+const getLeaderboardTopRankHandler = async (event, context) => {
 
   //排行榜id
   let appId;
@@ -164,3 +164,5 @@ exports.main = async (event, context) => {
 
   return ret;
 };
+
+exports.main = getLeaderboardTopRankHandler;

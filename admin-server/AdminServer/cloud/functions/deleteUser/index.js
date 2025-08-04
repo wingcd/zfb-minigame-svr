@@ -1,5 +1,6 @@
 const cloud = require("@alipay/faas-server-sdk");
 const common = require("./common");
+const { requirePermission, logOperation } = require("./common/auth");
 
 // 请求参数
 /**
@@ -27,7 +28,8 @@ const common = require("./common");
     }
  */
 
-exports.main = async (event, context) => {
+// 原始处理函数
+async function deleteUserHandler(event, context) {
     let appId = event.appId;
     let playerId = event.playerId;
     let force = event.force || false;
@@ -60,6 +62,13 @@ exports.main = async (event, context) => {
         return ret;
     }
 
+    // 额外安全检查：删除用户需要较高权限
+    if (!['super_admin', 'admin'].includes(event.adminInfo.role)) {
+        ret.code = 4003;
+        ret.msg = "删除用户需要管理员或超级管理员权限";
+        return ret;
+    }
+
     const db = cloud.database();
     const userTableName = `user_${appId}`;
 
@@ -78,6 +87,15 @@ exports.main = async (event, context) => {
         }
 
         let user = userList[0];
+
+        // 保存用户信息用于日志
+        const userInfo = {
+            playerId: user.playerId,
+            openId: user.openId,
+            createTime: user.gmtCreate,
+            banned: user.banned,
+            banReason: user.banReason
+        };
 
         // 如果不是强制删除，检查用户是否有排行榜记录
         if (!force) {
@@ -123,6 +141,15 @@ exports.main = async (event, context) => {
         await collection.doc(user._id).remove();
         deletedCount.user = 1;
 
+        // 记录操作日志（重要操作）
+        await logOperation(event.adminInfo, 'DELETE', 'USER', {
+            appId: appId,
+            userInfo: userInfo,
+            force: force,
+            deletedCount: deletedCount,
+            severity: 'CRITICAL'  // 标记为关键操作
+        });
+
         ret.msg = "删除成功";
         ret.data = {
             playerId: playerId,
@@ -137,4 +164,8 @@ exports.main = async (event, context) => {
     }
 
     return ret;
-}; 
+}
+
+// 导出带权限校验的函数
+const mainFunc = requirePermission(deleteUserHandler, 'user_manage');
+exports.main = mainFunc;

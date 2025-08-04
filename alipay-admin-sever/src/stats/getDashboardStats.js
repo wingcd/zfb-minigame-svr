@@ -282,7 +282,3 @@ async function getLeaderboardStats(db) {
 // 导出带权限校验的函数
 const mainFunc = requirePermission(getDashboardStatsHandler, 'stats_view');
 exports.main = mainFunc;
-
-// 自动注册API
-const { autoRegister } = require('../api-factory');
-autoRegister('stats.getDashboardStats')(mainFunc);

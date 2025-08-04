@@ -243,7 +243,3 @@ const verifyTokenHandler = async (event, context) => {
 }; 
 
 exports.main = verifyTokenHandler;
-
-// 自动注册API
-const { autoRegister } = require('../api-factory');
-autoRegister('auth.verifyToken')(verifyTokenHandler);

@@ -1,110 +1,141 @@
 const cloud = require("@alipay/faas-server-sdk");
 const { requirePermission, logOperation } = require("./common/auth");
 
-// 原始处理函数
-async function queryAppHandler(event, context) {
-    //请求参数
-    //app 名字
-    let appName;
-    let appId;
-    let channelAppId;
+// 请求参数
+/**
+ * 函数：getAllApps
+ * 说明：获取所有应用列表
+ * 参数：
+    | 参数名 | 类型 | 必选 | 说明 |
+    | --- | --- | --- | --- |
+    | page | number | 否 | 页码，默认1 |
+    | pageSize | number | 否 | 每页数量，默认20 |
+    | appName | string | 否 | 应用名称搜索 |
+    | appId | string | 否 | 应用ID搜索 |
+    | platform | string | 否 | 平台筛选 |
+  * 测试数据
+    {
+        "page": 1,
+        "pageSize": 20,
+        "appName": "小游戏"
+    }
+    
+    * 返回结果
+    {
+        "code": 0,
+        "msg": "success",
+        "timestamp": 1603991234567,
+        "data": {
+            "list": [...],
+            "total": 100,
+            "page": 1,
+            "pageSize": 20
+        }
+    }
+ */
 
-    //返回结果
+// 原始处理函数
+async function getAllAppsHandler(event, context) {
+    // 请求参数
+    let page = event.page || 1;
+    let pageSize = event.pageSize || 20;
+    let appName = event.appName;
+    let appId = event.appId;
+    let platform = event.platform;
+
+    // 返回结果
     let ret = {
         "code": 0,
         "msg": "success",
         "timestamp": Date.now(),
-        "data": {}
+        "data": {
+            list: [],
+            total: 0,
+            page: page,
+            pageSize: pageSize
+        }
     };
 
-    //参数校验 字段存在  为空   类型
-    appName = event.appName === undefined ? null : event.appName;
-    appId = event.appId === undefined ? null : event.appId;
-    channelAppId = event.channelAppId === undefined ? null : event.channelAppId;
-    
-    if (!appName && !appId && !channelAppId) {
-        ret.code = 4001;
-        ret.msg = "参数[appName]和[appId]和[channelAppId]不能同时为空";
-        return ret;
+    // 参数校验
+    if (pageSize > 100) {
+        pageSize = 100; // 限制最大每页数量
     }
 
-    if (appName && typeof appName != "string") {
-        ret.code = 4001;
-        ret.msg = "参数[appName]错误";
-        return ret;
-    }
-
-    if (appId && typeof appId != "string") {
-        ret.code = 4001;
-        ret.msg = "参数[appId]错误";
-        return ret;
-    }
-
-    if (channelAppId && typeof channelAppId != "string") {
-        ret.code = 4001;
-        ret.msg = "参数[channelAppId]错误";
-        return ret;
-    }
-
-    //数据库实例
     const db = cloud.database();
 
     try {
-        let appList = null;
-        let queryCondition = {};
-
+        // 构建查询条件
+        let whereCondition = {};
+        
+        if (appName) {
+            whereCondition.appName = new RegExp(appName, 'i'); // 模糊搜索，忽略大小写
+        }
+        
         if (appId) {
-            queryCondition = { appId: appId };
-            appList = await db.collection(`app_config`)
-                .where(queryCondition)
-                .get();
-        } else if (channelAppId) {
-            queryCondition = { channelAppId: channelAppId };
-            appList = await db.collection(`app_config`)
-                .where(queryCondition)
-                .get();
-        } else {
-            queryCondition = { appName: appName };
-            appList = await db.collection(`app_config`)
-                .where(queryCondition)
-                .get();
+            whereCondition.appId = appId;
+        }
+        
+        if (platform) {
+            whereCondition.platform = platform;
         }
 
-        if (appList.length === 0) {
-            ret.msg = "未查询到您的数据";
-            return ret;
-        }
+        // 查询总数
+        const countResult = await db.collection('app_config').where(whereCondition).count();
+        const total = countResult.total;
 
-        const appData = appList[0];
-        ret.data = appData;
-
-        // 查询排行榜数据
-        let leaderBoardList = await db.collection(`leaderboard_config`)
-            .where({
-                appId: appData.appId
-            })
+        // 分页查询
+        const skip = (page - 1) * pageSize;
+        let appList = await db.collection('app_config')
+            .where(whereCondition)
+            .orderBy('createTime', 'desc')
+            .skip(skip)
+            .limit(pageSize)
             .get();
-        ret.data.leaderBoardList = leaderBoardList;
 
-        // 统计用户数量
-        try {
-            const userTableName = `user_${appData.appId}`;
-            const userCount = await db.collection(userTableName).count();
-            ret.data.userCount = userCount.total;
-        } catch (e) {
-            ret.data.userCount = 0;
+        // 为每个应用添加统计信息
+        for (let app of appList) {
+            try {
+                // 统计用户数量
+                const userTableName = `user_${app.appId}`;
+                const userCount = await db.collection(userTableName).count();
+                app.userCount = userCount.total;
+
+                // 统计今日活跃用户（简化实现，可根据实际需求优化）
+                const today = new Date().toISOString().split('T')[0];
+                const dailyActiveCount = await db.collection(userTableName)
+                    .where({
+                        gmtModify: {
+                            $gte: today + ' 00:00:00',
+                            $lte: today + ' 23:59:59'
+                        }
+                    })
+                    .count();
+                app.dailyActive = dailyActiveCount.total;
+
+                // 统计排行榜数量
+                const leaderboardCount = await db.collection('leaderboard_config')
+                    .where({ appId: app.appId })
+                    .count();
+                app.leaderboardCount = leaderboardCount.total;
+
+                // 设置状态
+                app.status = app.status || 'active';
+            } catch (e) {
+                // 如果统计出错，设置默认值
+                app.userCount = 0;
+                app.dailyActive = 0;
+                app.leaderboardCount = 0;
+                app.status = 'active';
+            }
         }
 
-        // 记录查询操作日志
-        await logOperation(event.adminInfo, 'VIEW', 'APP_QUERY', {
-            queryCondition: queryCondition,
-            foundApp: {
-                appId: appData.appId,
-                appName: appData.appName,
-                platform: appData.platform
-            },
-            leaderboardCount: leaderBoardList.length,
-            userCount: ret.data.userCount
+        ret.data.list = appList;
+        ret.data.total = total;
+
+        // 记录操作日志
+        await logOperation(event.adminInfo, 'VIEW', 'APPS', {
+            searchCondition: whereCondition,
+            resultCount: total
         });
 
     } catch (e) {
@@ -117,5 +148,5 @@ async function queryAppHandler(event, context) {
 }
 
 // 导出带权限校验的函数
-const mainFunc = requirePermission(queryAppHandler, 'app_manage');
+const mainFunc = requirePermission(getAllAppsHandler, 'app_manage');
 exports.main = mainFunc;

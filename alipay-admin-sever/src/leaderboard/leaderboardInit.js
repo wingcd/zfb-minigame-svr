@@ -152,7 +152,3 @@ async function leaderboardInitHandler(event, context) {
 // 导出带权限校验的函数
 const mainFunc = requirePermission(leaderboardInitHandler, 'leaderboard_manage');
 exports.main = mainFunc;
-
-// 自动注册API
-const { autoRegister } = require('../api-factory');
-autoRegister('leaderboard.init')(mainFunc);

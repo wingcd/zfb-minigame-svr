@@ -129,7 +129,3 @@ async function getRoleListHandler(event, context) {
 // 导出带权限校验的函数
 const mainFunc = requirePermission(getRoleListHandler, 'role_manage');
 exports.main = mainFunc;
-
-// 自动注册API
-const { autoRegister } = require('../api-factory');
-autoRegister('role.getList')(mainFunc);

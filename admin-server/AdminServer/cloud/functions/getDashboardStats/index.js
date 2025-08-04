@@ -1,56 +1,9 @@
 const cloud = require("@alipay/faas-server-sdk");
 const moment = require("moment");
+const { requirePermission, logOperation } = require("./common/auth");
 
-// 请求参数
-/**
- * 函数：getDashboardStats
- * 说明：获取仪表板统计数据
- * 参数：
-    | 参数名 | 类型 | 必选 | 说明 |
-    | --- | --- | --- | --- |
-    | timeRange | string | 否 | 时间范围: today, week, month |
-  * 测试数据
-    {
-        "timeRange": "week"
-    }
-    
-    * 返回结果
-    {
-        "code": 0,
-        "msg": "success",
-        "timestamp": 1603991234567,
-        "data": {
-            "apps": {
-                "total": 10,
-                "active": 8,
-                "newThisMonth": 2,
-                "totalUsers": 1000,
-                "change": 5.2
-            },
-            "users": {
-                "total": 1000,
-                "newToday": 50,
-                "activeToday": 200,
-                "banned": 5,
-                "change": 8.5
-            },
-            "activity": {
-                "daily": 200,
-                "weekly": 800,
-                "monthly": 3000,
-                "change": 12.3
-            },
-            "leaderboards": {
-                "total": 25,
-                "active": 20,
-                "totalScores": 5000,
-                "change": -2.1
-            }
-        }
-    }
- */
-
-exports.main = async (event, context) => {
+// 原始处理函数
+async function getDashboardStatsHandler(event, context) {
     let timeRange = event.timeRange || 'week';
 
     // 返回结果
@@ -90,6 +43,12 @@ exports.main = async (event, context) => {
             leaderboards: leaderboardStats
         };
 
+        // 记录操作日志
+        await logOperation(event.adminInfo, 'VIEW', 'DASHBOARD_STATS', {
+            timeRange: timeRange,
+            statsGenerated: Object.keys(ret.data)
+        });
+
     } catch (e) {
         ret.code = 5001;
         ret.msg = e.message;
@@ -97,7 +56,7 @@ exports.main = async (event, context) => {
     }
 
     return ret;
-};
+}
 
 // 获取应用统计
 async function getAppStats(db, today, thisMonth) {
@@ -318,4 +277,8 @@ async function getLeaderboardStats(db) {
             change: 0
         };
     }
-} 
+}
+
+// 导出带权限校验的函数
+const mainFunc = requirePermission(getDashboardStatsHandler, 'stats_view');
+exports.main = mainFunc;

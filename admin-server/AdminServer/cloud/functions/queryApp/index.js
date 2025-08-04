@@ -1,32 +1,8 @@
 const cloud = require("@alipay/faas-server-sdk");
+const { requirePermission, logOperation } = require("./common/auth");
 
-// 请求参数
-/**
- * 函数：queryApp
- * 说明：查询app
- * 参数：
-    | 参数名 | 类型 | 必选 | 说明 |
-    | --- | --- | --- | --- |
-    | appName | string | 否 | app名字 |
-    | appId | string | 否 | 小程序id |
-  * 测试数据
-    {
-        "appName": "小程序"
-    }
-    
-    * 返回结果
-    {
-        "code": 0,
-        "msg": "success",
-        "timestamp": 1603991234567,
-        "data": {
-            "appName": "小程序",
-            "appId": "5f9b3b7b7b4b4b0001b4b4b4"
-        }
-    }
- */
-
-exports.main = async (event, context) => {
+// 原始处理函数
+async function queryAppHandler(event, context) {
     //请求参数
     //app 名字
     let appName;
@@ -39,12 +15,13 @@ exports.main = async (event, context) => {
         "msg": "success",
         "timestamp": Date.now(),
         "data": {}
-    }
+    };
 
     //参数校验 字段存在  为空   类型
     appName = event.appName === undefined ? null : event.appName;
     appId = event.appId === undefined ? null : event.appId;
     channelAppId = event.channelAppId === undefined ? null : event.channelAppId;
+    
     if (!appName && !appId && !channelAppId) {
         ret.code = 4001;
         ret.msg = "参数[appName]和[appId]和[channelAppId]不能同时为空";
@@ -53,19 +30,19 @@ exports.main = async (event, context) => {
 
     if (appName && typeof appName != "string") {
         ret.code = 4001;
-        ret.msg = "参数[appName]错误"
+        ret.msg = "参数[appName]错误";
         return ret;
     }
 
     if (appId && typeof appId != "string") {
         ret.code = 4001;
-        ret.msg = "参数[appId]错误"
+        ret.msg = "参数[appId]错误";
         return ret;
     }
 
     if (channelAppId && typeof channelAppId != "string") {
         ret.code = 4001;
-        ret.msg = "参数[channelAppId]错误"
+        ret.msg = "参数[channelAppId]错误";
         return ret;
     }
 
@@ -74,40 +51,62 @@ exports.main = async (event, context) => {
 
     try {
         let appList = null;
+        let queryCondition = {};
 
         if (appId) {
+            queryCondition = { appId: appId };
             appList = await db.collection(`app_config`)
-                .where({
-                    appId: appId
-                })
+                .where(queryCondition)
                 .get();
         } else if (channelAppId) {
+            queryCondition = { channelAppId: channelAppId };
             appList = await db.collection(`app_config`)
-                .where({
-                    channelAppId: channelAppId
-                })
+                .where(queryCondition)
                 .get();
         } else {
-            // (模糊查询)
+            queryCondition = { appName: appName };
             appList = await db.collection(`app_config`)
-                .where({
-                    appName: appName
-                })
+                .where(queryCondition)
                 .get();
         }
+
         if (appList.length === 0) {
             ret.msg = "未查询到您的数据";
             return ret;
         }
-        ret.data = appList[0];
+
+        const appData = appList[0];
+        ret.data = appData;
 
         // 查询排行榜数据
         let leaderBoardList = await db.collection(`leaderboard_config`)
             .where({
-                appId: ret.data.appId
+                appId: appData.appId
             })
             .get();
         ret.data.leaderBoardList = leaderBoardList;
+
+        // 统计用户数量
+        try {
+            const userTableName = `user_${appData.appId}`;
+            const userCount = await db.collection(userTableName).count();
+            ret.data.userCount = userCount.total;
+        } catch (e) {
+            ret.data.userCount = 0;
+        }
+
+        // 记录查询操作日志
+        await logOperation(event.adminInfo, 'VIEW', 'APP_QUERY', {
+            queryCondition: queryCondition,
+            foundApp: {
+                appId: appData.appId,
+                appName: appData.appName,
+                platform: appData.platform
+            },
+            leaderboardCount: leaderBoardList.length,
+            userCount: ret.data.userCount
+        });
+
     } catch (e) {
         ret.code = 5001;
         ret.msg = e.message;
@@ -115,4 +114,8 @@ exports.main = async (event, context) => {
     }
 
     return ret;
-};
+}
+
+// 导出带权限校验的函数
+const mainFunc = requirePermission(queryAppHandler, 'app_manage');
+exports.main = mainFunc;

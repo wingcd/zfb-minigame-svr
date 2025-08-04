@@ -1,5 +1,7 @@
 const cloud = require("@alipay/faas-server-sdk");
-const moment = require("moment")
+const moment = require("moment");
+const common = require("./common");
+const { requirePermission, logOperation } = require("./common/auth");
 
 // 请求参数
 /**
@@ -23,7 +25,8 @@ const moment = require("moment")
  }
 */
 
-exports.main = async (event, context) => {
+// 原始处理函数
+async function leaderboardInitHandler(event, context) {
     //排行榜名字
     let leaderboardName;
     //排行榜类型
@@ -128,10 +131,24 @@ exports.main = async (event, context) => {
         ret.msg = e.message;
         return ret;
     }
+
+    // 记录操作日志
+    await logOperation(event.adminInfo, 'CREATE', 'LEADERBOARD', {
+        appId: appId,
+        leaderboardName: leaderboardName,
+        leaderboardType: leaderboardType,
+        updateStrategy: updateStrategy,
+        sort: sort
+    });
+
     ret.data = {
         "appId": appId,
         "leaderboardName": leaderboardName,
         "leaderboardType": leaderboardType,
     }
     return ret;
-};
+}
+
+// 导出带权限校验的函数
+const mainFunc = requirePermission(leaderboardInitHandler, 'leaderboard_manage');
+exports.main = mainFunc;
