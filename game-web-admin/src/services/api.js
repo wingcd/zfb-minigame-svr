@@ -139,6 +139,14 @@ export const unifiedAPI = {
     deleteScore: (data) => api.post('/leaderboard/deleteScore', data),
   },
   
+  // 计数器相关
+  counter: {
+    getList: (params) => api.post('/counter/getList', params),
+    create: (data) => api.post('/counter/create', data),
+    update: (data) => api.post('/counter/update', data),
+    delete: (params) => api.post('/counter/delete', params),
+  },
+  
   // 统计相关
   stats: {
     getDashboardStats: (params) => api.post('/stat/dashboard', params || {}),
@@ -169,6 +177,9 @@ export const userAPI = unifiedAPI.user
 
 // 排行榜管理API
 export const leaderboardAPI = unifiedAPI.leaderboard
+
+// 计数器管理API
+export const counterAPI = unifiedAPI.counter
 
 // 统计数据API
 export const statsAPI = unifiedAPI.stats

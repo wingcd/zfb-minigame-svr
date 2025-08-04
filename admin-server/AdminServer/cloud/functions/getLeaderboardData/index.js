@@ -9,7 +9,7 @@ const { requirePermission, logOperation } = require("./common/auth");
     | 参数名 | 类型 | 必选 | 说明 |
     | --- | --- | --- | --- |
     | appId | string | 是 | 应用ID |
-    | leaderboardId | string | 是 | 排行榜ID |
+    | leaderboardType | string | 是 | 排行榜Key |
     | limit | number | 否 | 返回记录数量(默认100) |
     | offset | number | 否 | 分页偏移量(默认0) |
     | includeUserInfo | boolean | 否 | 是否包含用户信息(默认true) |
@@ -17,7 +17,7 @@ const { requirePermission, logOperation } = require("./common/auth");
  * 测试数据：
     {
         "appId": "test_game_001",
-        "leaderboardId": "weekly_score",
+        "leaderboardType": "weekly_score",
         "limit": 50,
         "offset": 0,
         "includeUserInfo": true
@@ -32,7 +32,7 @@ const { requirePermission, logOperation } = require("./common/auth");
             "leaderboardInfo": {
                 "id": "leaderboard_id_123456",
                 "appId": "test_game_001",
-                "leaderboardId": "weekly_score",
+                "leaderboardType": "weekly_score",
                 "name": "周榜",
                 "description": "每周重置的积分排行榜",
                 "scoreType": "higher_better",
@@ -72,7 +72,7 @@ const { requirePermission, logOperation } = require("./common/auth");
 // 原始处理函数
 async function getLeaderboardDataHandler(event, context) {
     let appId = event.appId;
-    let leaderboardId = event.leaderboardId;
+    let leaderboardType = event.leaderboardType;
     let limit = event.limit || 100;
     let offset = event.offset || 0;
     let includeUserInfo = event.includeUserInfo !== false; // 默认包含用户信息
@@ -92,7 +92,7 @@ async function getLeaderboardDataHandler(event, context) {
         return ret;
     }
 
-    if (!leaderboardId || typeof leaderboardId !== "string") {
+    if (!leaderboardType || typeof leaderboardType !== "string") {
         ret.code = 4001;
         ret.msg = "排行榜ID不能为空";
         return ret;
@@ -113,7 +113,7 @@ async function getLeaderboardDataHandler(event, context) {
         const leaderboardList = await db.collection('leaderboard_config')
             .where({ 
                 appId: appId,
-                leaderboardId: leaderboardId 
+                leaderboardType: leaderboardType 
             })
             .get();
 
@@ -129,7 +129,7 @@ async function getLeaderboardDataHandler(event, context) {
         const totalCount = await db.collection('leaderboard_score')
             .where({ 
                 appId: appId,
-                leaderboardId: leaderboardId 
+                leaderboardType: leaderboardType 
             })
             .count();
 
@@ -140,7 +140,7 @@ async function getLeaderboardDataHandler(event, context) {
         let scoreQuery = db.collection('leaderboard_score')
             .where({ 
                 appId: appId,
-                leaderboardId: leaderboardId 
+                leaderboardType: leaderboardType 
             })
             .orderBy('score', orderBy)
             .orderBy('gmtCreate', 'asc') // 同分数时按时间排序
@@ -195,7 +195,7 @@ async function getLeaderboardDataHandler(event, context) {
             leaderboardInfo: {
                 id: leaderboardInfo._id,
                 appId: leaderboardInfo.appId,
-                leaderboardId: leaderboardInfo.leaderboardId,
+                leaderboardType: leaderboardInfo.leaderboardType,
                 name: leaderboardInfo.name,
                 description: leaderboardInfo.description,
                 scoreType: leaderboardInfo.scoreType,
@@ -218,7 +218,7 @@ async function getLeaderboardDataHandler(event, context) {
         if (shouldLog) {
             await logOperation(event.adminInfo, 'VIEW', 'LEADERBOARD_DATA', {
                 appId: appId,
-                leaderboardId: leaderboardId,
+                leaderboardType: leaderboardType,
                 limit: limit,
                 offset: offset,
                 currentAdmin: event.adminInfo.username

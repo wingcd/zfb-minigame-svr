@@ -17,6 +17,8 @@ const { requirePermission, logOperation } = require("./common/auth");
     | maxRank | number | 否 | 最大排名数量 |
     | enabled | boolean | 否 | 是否启用 |
     | category | string | 否 | 排行榜分类 |
+    | resetType | string | 否 | 重置类型 (permanent/daily/weekly/monthly/custom) |
+    | resetValue | number | 否 | 自定义重置间隔(小时)，仅resetType为custom时有效 |
  * 
  * 测试数据：
     {
@@ -27,7 +29,9 @@ const { requirePermission, logOperation } = require("./common/auth");
         "scoreType": "higher_better",
         "maxRank": 100,
         "enabled": true,
-        "category": "weekly"
+        "category": "weekly",
+        "resetType": "weekly",
+        "resetValue": null
     }
     
  * 返回结果：
@@ -66,6 +70,8 @@ async function createLeaderboardHandler(event, context) {
     let maxRank = event.maxRank || 100;
     let enabled = event.enabled !== false; // 默认启用
     let category = event.category || 'default';
+    let resetType = event.resetType || 'permanent';
+    let resetValue = event.resetValue || null;
 
     // 返回结果
     let ret = {
@@ -109,6 +115,21 @@ async function createLeaderboardHandler(event, context) {
         return ret;
     }
 
+    // 验证重置类型
+    const validResetTypes = ['permanent', 'daily', 'weekly', 'monthly', 'custom'];
+    if (!validResetTypes.includes(resetType)) {
+        ret.code = 4001;
+        ret.msg = "无效的重置类型";
+        return ret;
+    }
+
+    // 验证自定义重置间隔
+    if (resetType === 'custom' && (typeof resetValue !== 'number' || resetValue < 1)) {
+        ret.code = 4001;
+        ret.msg = "自定义重置类型需要提供有效的重置间隔(小时)";
+        return ret;
+    }
+
     const db = cloud.database();
 
     try {
@@ -137,6 +158,25 @@ async function createLeaderboardHandler(event, context) {
             return ret;
         }
 
+        // 计算重置时间
+        let resetTime = null;
+        if (resetType !== 'permanent') {
+            switch (resetType) {
+                case "daily":
+                    resetTime = moment().startOf('day').add(1, 'day').format("YYYY-MM-DD HH:mm:ss");
+                    break;
+                case "weekly":
+                    resetTime = moment().startOf('week').add(1, 'week').format("YYYY-MM-DD HH:mm:ss");
+                    break;
+                case "monthly":
+                    resetTime = moment().startOf('month').add(1, 'month').format("YYYY-MM-DD HH:mm:ss");
+                    break;
+                case "custom":
+                    resetTime = moment().add(resetValue, 'hours').format("YYYY-MM-DD HH:mm:ss");
+                    break;
+            }
+        }
+
         // 创建排行榜
         const newLeaderboard = {
             appId: appId,
@@ -147,6 +187,9 @@ async function createLeaderboardHandler(event, context) {
             maxRank: maxRank,
             enabled: enabled,
             category: category,
+            resetType: resetType,
+            resetValue: resetValue,
+            resetTime: resetTime,
             createTime: moment().format("YYYY-MM-DD HH:mm:ss"),
             createdBy: event.adminInfo.username,
             scoreCount: 0,
@@ -179,6 +222,9 @@ async function createLeaderboardHandler(event, context) {
             scoreType: scoreType,
             maxRank: maxRank,
             enabled: enabled,
+            resetType: resetType,
+            resetValue: resetValue,
+            resetTime: resetTime,
             createTime: newLeaderboard.createTime
         };
 

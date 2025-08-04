@@ -12,6 +12,8 @@ const { requirePermission, logOperation } = require("./common/auth");
  | leaderboardTypeList | array | 是 | 排行榜类型数组 |
  | updateStrategy | number | 否 | 更新策略 |
  | sort | number | 否 | 排序方式 |
+ | resetType | string | 否 | 重置类型：daily(每日)、weekly(每周)、monthly(每月)、custom(自定义)、permanent(永久) |
+ | resetValue | number | 否 | 自定义重置时间(小时)，仅在resetType为custom时有效 |
  */
 
 // 测试数据
@@ -37,6 +39,10 @@ async function leaderboardInitHandler(event, context) {
     let sort;
     //appId   
     let appId;
+    //重置类型
+    let resetType;
+    //重置间隔值
+    let resetValue;
 
     //返回结果
     let ret = {
@@ -76,6 +82,10 @@ async function leaderboardInitHandler(event, context) {
 
     sort = event.hasOwnProperty("sort") ? event.sort : 1;
 
+    resetType = event.hasOwnProperty("resetType") ? event.resetType : "permanent";
+    
+    resetValue = event.hasOwnProperty("resetValue") ? event.resetValue : 24;
+
     const db = cloud.database();
     //创建集合
     try {
@@ -114,6 +124,29 @@ async function leaderboardInitHandler(event, context) {
 
     try {
         let now = moment().format("YYYY-MM-DD HH:mm:ss");
+        
+        // 计算重置时间
+        let resetTime = null;
+        if (resetType !== 'permanent') {
+            switch (resetType) {
+                case "daily":
+                    resetTime = moment().startOf('day').add(1, 'day').format("YYYY-MM-DD HH:mm:ss");
+                    break;
+                case "weekly":
+                    resetTime = moment().startOf('week').add(1, 'week').format("YYYY-MM-DD HH:mm:ss");
+                    break;
+                case "monthly":
+                    resetTime = moment().startOf('month').add(1, 'month').format("YYYY-MM-DD HH:mm:ss");
+                    break;
+                case "custom":
+                    resetTime = moment().add(resetValue, 'hours').format("YYYY-MM-DD HH:mm:ss");
+                    break;
+                default:
+                    resetTime = null;
+                    break;
+            }
+        }
+        
         await db.collection("leaderboard_config")
             .add({
                 data: {
@@ -122,6 +155,9 @@ async function leaderboardInitHandler(event, context) {
                     "leaderboardType": leaderboardType,
                     "sort": sort,
                     "updateStrategy": updateStrategy,
+                    "resetType": resetType,
+                    "resetValue": resetValue,
+                    "resetTime": resetTime,
                     "gmtCreate": now,
                     "gmtModify": now,
                 }

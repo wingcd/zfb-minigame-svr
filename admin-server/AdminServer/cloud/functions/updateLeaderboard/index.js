@@ -13,6 +13,12 @@ const { requirePermission, logOperation } = require("./common/auth");
     | appId | string | 是 | 应用ID |
     | leaderboardType | string | 是 | 排行榜类型 |
     | name | string | 否 | 排行榜名称 |
+    | description | string | 否 | 排行榜描述 |
+    | scoreType | string | 否 | 分数类型 |
+    | maxRank | number | 否 | 最大排名数 |
+    | category | string | 否 | 排行榜分类 |
+    | resetType | string | 否 | 重置类型 |
+    | resetValue | number | 否 | 自定义重置间隔 |
     | updateStrategy | number | 否 | 更新策略 |
     | sort | number | 否 | 排序方式 |
     | enabled | boolean | 否 | 是否启用 |
@@ -40,6 +46,12 @@ async function updateLeaderboardHandler(event, context) {
     let appId = event.appId;
     let leaderboardType = event.leaderboardType;
     let name = event.name;
+    let description = event.description;
+    let scoreType = event.scoreType;
+    let maxRank = event.maxRank;
+    let category = event.category;
+    let resetType = event.resetType;
+    let resetValue = event.resetValue;
     let updateStrategy = event.updateStrategy;
     let sort = event.sort;
     let enabled = event.enabled;
@@ -91,6 +103,74 @@ async function updateLeaderboardHandler(event, context) {
 
         if (name !== undefined) {
             updateData.name = name;
+        }
+
+        if (description !== undefined) {
+            updateData.description = description;
+        }
+
+        if (scoreType !== undefined) {
+            const validScoreTypes = ['higher_better', 'lower_better'];
+            if (!validScoreTypes.includes(scoreType)) {
+                ret.code = 4001;
+                ret.msg = "无效的分数类型";
+                return ret;
+            }
+            updateData.scoreType = scoreType;
+        }
+
+        if (maxRank !== undefined) {
+            if (typeof maxRank !== 'number' || maxRank < 10 || maxRank > 10000) {
+                ret.code = 4001;
+                ret.msg = "最大排名数量必须在10-10000之间";
+                return ret;
+            }
+            updateData.maxRank = maxRank;
+        }
+
+        if (category !== undefined) {
+            updateData.category = category;
+        }
+
+        if (resetType !== undefined) {
+            const validResetTypes = ['permanent', 'daily', 'weekly', 'monthly', 'custom'];
+            if (!validResetTypes.includes(resetType)) {
+                ret.code = 4001;
+                ret.msg = "无效的重置类型";
+                return ret;
+            }
+            updateData.resetType = resetType;
+
+            // 重新计算重置时间
+            let resetTime = null;
+            if (resetType !== 'permanent') {
+                switch (resetType) {
+                    case "daily":
+                        resetTime = moment().startOf('day').add(1, 'day').format("YYYY-MM-DD HH:mm:ss");
+                        break;
+                    case "weekly":
+                        resetTime = moment().startOf('week').add(1, 'week').format("YYYY-MM-DD HH:mm:ss");
+                        break;
+                    case "monthly":
+                        resetTime = moment().startOf('month').add(1, 'month').format("YYYY-MM-DD HH:mm:ss");
+                        break;
+                    case "custom":
+                        if (resetValue && typeof resetValue === 'number' && resetValue > 0) {
+                            resetTime = moment().add(resetValue, 'hours').format("YYYY-MM-DD HH:mm:ss");
+                        }
+                        break;
+                }
+            }
+            updateData.resetTime = resetTime;
+        }
+
+        if (resetValue !== undefined) {
+            if (resetType === 'custom' && (typeof resetValue !== 'number' || resetValue < 1)) {
+                ret.code = 4001;
+                ret.msg = "自定义重置类型需要提供有效的重置间隔(小时)";
+                return ret;
+            }
+            updateData.resetValue = resetValue;
         }
 
         if (updateStrategy !== undefined) {

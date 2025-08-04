@@ -12,13 +12,13 @@
     <div class="search-section">
       <el-form :model="searchForm" :inline="true">
         <el-form-item label="应用名称:">
-          <el-input v-model="searchForm.appName" placeholder="输入应用名称" @keyup.enter="searchApps"></el-input>
+          <el-input v-model="searchForm.appName" placeholder="输入应用名称" @keyup.enter="searchApps" style="width: 180px"></el-input>
         </el-form-item>
         <el-form-item label="应用ID:">
-          <el-input v-model="searchForm.appId" placeholder="输入应用ID" @keyup.enter="searchApps"></el-input>
+          <el-input v-model="searchForm.appId" placeholder="输入应用ID" @keyup.enter="searchApps" style="width: 180px"></el-input>
         </el-form-item>
         <el-form-item label="平台:">
-          <el-select v-model="searchForm.platform" placeholder="选择平台" clearable>
+          <el-select v-model="searchForm.platform" placeholder="选择平台" clearable style="width: 180px">
             <el-option label="微信小程序" value="wechat"></el-option>
             <el-option label="支付宝小程序" value="alipay"></el-option>
             <el-option label="抖音小程序" value="douyin"></el-option>
@@ -151,8 +151,8 @@
         <el-form-item label="应用名称" prop="appName">
           <el-input v-model="appDialog.form.appName" placeholder="请输入应用名称"></el-input>
         </el-form-item>
-        <el-form-item label="平台" prop="platform">
-          <el-select v-model="appDialog.form.platform" placeholder="选择平台" style="width: 100%">
+        <el-form-item label="平台" prop="platform" style="width: 180px">
+          <el-select v-model="appDialog.form.platform" placeholder="选择平台">
             <el-option label="微信小程序" value="wechat"></el-option>
             <el-option label="支付宝小程序" value="alipay"></el-option>
             <el-option label="抖音小程序" value="douyin"></el-option>

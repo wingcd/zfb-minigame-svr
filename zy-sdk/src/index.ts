@@ -2,6 +2,7 @@ import { Env } from "./env";
 import { Http } from "./http";
 import { Leaderboard } from "./leaderboard";
 import { User } from "./user";
+import { Counter } from "./counter";
 
 type ZYSDKOptions = {
     appId: string,
@@ -23,6 +24,7 @@ class _ZYSDK {
 
     public readonly user = new User();
     public readonly leaderboard = new Leaderboard();
+    public readonly counter = new Counter();
 
     public init(opts: ZYSDKOptions) {
         Env.baseUrl = opts.baseUrl || 'https://env-00jxt0uhcb2h.dev-hz.cloudbasefunction.cn';

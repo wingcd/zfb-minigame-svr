@@ -6,6 +6,7 @@ import { ElMessage } from 'element-plus'
 const Dashboard = () => import('../views/Dashboard.vue')
 const AppManagement = () => import('../views/AppManagement.vue')
 const LeaderboardManagement = () => import('../views/LeaderboardManagement.vue')
+const CounterManagement = () => import('../views/CounterManagement.vue')
 const UserManagement = () => import('../views/UserManagement.vue')
 const AdminManagement = () => import('../views/AdminManagement.vue')
 const RoleManagement = () => import('../views/RoleManagement.vue')
@@ -52,6 +53,17 @@ const routes = [
       title: '排行榜管理',
       requiresAuth: true,
       icon: 'Trophy',
+      permissions: ['leaderboard_manage']
+    }
+  },
+  {
+    path: '/counters',
+    name: 'CounterManagement',
+    component: CounterManagement,
+    meta: { 
+      title: '计数器管理',
+      requiresAuth: true,
+      icon: 'Timer',
       permissions: ['leaderboard_manage']
     }
   },

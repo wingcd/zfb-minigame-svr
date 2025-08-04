@@ -123,6 +123,7 @@ import {
   DataBoard,
   Grid,
   Trophy,
+  Timer,
   UserFilled,
   Key
 } from '@element-plus/icons-vue'

@@ -35,6 +35,19 @@
         </el-table-column>
         <el-table-column prop="description" label="描述" width="150" show-overflow-tooltip>
         </el-table-column>
+        <el-table-column label="重置类型" width="120">
+          <template #default="scope">
+            <el-tag :type="getResetTypeTagType(scope.row.resetType)">
+              {{ getResetTypeText(scope.row.resetType) }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="下次重置" width="160" show-overflow-tooltip>
+          <template #default="scope">
+            <span v-if="scope.row.resetType === 'permanent'">永不重置</span>
+            <span v-else>{{ scope.row.resetTime || '未设置' }}</span>
+          </template>
+        </el-table-column>
         <el-table-column prop="maxRank" label="最大排名数" width="100">
         </el-table-column>
         <el-table-column prop="createTime" label="创建时间" width="160">
@@ -188,6 +201,27 @@
         <el-form-item label="分类" prop="category">
           <el-input v-model="configDialog.form.category" placeholder="排行榜分类"></el-input>
         </el-form-item>
+        <el-form-item label="重置类型" prop="resetType">
+          <el-select v-model="configDialog.form.resetType" style="width: 100%" @change="handleResetTypeChange">
+            <el-option label="永久保存" value="permanent"></el-option>
+            <el-option label="每日重置" value="daily"></el-option>
+            <el-option label="每周重置" value="weekly"></el-option>
+            <el-option label="每月重置" value="monthly"></el-option>
+            <el-option label="自定义间隔" value="custom"></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item 
+          v-if="configDialog.form.resetType === 'custom'" 
+          label="重置间隔(小时)" 
+          prop="resetValue">
+          <el-input-number 
+            v-model="configDialog.form.resetValue" 
+            :min="1" 
+            :max="8760" 
+            style="width: 100%"
+            placeholder="请输入重置间隔小时数">
+          </el-input-number>
+        </el-form-item>
         <el-form-item label="状态" prop="enabled">
           <el-switch v-model="configDialog.form.enabled"></el-switch>
         </el-form-item>
@@ -256,6 +290,8 @@ export default {
         scoreType: 'higher_better',
         maxRank: 100,
         category: 'default',
+        resetType: 'permanent',
+        resetValue: 24,
         enabled: true
       }
     })
@@ -434,6 +470,8 @@ export default {
         scoreType: 'higher_better',
         maxRank: 100,
         category: 'default',
+        resetType: 'permanent',
+        resetValue: 24,
         enabled: true
       }
       configDialog.visible = true
@@ -578,6 +616,36 @@ export default {
       return 'rank-normal'
     }
     
+    const getResetTypeText = (resetType) => {
+      const typeMap = {
+        'permanent': '永久保存',
+        'daily': '每日重置',
+        'weekly': '每周重置',
+        'monthly': '每月重置',
+        'custom': '自定义间隔'
+      }
+      return typeMap[resetType] || '未知'
+    }
+    
+    const getResetTypeTagType = (resetType) => {
+      const typeMap = {
+        'permanent': 'info',
+        'daily': 'success',
+        'weekly': 'warning',
+        'monthly': 'danger',
+        'custom': 'primary'
+      }
+      return typeMap[resetType] || 'info'
+    }
+    
+    const handleResetTypeChange = () => {
+      if (configDialog.form.resetType !== 'custom') {
+        configDialog.form.resetValue = null
+      } else {
+        configDialog.form.resetValue = 24
+      }
+    }
+    
     // 事件处理
     const handleAppChange = () => {
       selectedLeaderboard.value = null
@@ -622,6 +690,9 @@ export default {
       saveScore,
       deleteScore,
       getRankClass,
+      getResetTypeText,
+      getResetTypeTagType,
+      handleResetTypeChange,
       handleAppChange,
       refreshData
     }

@@ -125,6 +125,69 @@ exports.main = async (event, context) => {
     return ret;
   }
 
+  // 检查是否需要重置排行榜
+  let leaderboardConfig = queryList[0];
+  let now = moment();
+  
+  if (leaderboardConfig.resetTime && leaderboardConfig.resetType !== 'permanent') {
+    let resetTime = moment(leaderboardConfig.resetTime);
+    
+    if (now.isAfter(resetTime)) {
+      // 清空排行榜数据
+      try {
+        await db.collection('leaderboard_score')
+          .where({
+            appId: appId,
+            leaderboardType: leaderboardType
+          })
+          .remove();
+      } catch(e) {
+        ret.code = 5001;
+        ret.msg = "重置排行榜失败: " + e.message;
+        return ret;
+      }
+      
+      // 重新计算下次重置时间
+      let newResetTime = null;
+      if (leaderboardConfig.resetType) {
+        switch (leaderboardConfig.resetType) {
+          case "daily":
+            newResetTime = moment().startOf('day').add(1, 'day').format("YYYY-MM-DD HH:mm:ss");
+            break;
+          case "weekly":
+            newResetTime = moment().startOf('week').add(1, 'week').format("YYYY-MM-DD HH:mm:ss");
+            break;
+          case "monthly":
+            newResetTime = moment().startOf('month').add(1, 'month').format("YYYY-MM-DD HH:mm:ss");
+            break;
+          case "custom":
+            if (leaderboardConfig.resetValue) {
+              newResetTime = moment().add(leaderboardConfig.resetValue, 'hours').format("YYYY-MM-DD HH:mm:ss");
+            }
+            break;
+        }
+      }
+      
+      // 更新配置中的重置时间
+      if (newResetTime) {
+        try {
+          await db.collection('leaderboard_config')
+            .doc(leaderboardConfig._id)
+            .update({
+              data: {
+                resetTime: newResetTime,
+                gmtModify: now.format("YYYY-MM-DD HH:mm:ss")
+              }
+            });
+        } catch(e) {
+          ret.code = 5001;
+          ret.msg = "更新重置时间失败: " + e.message;
+          return ret;
+        }
+      }
+    }
+  }
+
   if(!id) {
     id = "";
     let recordList = await db.collection('leaderboard_score').where({
