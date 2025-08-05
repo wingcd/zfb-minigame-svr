@@ -52,18 +52,7 @@
       </el-form>
       
       <div class="login-footer">
-        <el-text type="info" size="small">
-          默认账户：admin / 123456
-        </el-text>
-        <br>
-        <el-button
-          type="text"
-          size="small"
-          @click="handleInitSystem"
-          :loading="initLoading"
-        >
-          {{ initLoading ? '初始化中...' : '初始化系统' }}
-        </el-button>
+      
       </div>
     </div>
   </div>
