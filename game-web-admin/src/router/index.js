@@ -12,6 +12,7 @@ const AdminManagement = () => import('../views/AdminManagement.vue')
 const RoleManagement = () => import('../views/RoleManagement.vue')
 const MailManagement = () => import('../views/MailManagement.vue')
 const MailTest = () => import('../views/MailTest.vue')
+const GameConfigManagement = () => import('../views/GameConfigManagement.vue')
 
 const Login = () => import('../views/Login.vue')
 
@@ -89,6 +90,20 @@ const routes = [
       requiresAuth: true,
       icon: 'UserFilled',
       permissions: ['user_manage'],
+      group: 'game',
+      groupTitle: '游戏管理',
+      groupIcon: 'Grid'
+    }
+  },
+  {
+    path: '/game-config',
+    name: 'GameConfigManagement',
+    component: GameConfigManagement,
+    meta: { 
+      title: '游戏配置',
+      requiresAuth: true,
+      icon: 'Setting',
+      permissions: ['app_manage'],
       group: 'game',
       groupTitle: '游戏管理',
       groupIcon: 'Grid'

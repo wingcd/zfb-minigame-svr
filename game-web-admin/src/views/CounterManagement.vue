@@ -113,11 +113,6 @@
                     <span class="value-number">{{ scope.row.value }}</span>
                   </template>
                 </el-table-column>
-                <el-table-column label="重置时间" width="180" align="center">
-                  <template #default="scope">
-                    {{ scope.row.resetTime ? formatDate(scope.row.resetTime) : '永不重置' }}
-                  </template>
-                </el-table-column>
                 <el-table-column label="操作" width="120" align="center">
                   <template #default="scope">
                     <el-button type="text" size="small" @click="editLocationCounter(props.row, scope.row)">

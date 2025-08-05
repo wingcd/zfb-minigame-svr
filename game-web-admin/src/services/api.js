@@ -50,32 +50,48 @@ api.interceptors.response.use(
     // 如果数据格式异常，返回标准错误格式
     return {
       code: 5001,
-      msg: '服务器返回数据格式异常',
+      msg: '数据格式错误',
       data: null
     }
   },
   error => {
-    console.error('API Error:', error)
-    console.error('Error Response:', error.response)
-    console.error('Error Config:', error.config)
+    console.error('Response Error:', error)
     
-    if (error.response?.status === 401) {
-      // token过期或无效，清除本地存储
+    // 处理网络错误
+    if (!error.response) {
+      return Promise.resolve({
+        code: 5001,
+        msg: '网络连接失败',
+        data: null
+      })
+    }
+    
+    // 处理HTTP错误
+    const { status, data } = error.response
+    
+    if (status === 401) {
+      // token失效，清除本地存储并跳转到登录页
       localStorage.removeItem('admin_token')
       localStorage.removeItem('admin_info')
-      
-      // 避免重复跳转，只有当前不在登录页时才跳转
-      if (window.location.pathname !== '/login') {
-        console.warn('Token已失效，即将跳转到登录页')
-        window.location.href = '/login'
-      }
+      window.location.href = '/login'
+      return Promise.resolve({
+        code: 4001,
+        msg: '登录已过期，请重新登录',
+        data: null
+      })
     }
-    return Promise.reject(error)
+    
+    // 返回服务器错误信息或默认错误
+    return Promise.resolve(data || {
+      code: status,
+      msg: `HTTP ${status} 错误`,
+      data: null
+    })
   }
 )
 
-// === 统一API调用 ===
-export const unifiedAPI = {  
+// 统一的API对象
+const unifiedAPI = {
   // 认证相关
   auth: {
     login: (params) => api.post('/admin/login', params),
@@ -169,6 +185,15 @@ export const unifiedAPI = {
     getStats: (params) => api.post('/mail/getStats', params || {}),
     getUserMails: (params) => api.post('/mail/getUserMails', params),
     initSystem: (params) => api.post('/mail/initSystem', params || {})
+  },
+  
+  // 游戏配置相关
+  gameConfig: {
+    getList: (params) => api.post('/gameConfig/getList', params || {}),
+    create: (data) => api.post('/gameConfig/create', data),
+    update: (data) => api.post('/gameConfig/update', data),
+    delete: (id) => api.post('/gameConfig/delete', { id }),
+    get: (params) => api.post('/gameConfig/get', params || {})
   }
 }
 
@@ -199,5 +224,79 @@ export const statsAPI = unifiedAPI.stats
 
 // 邮件管理API
 export const mailAPI = unifiedAPI.mail
+
+// 游戏配置管理API
+export const gameConfigAPI = unifiedAPI.gameConfig
+
+// === 便捷方法导出（向后兼容） ===
+export const login = unifiedAPI.auth.login
+export const verifyToken = unifiedAPI.auth.verifyToken
+export const logout = unifiedAPI.auth.logout
+
+export const getAdminList = unifiedAPI.admin.getList
+export const createAdmin = unifiedAPI.admin.create
+export const deleteAdmin = unifiedAPI.admin.delete
+export const resetAdminPassword = unifiedAPI.admin.resetPassword
+export const updateAdmin = unifiedAPI.admin.update
+export const initAdmin = unifiedAPI.admin.init
+
+export const getRoleList = unifiedAPI.role.getList
+export const getAllRoles = unifiedAPI.role.getAll
+export const createRole = unifiedAPI.role.create
+export const updateRole = unifiedAPI.role.update
+export const deleteRole = unifiedAPI.role.delete
+
+export const initApp = unifiedAPI.app.init
+export const queryApp = unifiedAPI.app.query
+export const getAppList = unifiedAPI.app.getAll
+export const updateApp = unifiedAPI.app.update
+export const deleteApp = unifiedAPI.app.delete
+export const createApp = unifiedAPI.app.create
+export const getAppDetail = unifiedAPI.app.getDetail
+
+export const getUserList = unifiedAPI.user.getAll
+export const banUser = unifiedAPI.user.ban
+export const unbanUser = unifiedAPI.user.unban
+export const deleteUser = unifiedAPI.user.delete
+export const getUserDetail = unifiedAPI.user.getDetail
+export const setUserDetail = unifiedAPI.user.setDetail
+export const getUserStats = unifiedAPI.user.getStats
+
+export const getLeaderboardList = unifiedAPI.leaderboard.getAll
+export const updateLeaderboard = unifiedAPI.leaderboard.update
+export const deleteLeaderboard = unifiedAPI.leaderboard.delete
+export const createLeaderboard = unifiedAPI.leaderboard.create
+export const getLeaderboardData = unifiedAPI.leaderboard.getData
+export const updateLeaderboardScore = unifiedAPI.leaderboard.updateScore
+export const deleteLeaderboardScore = unifiedAPI.leaderboard.deleteScore
+
+export const getCounterList = unifiedAPI.counter.getList
+export const createCounter = unifiedAPI.counter.create
+export const updateCounter = unifiedAPI.counter.update
+export const deleteCounter = unifiedAPI.counter.delete
+export const getCounterStats = unifiedAPI.counter.getAllStats
+
+export const getDashboardStats = unifiedAPI.stats.getDashboardStats
+export const getTopApps = unifiedAPI.stats.getTopApps
+export const getRecentActivity = unifiedAPI.stats.getRecentActivity
+export const getUserGrowth = unifiedAPI.stats.userGrowth
+export const getAppStats = unifiedAPI.stats.getAppStats
+export const getLeaderboardStats = unifiedAPI.stats.leaderboardStats
+
+export const getMailList = unifiedAPI.mail.getAll
+export const createMail = unifiedAPI.mail.create
+export const updateMail = unifiedAPI.mail.update
+export const deleteMail = unifiedAPI.mail.delete
+export const publishMail = unifiedAPI.mail.publish
+export const getMailStats = unifiedAPI.mail.getStats
+export const getUserMails = unifiedAPI.mail.getUserMails
+export const initMailSystem = unifiedAPI.mail.initSystem
+
+// 游戏配置相关便捷方法
+export const getGameConfigList = unifiedAPI.gameConfig.getList
+export const createGameConfig = unifiedAPI.gameConfig.create
+export const updateGameConfig = unifiedAPI.gameConfig.update
+export const deleteGameConfig = unifiedAPI.gameConfig.delete
+export const getGameConfig = unifiedAPI.gameConfig.get
 
 export default api
