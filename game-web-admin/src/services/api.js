@@ -26,6 +26,8 @@ api.interceptors.request.use(
       config.headers.authorization = `Bearer ${token}`
       if(typeof config.data === 'object') {
         config.data.token = token;
+      }else{
+        // request token
       }
       // console.log('Authorization header set:', config.headers.authorization.substring(0, 20) + '...')
     } else {
@@ -141,7 +143,7 @@ const unifiedAPI = {
     delete: (params) => api.post('/user/delete', params),    
     getDetail: (data) => api.post('/user/getDetail', data),
     setDetail: (data) => api.post('/user/setDetail', data),
-    getStats: (params) => api.post('/user/getStats', params),
+    getStats: (appId) => api.post('/user/getStats', {appId}),
   },
   
   // 排行榜相关
@@ -171,8 +173,7 @@ const unifiedAPI = {
     getRecentActivity: (params) => api.post('/stat/getRecentActivity', params || {}),    
     userGrowth: (params) => api.post('/stat/getUserGrowth', params || {}),
     getAppStats: (params) => api.post('/stat/getAppStats', params || {}),
-    leaderboardStats: (params) => api.post('/stat/getLeaderboardStats', params || {}),
-    getUserStats: (params) => api.post('/stat/getUserStats', params || {})
+    leaderboardStats: (params) => api.post('/stat/getLeaderboardStats', params || {})
   },
   
   // 邮件相关

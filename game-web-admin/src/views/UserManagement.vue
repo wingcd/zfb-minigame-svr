@@ -232,7 +232,7 @@ export default {
       if (!selectedAppId.value) return
       
       try {
-        const result = await statsAPI.getUserStats(selectedAppId.value)
+        const result = await userAPI.getStats(selectedAppId.value)
         if (result.code === 0) {
           userStats.value = result.data
         }
