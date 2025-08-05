@@ -1,0 +1,9 @@
+{
+  "name": "getAllCounterStats",
+  "version": "1.0.0",
+  "description": "获取应用的所有计数器统计信息",
+  "main": "index.js",
+  "dependencies": {
+    "@alipay/faas-server-sdk": "^1.0.0"
+  }
+} 

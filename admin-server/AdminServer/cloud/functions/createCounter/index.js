@@ -11,7 +11,8 @@ const { requirePermission } = require("./common/auth");
     | --- | --- | --- | --- |
     | appId | string | 是 | 应用ID |
     | key | string | 是 | 计数器key |
-    | resetType | string | 是 | 重置类型：daily(每日)、weekly(每周)、monthly(每月)、custom(自定义)、permanent(永久) |
+    | locations | array | 否 | 点位标识数组，如['default', 'beijing', 'shanghai']，默认为['default'] |
+    | resetType | string | 否 | 重置类型：daily(每日)、weekly(每周)、monthly(每月)、custom(自定义)、permanent(永久)，默认permanent |
     | resetValue | number | 否 | 自定义重置时间(小时)，仅在resetType为custom时有效 |
     | description | string | 否 | 计数器描述 |
  */
@@ -19,7 +20,8 @@ const { requirePermission } = require("./common/auth");
 async function createCounterHandler(event, context) {
     let appId = event.appId;
     let key = event.key;
-    let resetType = event.resetType;
+    let locations = event.locations || ['default'];
+    let resetType = event.resetType || 'permanent';
     let resetValue = event.resetValue;
     let description = event.description || '';
 
@@ -44,7 +46,22 @@ async function createCounterHandler(event, context) {
         return ret;
     }
 
-    if (!resetType || !["daily", "weekly", "monthly", "custom", "permanent"].includes(resetType)) {
+    if (!Array.isArray(locations) || locations.length === 0 || locations.length > 1000) {
+        ret.code = 4001;
+        ret.msg = "参数[locations]错误，必须是1-1000个点位的数组";
+        return ret;
+    }
+
+    // 验证点位标识格式
+    for (let location of locations) {
+        if (!location || typeof location !== "string" || location.length > 50) {
+            ret.code = 4001;
+            ret.msg = "点位标识必须是非空字符串且长度不超过50";
+            return ret;
+        }
+    }
+
+    if (!["daily", "weekly", "monthly", "custom", "permanent"].includes(resetType)) {
         ret.code = 4001;
         ret.msg = "参数[resetType]错误，支持的值：daily、weekly、monthly、custom、permanent";
         return ret;
@@ -88,9 +105,8 @@ async function createCounterHandler(event, context) {
         }
 
         let now = moment();
-        let resetTime = null;
-
         // 计算重置时间
+        let resetTime = null;
         if (resetType !== 'permanent') {
             switch (resetType) {
                 case "daily":
@@ -103,41 +119,57 @@ async function createCounterHandler(event, context) {
                     resetTime = moment().startOf('month').add(1, 'month');
                     break;
                 case "custom":
-                    resetTime = moment().add(resetValue, 'hours');
+                    if (resetValue) {
+                        resetTime = moment().add(resetValue, 'hours');
+                    }
                     break;
             }
         }
 
-        // 插入新记录
-        let insertData = {
-            "appId": appId,
+        // 构建点位数据
+        const locationsMap = {};
+        if (Array.isArray(locations)) {
+            // 多个点位
+            locations.forEach(loc => {
+                locationsMap[loc] = {
+                    value: 0
+                };
+            });
+        } else {
+            // 单个点位
+            locationsMap[locations] = {
+                value: 0
+            };
+        }
+
+        // 构建计数器数据
+        let counterData = {
             "key": key,
-            "value": 0,
+            "locations": locationsMap,
             "resetType": resetType,
-            "resetValue": resetValue || null,
+            "resetValue": resetValue,
             "description": description,
+            "resetTime": resetTime ? resetTime.format("YYYY-MM-DD HH:mm:ss") : null,
             "gmtCreate": now.format("YYYY-MM-DD HH:mm:ss"),
             "gmtModify": now.format("YYYY-MM-DD HH:mm:ss")
         };
 
-        if (resetTime) {
-            insertData.resetTime = resetTime.format("YYYY-MM-DD HH:mm:ss");
-        }
-
         await collection.add({
-            data: insertData
+            data: counterData
         });
 
         ret.data = {
             key: key,
-            value: 0,
+            locations: Object.keys(locationsMap),
+            locationsMap: locationsMap,
             resetType: resetType,
             resetValue: resetValue || null,
-            description: description,
-            resetTime: resetTime ? resetTime.format("YYYY-MM-DD HH:mm:ss") : null
+            resetTime: resetTime ? resetTime.format("YYYY-MM-DD HH:mm:ss") : null,
+            description: description
         };
 
     } catch (e) {
+        console.error('创建计数器失败:', e);
         ret.code = 5001;
         ret.msg = e.message;
     }
@@ -145,5 +177,5 @@ async function createCounterHandler(event, context) {
     return ret;
 }
 
-// 包装权限校验
-exports.main = requirePermission(createCounterHandler, ['leaderboard_manage']); 
+// 导出处理函数
+exports.main = requirePermission(createCounterHandler, ['counter_manage']); 

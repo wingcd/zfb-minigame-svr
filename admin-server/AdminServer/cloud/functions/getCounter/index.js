@@ -1,65 +1,21 @@
 const cloud = require("@alipay/faas-server-sdk");
 const moment = require("moment");
-const common = require("./common");
 
-// 请求参数
 /**
  * 函数：getCounter
- * 说明：获取计数器值
+ * 说明：获取计数器当前值（返回所有点位）
  * 参数：
     | 参数名 | 类型 | 必选 | 说明 |
     | --- | --- | --- | --- |
-    | appId | string | 是 | 小程序id |
-    | key | string | 否 | 计数器key，不传则获取该游戏所有计数器 |
-  * 测试数据
-    {
-        "appId": "6a5f86e9-d59b-4a2a-a63b-c06c772bcee9",
-        "key": "daily_challenge"
-    }
-    
-    * 返回结果
-    {
-        "code": 0,
-        "msg": "success",
-        "timestamp": 1603991234567,
-        "data": {
-            "key": "daily_challenge",
-            "value": 5,
-            "resetType": "daily",
-            "resetTime": "2023-10-29 00:00:00",
-            "timeToReset": 36000000
-        }
-    }
-    
-    或者获取所有计数器：
-    {
-        "code": 0,
-        "msg": "success",
-        "timestamp": 1603991234567,
-        "data": [
-            {
-                "key": "daily_challenge",
-                "value": 5,
-                "resetType": "daily",
-                "resetTime": "2023-10-29 00:00:00",
-                "timeToReset": 36000000
-            },
-            {
-                "key": "weekly_battle",
-                "value": 10,
-                "resetType": "weekly",
-                "resetTime": "2023-10-30 00:00:00",
-                "timeToReset": 122400000
-            }
-        ]
-    }
-*/
+    | appId | string | 是 | 应用ID |
+    | key | string | 是 | 计数器key |
+ */
 
-exports.main = async (event, context) => {
-    let appId;
-    let key = null;
+async function getCounterHandler(event, context) {
+    let appId = event.appId;
+    let key = event.key;
 
-    //返回结果
+    // 返回结果
     let ret = {
         "code": 0,
         "msg": "success",
@@ -68,134 +24,126 @@ exports.main = async (event, context) => {
     };
 
     // 参数校验
-    var parmErr = common.hash.CheckParams(event);
-    if(parmErr) {
-        ret.code = 4001;
-        ret.msg = "参数错误, error code:" + parmErr;
-        return ret;
-    }
-
-    //参数校验 字段存在 为空 类型
-    if (!event.hasOwnProperty("appId") || !event.appId || typeof event.appId != "string") {
+    if (!appId || typeof appId !== "string") {
         ret.code = 4001;
         ret.msg = "参数[appId]错误";
         return ret;
     }
 
-
-
-    if (!event.hasOwnProperty("key") || !event.key || typeof event.key != "string") {
+    if (!key || typeof key !== "string") {
         ret.code = 4001;
         ret.msg = "参数[key]错误";
         return ret;
     }
 
-    //请求参数
-    appId = event.appId.trim();
-    key = event.key.trim();
-
-    // 获取 cloud 环境中的 mongoDB 数据库对象
-    const db = cloud.database();
-    let counterTableName = `counter_${appId}`;
-
     try {
-        var collection = db.collection(counterTableName);
-    } catch (e) {
-        if (e.message == "not found collection") {
-            ret.code = 4004;
-            ret.msg = `计数器[${key}]不存在，请先在管理后台创建`;
-            return ret;
-        } else {
-            ret.code = 5001;
-            ret.msg = e.message;
-            return ret;
+        const db = cloud.database();
+        let counterTableName = `counter_${appId}`;
+        
+        // 确保计数器表存在
+        try {
+            var collection = db.collection(counterTableName);
+        } catch (e) {
+            if (e.message == "not found collection") {
+                ret.code = 4004;
+                ret.msg = `计数器表不存在，请先在管理后台创建计数器`;
+                return ret;
+            } else {
+                ret.code = 5001;
+                ret.msg = e.message;
+                return ret;
+            }
         }
-    }
-
-    try {
-        // 构建查询条件
-        let whereCondition = {
-            key: key
-        };
 
         // 查询计数器记录
         let queryList = await collection
-            .where(whereCondition)
+            .where({ key: key })
             .get();
 
         if (queryList.length === 0) {
-            // 如果查询特定key但不存在，返回错误
             ret.code = 4004;
             ret.msg = `计数器[${key}]不存在，请先在管理后台创建`;
             return ret;
         }
 
+        const record = queryList[0];
+        const locations = record.locations || {};
         let now = moment();
-        let results = [];
+        let shouldUpdateRecord = false;
+        let updateData = {
+            "gmtModify": now.format("YYYY-MM-DD HH:mm:ss")
+        };
 
-        // 处理每个计数器记录
-        for (let record of queryList) {
-            let currentValue = record.value || 0;
-            let shouldReset = false;
-            let timeToReset = null;
+        // 检查是否需要重置（所有点位共享同一个重置时间）
+        let resetTime = record.resetTime;
+        let timeToReset = null;
+        let currentResetTime = resetTime;
 
-            // 检查是否需要重置
-            if (record.resetTime) {
-                let resetTime = moment(record.resetTime);
-                timeToReset = resetTime.diff(now);
+        if (resetTime) {
+            let resetMoment = moment(resetTime);
+            timeToReset = resetMoment.diff(now);
+            
+            if (now.isAfter(resetMoment)) {
+                shouldUpdateRecord = true;
                 
-                if (now.isAfter(resetTime)) {
-                    shouldReset = true;
-                    currentValue = 0;
-                    
-                    // 重新计算下次重置时间
-                    let newResetTime = null;
-                    if (record.resetType && record.resetType !== 'permanent') {
-                        switch (record.resetType) {
-                            case "daily":
-                                newResetTime = moment().startOf('day').add(1, 'day');
-                                break;
-                            case "weekly":
-                                newResetTime = moment().startOf('week').add(1, 'week');
-                                break;
-                            case "monthly":
-                                newResetTime = moment().startOf('month').add(1, 'month');
-                                break;
-                            case "custom":
-                                if (record.resetValue) {
-                                    newResetTime = moment().add(record.resetValue, 'hours');
-                                }
-                                break;
-                        }
+                // 重新计算下次重置时间
+                let newResetTime = null;
+                if (record.resetType && record.resetType !== 'permanent') {
+                    switch (record.resetType) {
+                        case "daily":
+                            newResetTime = moment().startOf('day').add(1, 'day');
+                            break;
+                        case "weekly":
+                            newResetTime = moment().startOf('week').add(1, 'week');
+                            break;
+                        case "monthly":
+                            newResetTime = moment().startOf('month').add(1, 'month');
+                            break;
+                        case "custom":
+                            if (record.resetValue) {
+                                newResetTime = moment().add(record.resetValue, 'hours');
+                            }
+                            break;
                     }
+                }
 
-                    // 更新数据库中的记录
-                    let updateData = {
-                        "value": 0,
-                        "gmtModify": now.format("YYYY-MM-DD HH:mm:ss")
-                    };
+                if (newResetTime) {
+                    updateData.resetTime = newResetTime.format("YYYY-MM-DD HH:mm:ss");
+                    timeToReset = newResetTime.diff(now);
+                    currentResetTime = newResetTime.format("YYYY-MM-DD HH:mm:ss");
+                }
 
-                    if (newResetTime) {
-                        updateData.resetTime = newResetTime.format("YYYY-MM-DD HH:mm:ss");
-                        timeToReset = newResetTime.diff(now);
-                    }
-
-                    await collection.doc(record._id).update({
-                        data: updateData
-                    });
+                // 重置所有点位的值
+                for (let locationKey of Object.keys(locations)) {
+                    updateData[`locations.${locationKey}.value`] = 0;
                 }
             }
-
-            let counterData = {
-                key: record.key,
-                value: currentValue
-            };
-
-            results.push(counterData);
         }
 
-        // 返回单个对象
-        ret.data = results[0];
+        // 如果需要更新记录，执行更新
+        if (shouldUpdateRecord) {
+            await collection.doc(record._id).update({
+                data: updateData
+            });
+        }
+
+        // 构建返回数据
+        let resultLocations = {};
+        for (let [locationKey, locationData] of Object.entries(locations)) {
+            resultLocations[locationKey] = {
+                value: shouldUpdateRecord ? 0 : (locationData.value || 0)
+            };
+        }
+
+        ret.data = {
+            key: record.key,
+            locations: resultLocations,
+            resetType: record.resetType || 'permanent',
+            resetValue: record.resetValue || null,
+            resetTime: currentResetTime,
+            timeToReset: timeToReset,
+            description: record.description || ''
+        };
 
     } catch (e) {
         ret.code = 5001;
@@ -204,4 +152,7 @@ exports.main = async (event, context) => {
     }
 
     return ret;
-}; 
+};
+
+// 导出处理函数
+exports.main = getCounterHandler; 

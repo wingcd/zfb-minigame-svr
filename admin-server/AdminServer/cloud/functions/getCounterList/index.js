@@ -85,17 +85,26 @@ async function getCounterListHandler(event, context) {
             .get();
 
         // 格式化数据
-        const list = queryList.map(item => ({
-            _id: item._id,
-            key: item.key,
-            value: item.value || 0,
-            resetType: item.resetType || 'permanent',
-            resetValue: item.resetValue || null,
-            resetTime: item.resetTime || null,
-            description: item.description || '',
-            gmtCreate: item.gmtCreate,
-            gmtModify: item.gmtModify
-        }));
+        const list = queryList.map(item => {
+            // 计算总值和点位数量
+            const locations = item.locations || {};
+            const locationKeys = Object.keys(locations);
+            const totalValue = locationKeys.reduce((sum, key) => sum + (locations[key].value || 0), 0);
+            
+            return {
+                _id: item._id,
+                key: item.key,
+                locations: locations,
+                locationCount: locationKeys.length,
+                totalValue: totalValue,
+                resetType: item.resetType || 'permanent',
+                resetValue: item.resetValue || null,
+                resetTime: item.resetTime || null,
+                description: item.description || '',
+                gmtCreate: item.gmtCreate,
+                gmtModify: item.gmtModify
+            };
+        });
 
         ret.data = {
             list: list,
@@ -112,5 +121,5 @@ async function getCounterListHandler(event, context) {
     return ret;
 }
 
-// 包装权限校验
-exports.main = requirePermission(getCounterListHandler, ['leaderboard_manage']); 
+// 导出处理函数
+exports.main = requirePermission(getCounterListHandler, ['counter_manage']); 

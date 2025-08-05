@@ -145,6 +145,7 @@ export const unifiedAPI = {
     create: (data) => api.post('/counter/create', data),
     update: (data) => api.post('/counter/update', data),
     delete: (params) => api.post('/counter/delete', params),
+    getAllStats: (params) => api.post('/counter/getAllStats', params),
   },
   
   // 统计相关

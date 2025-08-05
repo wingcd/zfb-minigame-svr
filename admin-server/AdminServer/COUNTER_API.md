@@ -6,18 +6,22 @@
 
 **注意：计数器是绑定到游戏(appId)的，所有玩家共享同一个计数器，不是每个玩家独立的计数器。**
 
+**新增功能：现在支持点位参数(location)，一个计数器可以记录不同点位的值，可用于地区排序、服务器排行等功能。**
+
 ## 功能特点
 
 - **灵活计数**: 支持任意key的计数器
+- **点位支持**: 支持为同一计数器设置不同的点位，实现地区排序等功能
 - **自动重置**: 支持5种重置类型
 - **原子操作**: 增加操作是原子性的，确保并发安全
-- **批量查询**: 支持获取单个或所有计数器
+- **批量查询**: 支持获取单个点位或所有点位的计数器值
+- **排行榜功能**: 提供便捷的地区排行榜API
 
 ## 云函数接口
 
 ### 1. incrementCounter - 增加计数器
 
-**功能**: 增加指定key的计数器值
+**功能**: 增加指定key和点位的计数器值
 
 **参数**:
 
@@ -26,6 +30,7 @@
 | appId | string | 是 | 小程序id |
 | key | string | 是 | 计数器key |
 | increment | number | 否 | 增加的数量，默认1 |
+| location | string | 否 | 点位参数，用于地区排序等，默认为"default" |
 | resetType | string | 否 | 重置类型：daily(每日)、weekly(每周)、monthly(每月)、custom(自定义)、permanent(永久) |
 | resetValue | number | 否 | 自定义重置时间(小时)，仅在resetType为custom时有效 |
 
@@ -35,6 +40,7 @@
     "appId": "6a5f86e9-d59b-4a2a-a63b-c06c772bcee9",
     "key": "daily_challenge",
     "increment": 1,
+    "location": "beijing",
     "resetType": "daily"
 }
 ```
@@ -47,6 +53,7 @@
     "timestamp": 1603991234567,
     "data": {
         "key": "daily_challenge",
+        "location": "beijing",
         "currentValue": 5,
         "resetTime": "2023-10-29 00:00:00",
         "wasReset": false
@@ -56,14 +63,14 @@
 
 ### 2. getCounter - 获取计数器值
 
-**功能**: 获取指定key的计数器值，或获取游戏所有计数器
+**功能**: 获取指定key的计数器所有点位的值
 
 **参数**:
 
 | 参数名 | 类型 | 必选 | 说明 |
 | --- | --- | --- | --- |
 | appId | string | 是 | 小程序id |
-| key | string | 否 | 计数器key，不传则获取该游戏所有计数器 |
+| key | string | 是 | 计数器key |
 
 **请求示例**:
 ```json
@@ -73,7 +80,7 @@
 }
 ```
 
-**返回示例（单个计数器）**:
+**返回示例**:
 ```json
 {
     "code": 0,
@@ -81,157 +88,142 @@
     "timestamp": 1603991234567,
     "data": {
         "key": "daily_challenge",
-        "value": 5,
+        "locations": {
+            "beijing": {
+                "value": 5
+            },
+            "shanghai": {
+                "value": 10
+            },
+            "default": {
+                "value": 15
+            }
+        },
         "resetType": "daily",
+        "resetValue": null,
         "resetTime": "2023-10-29 00:00:00",
         "timeToReset": 36000000,
-        "lastModified": "2023-10-28 14:30:00"
+        "description": "每日挑战计数器"
     }
 }
 ```
 
-**返回示例（所有计数器）**:
+### 3. createCounter - 创建计数器（管理员权限）
+
+**功能**: 创建新的计数器
+
+**参数**:
+
+| 参数名 | 类型 | 必选 | 说明 |
+| --- | --- | --- | --- |
+| appId | string | 是 | 应用ID |
+| key | string | 是 | 计数器key |
+| resetType | string | 是 | 重置类型：daily、weekly、monthly、custom、permanent |
+| resetValue | number | 否 | 自定义重置时间(小时)，仅在resetType为custom时有效 |
+| description | string | 否 | 计数器描述 |
+| location | string | 否 | 点位参数，默认为"default" |
+
+**请求示例**:
 ```json
 {
-    "code": 0,
-    "msg": "success",
-    "timestamp": 1603991234567,
-    "data": [
-        {
-            "key": "daily_challenge",
-            "value": 5,
-            "resetType": "daily",
-            "resetTime": "2023-10-29 00:00:00",
-            "timeToReset": 36000000,
-            "lastModified": "2023-10-28 14:30:00"
-        },
-        {
-            "key": "weekly_battle",
-            "value": 10,
-            "resetType": "weekly",
-            "resetTime": "2023-10-30 00:00:00",
-            "timeToReset": 122400000,
-            "lastModified": "2023-10-28 10:15:00"
-        }
-    ]
+    "appId": "6a5f86e9-d59b-4a2a-a63b-c06c772bcee9",
+    "key": "server_events",
+    "resetType": "daily",
+    "description": "全服每日活动次数",
+    "location": "default"
 }
 ```
 
-## ZY-SDK 接口
+## SDK 接口使用
 
-### 基础接口
+### 基础使用
 
-#### incrementCounter(key, increment?, resetType?, resetValue?)
-
-增加计数器值
-
-**参数**:
-- `key: string` - 计数器key
-- `increment: number = 1` - 增加的数量，默认1
-- `resetType?: 'daily' | 'weekly' | 'monthly' | 'custom' | 'permanent'` - 重置类型
-- `resetValue?: number` - 自定义重置时间(小时)
-
-**示例**:
 ```typescript
-// 增加每日挑战次数
-const result = await ZYSDK.counter.incrementCounter('daily_challenge', 1, 'daily');
+// 增加计数器（默认点位）
+await ZYSDK.counter.incrementCounter('daily_task', 1);
 
-// 增加自定义计数器（48小时后重置）
-const result = await ZYSDK.counter.incrementCounter('event_counter', 1, 'custom', 48);
+// 增加计数器（指定点位）
+await ZYSDK.counter.incrementCounter('daily_task', 1, 'beijing');
+
+// 获取指定点位的计数器值
+const counter = await ZYSDK.counter.getCounter('daily_task', 'beijing');
+
+// 获取所有点位的计数器值
+const allCounters = await ZYSDK.counter.getCounter('daily_task');
+
+// 获取地区排行榜
+const ranking = await ZYSDK.counter.getLocationRanking('daily_task');
 ```
 
-#### getCounter(key?)
+### 地区排行榜功能
 
-获取计数器值
+SDK提供了便捷的地区排行榜API：
 
-**参数**:
-- `key?: string` - 计数器key，不传则获取所有计数器
-
-**示例**:
 ```typescript
-// 获取单个计数器
-const result = await ZYSDK.counter.getCounter('daily_challenge');
+// 获取地区排行榜
+const ranking = await ZYSDK.counter.getLocationRanking('server_activity');
 
-// 获取所有计数器
-const allCounters = await ZYSDK.counter.getCounter();
+console.log(ranking.data);
+// 输出:
+// [
+//   { key: 'server_activity', location: 'shanghai', value: 150, rank: 1 },
+//   { key: 'server_activity', location: 'beijing', value: 120, rank: 2 },
+//   { key: 'server_activity', location: 'guangzhou', value: 100, rank: 3 }
+// ]
 ```
 
-### 便捷接口
+## 使用场景示例
 
-#### incrementDailyChallenge(key?, increment?)
+### 1. 地区活动竞赛
 
-增加每日挑战次数
-
-**示例**:
 ```typescript
-// 使用默认key 'daily_challenge'
-await ZYSDK.counter.incrementDailyChallenge();
+// 各地区参与活动
+await ZYSDK.counter.incrementCounter('region_event', 5, 'beijing');
+await ZYSDK.counter.incrementCounter('region_event', 3, 'shanghai');
+await ZYSDK.counter.incrementCounter('region_event', 8, 'guangzhou');
 
-// 使用自定义key
-await ZYSDK.counter.incrementDailyChallenge('custom_daily', 2);
+// 获取地区排行榜
+const ranking = await ZYSDK.counter.getLocationRanking('region_event');
+console.log('地区活动排行榜:', ranking.data);
 ```
 
-#### incrementWeeklyBattle(key?, increment?)
+### 2. 服务器统计
 
-增加每周战斗次数
-
-**示例**:
 ```typescript
-// 使用默认key 'weekly_battle'
-await ZYSDK.counter.incrementWeeklyBattle();
+// 不同服务器的在线玩家数量统计
+await ZYSDK.counter.incrementCounter('online_players', 1, 'server_01');
+await ZYSDK.counter.incrementCounter('online_players', 1, 'server_02');
+
+// 获取所有服务器统计
+const serverStats = await ZYSDK.counter.getCounter('online_players');
+console.log('服务器统计:', serverStats.data);
 ```
 
-#### incrementScore(key?, increment?)
+### 3. 传统全服计数器（向后兼容）
 
-增加积分（永久累积）
-
-**示例**:
 ```typescript
-// 使用默认key 'total_score'
-await ZYSDK.counter.incrementScore('total_score', 100);
-```
+// 不传location参数，使用默认点位
+await ZYSDK.counter.incrementCounter('global_events', 1);
 
-#### getDailyChallenge(key?)
-
-获取每日挑战次数
-
-**示例**:
-```typescript
-const dailyCount = await ZYSDK.counter.getDailyChallenge();
-```
-
-#### getWeeklyBattle(key?)
-
-获取每周战斗次数
-
-#### getTotalScore(key?)
-
-获取总积分
-
-#### getAllCounters()
-
-获取游戏所有计数器
-
-**示例**:
-```typescript
-const allCounters = await ZYSDK.counter.getAllCounters();
+// 获取全服统计
+const globalCounter = await ZYSDK.counter.getCounter('global_events', 'default');
 ```
 
 ## 重置类型说明
 
 ### daily（每日重置）
-- **描述**: 每天0点自动重置计数器
-- **适用场景**: 每日任务、日常挑战等
-- **重置时间**: 每日 00:00:00
+- **描述**: 每天 00:00:00 重置计数器
+- **适用场景**: 每日任务、每日活动次数等
+- **重置时间**: 每天 00:00:00
 
 ### weekly（每周重置）
-- **描述**: 每周一0点自动重置计数器
-- **适用场景**: 周任务、周赛等
+- **描述**: 每周一 00:00:00 重置计数器
+- **适用场景**: 周常任务、周赛等
 - **重置时间**: 每周一 00:00:00
 
 ### monthly（每月重置）
-- **描述**: 每月1号0点自动重置计数器
-- **适用场景**: 月任务、月度活动等
+- **描述**: 每月1号 00:00:00 重置计数器
+- **适用场景**: 月度活动、月度统计等
 - **重置时间**: 每月1号 00:00:00
 
 ### custom（自定义重置）
@@ -244,57 +236,6 @@ const allCounters = await ZYSDK.counter.getAllCounters();
 - **适用场景**: 总积分、历史统计等
 - **特点**: 数据会一直累积
 
-## 使用场景示例
-
-### 1. 每日任务系统
-
-```typescript
-// 初始化SDK
-ZYSDK.init({
-    appId: 'your-app-id'
-});
-
-// 完成每日任务时增加次数
-await ZYSDK.counter.incrementDailyChallenge('daily_task', 1);
-
-// 获取今日完成次数
-const taskCount = await ZYSDK.counter.getDailyChallenge('daily_task');
-console.log(`今日已完成任务: ${taskCount.data.value} 次`);
-```
-
-### 2. 游戏积分系统
-
-```typescript
-// 获得积分时增加
-await ZYSDK.counter.incrementScore('game_score', 50);
-
-// 查看总积分
-const totalScore = await ZYSDK.counter.getTotalScore('game_score');
-console.log(`总积分: ${totalScore.data.value}`);
-```
-
-### 3. 限时活动计数
-
-```typescript
-// 参与活动时增加计数（24小时后重置）
-await ZYSDK.counter.incrementCounter('event_2023', 1, 'custom', 24);
-
-// 查看活动参与次数
-const eventCount = await ZYSDK.counter.getCounter('event_2023');
-console.log(`活动参与次数: ${eventCount.data.value}`);
-console.log(`剩余时间: ${eventCount.data.timeToReset}ms`);
-```
-
-### 4. 多计数器管理
-
-```typescript
-// 获取玩家所有计数器
-const allCounters = await ZYSDK.counter.getAllCounters();
-allCounters.data.forEach(counter => {
-    console.log(`${counter.key}: ${counter.value} (${counter.resetType})`);
-});
-```
-
 ## 数据存储结构
 
 计数器数据存储在MongoDB集合中，集合名格式为：`counter_{appId}`
@@ -303,32 +244,24 @@ allCounters.data.forEach(counter => {
 ```json
 {
     "_id": "记录ID",
-    "appId": "小程序ID",
+    "appId": "应用ID",
     "key": "计数器key",
-    "value": "当前计数值",
-    "resetType": "重置类型",
-    "resetValue": "自定义重置时间（小时）",
-    "resetTime": "下次重置时间",
-    "gmtCreate": "创建时间",
-    "gmtModify": "修改时间"
+    "location": "点位标识",
+    "value": 100,
+    "resetType": "daily",
+    "resetValue": null,
+    "resetTime": "2023-10-29 00:00:00",
+    "description": "计数器描述",
+    "gmtCreate": "2023-10-28 10:30:00",
+    "gmtModify": "2023-10-28 15:45:00"
 }
 ```
 
 ## 注意事项
 
-1. **自动重置**：当玩家调用任何接口时，系统会自动检查是否到达重置时间，如果到达则自动重置计数器
-2. **时区处理**：所有时间处理基于服务器时区
-3. **原子操作**：增加操作是原子性的，确保并发安全
-4. **性能考虑**：建议为计数器集合创建复合索引：`{appId: 1, key: 1}`
-5. **错误处理**：接口包含完整的参数校验和错误处理机制
-
-## 错误码说明
-
-- **4001**: 参数错误
-- **5001**: 数据库操作失败
-
-## 版本历史
-
-- **v1.0**: 初始版本，支持基础计数和5种重置类型
-- 支持云函数和SDK接口
-- 兼容现有系统架构 
+1. **点位参数**: location参数用于区分同一计数器的不同点位，如地区、服务器等
+2. **向后兼容**: 不传location参数时默认使用"default"点位，保持向后兼容
+3. **自动创建**: 当访问不存在的location时，系统会自动基于默认配置创建新的location记录
+4. **原子操作**: 所有计数器操作都是原子性的，确保并发安全
+5. **重置机制**: 每个location的重置时间是独立计算的
+6. **排行榜**: 可以使用getLocationRanking方法快速获取地区排行榜 
