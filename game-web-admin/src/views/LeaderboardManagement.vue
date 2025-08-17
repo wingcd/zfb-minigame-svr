@@ -40,6 +40,20 @@
         </el-table-column>
         <el-table-column prop="maxRank" label="最大排名数" width="100">
         </el-table-column>
+        <el-table-column label="更新策略" width="120">
+          <template #default="scope">
+            <el-tag :type="getUpdateStrategyTagType(scope.row.updateStrategy)">
+              {{ getUpdateStrategyText(scope.row.updateStrategy) }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column label="排序方式" width="100">
+          <template #default="scope">
+            <el-tag :type="scope.row.sort === 1 ? 'success' : 'warning'">
+              {{ scope.row.sort === 1 ? '降序' : '升序' }}
+            </el-tag>
+          </template>
+        </el-table-column>
         <el-table-column prop="createTime" label="创建时间" width="160">
         </el-table-column>
         <el-table-column label="状态" width="100">
@@ -212,6 +226,19 @@
             placeholder="请输入重置间隔小时数">
           </el-input-number>
         </el-form-item>
+        <el-form-item label="更新策略" prop="updateStrategy">
+          <el-select v-model="configDialog.form.updateStrategy" style="width: 100%">
+            <el-option label="最高分" :value="0"></el-option>
+            <el-option label="最新分" :value="1"></el-option>
+            <el-option label="累计分" :value="2"></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="排序方式" prop="sort">
+          <el-select v-model="configDialog.form.sort" style="width: 100%">
+            <el-option label="降序" :value="1"></el-option>
+            <el-option label="升序" :value="0"></el-option>
+          </el-select>
+        </el-form-item>
         <el-form-item label="状态" prop="enabled">
           <el-switch v-model="configDialog.form.enabled"></el-switch>
         </el-form-item>
@@ -281,7 +308,9 @@ export default {
         category: 'default',
         resetType: 'permanent',
         resetValue: 24,
-        enabled: true
+        enabled: true,
+        updateStrategy: 0,
+        sort: 1
       }
     })
     
@@ -307,6 +336,12 @@ export default {
       maxRank: [
         { required: true, message: '请输入最大排名数', trigger: 'blur' },
         { type: 'number', min: 10, max: 10000, message: '最大排名数必须在10-10000之间', trigger: 'blur' }
+      ],
+      updateStrategy: [
+        { required: true, message: '请选择更新策略', trigger: 'change' }
+      ],
+      sort: [
+        { required: true, message: '请选择排序方式', trigger: 'change' }
       ]
     }
     
@@ -432,7 +467,9 @@ export default {
         category: 'default',
         resetType: 'permanent',
         resetValue: 24,
-        enabled: true
+        enabled: true,
+        updateStrategy: 0,
+        sort: 1
       }
       configDialog.visible = true
     }
@@ -597,6 +634,24 @@ export default {
       }
       return typeMap[resetType] || 'info'
     }
+
+    const getUpdateStrategyText = (strategy) => {
+      const typeMap = {
+        0: '最高分',
+        1: '最新分',
+        2: '累计分'
+      }
+      return typeMap[strategy] || '未知'
+    }
+
+    const getUpdateStrategyTagType = (strategy) => {
+      const typeMap = {
+        0: 'success',
+        1: 'warning', 
+        2: 'info'
+      }
+      return typeMap[strategy] || 'info'
+    }
     
     const handleResetTypeChange = () => {
       if (configDialog.form.resetType !== 'custom') {
@@ -657,7 +712,9 @@ export default {
       getResetTypeTagType,
       handleResetTypeChange,
       refreshData,
-      getAppName
+      getAppName,
+      getUpdateStrategyText,
+      getUpdateStrategyTagType
     }
   }
 }

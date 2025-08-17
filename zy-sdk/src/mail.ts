@@ -1,6 +1,25 @@
 import { Http } from "./http";
 import { Env } from "./env";
 
+export enum MailType {
+    System = 'system',
+    Notice = 'notice',
+    Reward = 'reward',
+}
+
+export enum MailStatus {
+    Unread = 'unread',
+    Read = 'read',
+    Received = 'received',
+    Deleted = 'deleted',
+}
+
+export enum MailAction {
+    Read = 'read',
+    Receive = 'receive',
+    Delete = 'delete',
+}
+
 export interface MailReward {
     type: string;
     name: string;
@@ -12,22 +31,21 @@ export interface MailInfo {
     mailId: string;
     title: string;
     content: string;
-    type: 'system' | 'notice' | 'reward';
+    type: MailType;
     rewards?: MailReward[];
     publishTime: string;
     expireTime?: string;
     isRead: boolean;
     isReceived: boolean;
     isDeleted: boolean;
-    status: 'unread' | 'read' | 'received' | 'deleted';
+    status: MailStatus;
 }
 
 export interface GetMailsParams {
-    openId: string;
     page?: number;
     pageSize?: number;
-    type?: 'system' | 'notice' | 'reward';
-    status?: 'unread' | 'read' | 'received' | 'deleted';
+    type?: MailType;
+    status?: MailStatus;
 }
 
 export interface GetMailsResponse {
@@ -48,7 +66,7 @@ export interface UpdateMailStatusParams {
     appId: string;
     playerId: string;
     mailId: string;
-    action: 'read' | 'receive' | 'delete';
+    action: MailAction;
 }
 
 export interface UpdateMailStatusResponse {
@@ -81,18 +99,17 @@ export class Mail {
      * @returns 邮件列表响应
      */
     public async getMails(params: GetMailsParams): Promise<GetMailsResponse> {
-        const queryParams = [
-            { key: 'appId', value: Env.appId },
-            { key: 'openId', value: params.openId },
-            { key: 'page', value: params.page || 1 },
-            { key: 'pageSize', value: params.pageSize || 20 }
-        ];
+        const queryParams: any = {
+            ...Env.getCommonParams(),
+            page: params.page || 1,
+            pageSize: params.pageSize || 20
+        };
 
         if (params.type) {
-            queryParams.push({ key: 'type', value: params.type });
+            queryParams.type = params.type;
         }
         if (params.status) {
-            queryParams.push({ key: 'status', value: params.status });
+            queryParams.status = params.status;
         }
 
         return Http.inst.get('/mail/getUserMails', ...queryParams) as Promise<GetMailsResponse>;
@@ -105,8 +122,7 @@ export class Mail {
      */
     public async updateStatus(params: UpdateMailStatusParams): Promise<UpdateMailStatusResponse> {
         const requestData = {
-            appId: Env.appId,
-            playerId: params.playerId,
+            ...Env.getCommonParams(),
             mailId: params.mailId,
             action: params.action
         };
@@ -122,10 +138,9 @@ export class Mail {
      */
     public async readMail(mailId: string): Promise<UpdateMailStatusResponse> {
         return this.updateStatus({
-            appId: Env.appId,
-            playerId: Env.playerId,
+            ...Env.getCommonParams(),
             mailId,
-            action: 'read'
+            action: MailAction.Read
         });
     }
 
@@ -136,10 +151,9 @@ export class Mail {
      */
     public async receiveMail(mailId: string): Promise<UpdateMailStatusResponse> {
         return this.updateStatus({
-            appId: Env.appId,
-            playerId: Env.playerId,
+            ...Env.getCommonParams(),
             mailId,
-            action: 'receive'
+            action: MailAction.Receive
         });
     }
 
@@ -151,10 +165,9 @@ export class Mail {
      */
     public async deleteMail(mailId: string): Promise<UpdateMailStatusResponse> {
         return this.updateStatus({
-            appId: Env.appId,
-            playerId: Env.playerId,
+            ...Env.getCommonParams(),
             mailId,
-            action: 'delete'
+            action: MailAction.Delete
         });
     }
 } 

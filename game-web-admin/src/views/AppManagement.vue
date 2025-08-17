@@ -151,7 +151,7 @@
         <el-form-item label="应用名称" prop="appName">
           <el-input v-model="appDialog.form.appName" placeholder="请输入应用名称"></el-input>
         </el-form-item>
-        <el-form-item label="平台" prop="platform" style="width: 180px">
+        <el-form-item label="平台" prop="platform" style="width: 300px">
           <el-select v-model="appDialog.form.platform" placeholder="选择平台">
             <el-option label="微信小程序" value="wechat"></el-option>
             <el-option label="支付宝小程序" value="alipay"></el-option>
@@ -267,6 +267,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { appAPI, statsAPI } from '../services/api.js'
+import { getAppList as refreshGlobalAppList } from '../utils/appStore.js'
 
 export default {
   name: 'AppManagement',
@@ -404,6 +405,8 @@ export default {
           appDialog.visible = false
           await getAppList()
           await getAppStats()
+          // 刷新全局应用列表
+          await refreshGlobalAppList()
         } else {
           ElMessage.error(result.msg || '操作失败')
         }
@@ -427,6 +430,8 @@ export default {
         if (result.code === 0) {
           ElMessage.success(`${action}成功`)
           await getAppList()
+          // 刷新全局应用列表
+          await refreshGlobalAppList()
         } else {
           ElMessage.error(result.msg || `${action}失败`)
         }
@@ -455,6 +460,8 @@ export default {
           ElMessage.success('删除成功')
           await getAppList()
           await getAppStats()
+          // 刷新全局应用列表
+          await refreshGlobalAppList()
         } else {
           ElMessage.error(result.msg || '删除失败')
         }

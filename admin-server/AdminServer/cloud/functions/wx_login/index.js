@@ -127,6 +127,7 @@ exports.main = async (event, context) => {
                     "openId": openId,
                     "playerId": playerId,
                     "token": token,
+                    "test": 0,
                     "data": null,
                     "gmtCreate": now,
                     "gmtModify": now,

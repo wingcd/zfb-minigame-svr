@@ -1,6 +1,7 @@
 declare type ResponseCommon = {
     code: number;
     message: string;
+    timestamp: number;
 };
 
 declare type MailType = 'system' | 'notice' | 'reward';

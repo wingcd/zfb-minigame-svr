@@ -107,7 +107,7 @@ const getLeaderboardTopRankHandler = async (event, context) => {
   leaderboardType = event.type.trim();
   startRank = event.hasOwnProperty("startRank") ? event.startRank : startRank; 
   count = event.hasOwnProperty("count") ? event.count : count;
-
+  let test = event.hasOwnProperty("test") ? event.test : false;
   
   //数据库实例
   const db = cloud.database();
@@ -211,11 +211,15 @@ const getLeaderboardTopRankHandler = async (event, context) => {
    
 
   try {
+    let whereInfo = {
+      appId: appId,
+      leaderboardType: leaderboardType,
+    }
+    if(!test) {
+      whereInfo.test = 0;
+    }
     let topList = await db.collection('leaderboard_score')
-      .where({
-        appId : appId,
-        leaderboardType : leaderboardType,
-      })
+      .where(whereInfo)
       .orderBy("score", sort == 1 ? cloud.Sort.DESC : cloud.Sort.ASC)
       .skip(startRank)
       .limit(count)

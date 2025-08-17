@@ -336,7 +336,8 @@ export default {
         
         const result = await userAPI.delete({
           appId: selectedAppId.value,
-          playerId: user.playerId
+          playerId: user.playerId,
+          force: true,
         })
         
         if (result.code === 0) {

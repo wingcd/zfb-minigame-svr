@@ -1,4 +1,4 @@
-import { Env } from "./env";
+import { Env, EPlatform } from "./env";
 import { Http } from "./http";
 import { Leaderboard } from "./leaderboard";
 import { User } from "./user";
@@ -6,6 +6,7 @@ import { Counter } from "./counter";
 import { Mail } from "./mail";
 
 type ZYSDKOptions = {
+    platform: EPlatform,
     appId: string,
     baseUrl?: string,
     timeout?: number,
@@ -29,9 +30,7 @@ class _ZYSDK {
     public readonly mail = new Mail();
 
     public init(opts: ZYSDKOptions) {
-        Env.baseUrl = opts.baseUrl || 'https://env-00jxt0uhcb2h.dev-hz.cloudbasefunction.cn';
-        Env.timeout = opts.timeout || 5000;
-        Env.appId = opts.appId;
+        Env.init(opts);
     }
 }
 

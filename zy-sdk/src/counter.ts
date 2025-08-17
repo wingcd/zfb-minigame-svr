@@ -1,6 +1,5 @@
 import { Env } from "./env";
 import { Http } from "./http";
-import "./types";
 
 /**
  * 计数器功能 - 简化版本，只需要key进行操作
@@ -26,7 +25,7 @@ export class Counter {
         }
     }> {
         const params: any = {
-            appId: Env.appId,
+            ...Env.getCommonParams(),
             key,
             increment
         };
@@ -43,8 +42,7 @@ export class Counter {
      * @param key 计数器key（需要在后台管理系统中预先创建）
      * @returns 返回计数器所有点位的值
      */
-    public getCounter(key: string): Promise<{
-        res: ResponseCommon,
+    public getCounter(key: string): Promise<ResponseCommon & {
         data: {
             key: string,
             locations: {
@@ -60,7 +58,7 @@ export class Counter {
         }
     }> {
         const params = {
-            appId: Env.appId,
+            ...Env.getCommonParams(),
             key
         };
 
@@ -72,8 +70,7 @@ export class Counter {
      * @param key 计数器key
      * @returns 返回按值降序排列的地区排行榜
      */
-    public async getLocationRanking(key: string): Promise<{
-        res: ResponseCommon,
+    public async getLocationRanking(key: string): Promise<ResponseCommon & {
         data: Array<{
             key: string,
             location: string,
@@ -84,7 +81,7 @@ export class Counter {
         // 获取所有location的数据
         const result = await this.getCounter(key);
         
-        if (!result.res || result.res.code !== 0) {
+        if (!result || result.code !== 0) {
             return result as any;
         }
 
@@ -106,7 +103,9 @@ export class Counter {
             }));
 
         return {
-            res: result.res,
+            code: result.code,
+            message: result.message,
+            timestamp: Date.now(),
             data: ranking
         };
     }
@@ -117,8 +116,7 @@ export class Counter {
      * @param location 点位标识
      * @returns 返回指定点位的计数器值
      */
-    public async getLocationCounter(key: string, location: string): Promise<{
-        res: ResponseCommon,
+    public async getLocationCounter(key: string, location: string): Promise<ResponseCommon & {
         data: {
             key: string,
             location: string,
@@ -131,23 +129,24 @@ export class Counter {
     }> {
         const result = await this.getCounter(key);
         
-        if (!result.res || result.res.code !== 0) {
+        if (!result || result.code !== 0) {
             return result as any;
         }
 
         const locationData = result.data.locations[location];
         if (!locationData) {
-                     return {
-             res: {
-                 code: 4004,
-                 message: `计数器[${key}]的点位[${location}]不存在`
-             },
-             data: null as any
-         };
+            return {
+                code: 4004,
+                message: `计数器[${key}]的点位[${location}]不存在`,
+                timestamp: Date.now(),
+                data: null as any
+            };
         }
 
         return {
-            res: result.res,
+            code: result.code,
+            message: result.message,
+            timestamp: Date.now(),
             data: {
                 key: result.data.key,
                 location: location,

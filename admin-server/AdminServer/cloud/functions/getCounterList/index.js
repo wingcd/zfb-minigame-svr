@@ -4,7 +4,7 @@ const { requirePermission } = require("./common/auth");
 /**
  * 函数：getCounterList
  * 说明：获取计数器列表（支持分页和筛选）
- * 权限：需要 leaderboard_manage 权限
+ * 权限：需要 counter_manage 权限
  * 参数：
     | 参数名 | 类型 | 必选 | 说明 |
     | --- | --- | --- | --- |
@@ -13,6 +13,7 @@ const { requirePermission } = require("./common/auth");
     | pageSize | number | 否 | 每页数量（默认：20，最大：100） |
     | key | string | 否 | 计数器key筛选（模糊搜索） |
     | resetType | string | 否 | 重置类型筛选 |
+    | groupByKey | boolean | 否 | 是否按key分组（默认：false） |
  */
 
 async function getCounterListHandler(event, context) {
@@ -21,6 +22,7 @@ async function getCounterListHandler(event, context) {
     let pageSize = Math.min(event.pageSize || 20, 100);
     let key = event.key;
     let resetType = event.resetType;
+    let groupByKey = event.groupByKey || false;
 
     // 返回结果
     let ret = {
@@ -71,47 +73,95 @@ async function getCounterListHandler(event, context) {
             whereCondition.resetType = resetType;
         }
 
-        // 获取总数
-        const totalResult = await collection.where(whereCondition).count();
-        const total = totalResult.total;
+        if (groupByKey) {
+            // 分组模式：返回按key分组的数据
+            // 获取总数
+            const totalResult = await collection.where(whereCondition).count();
+            const total = totalResult.total;
 
-        // 分页查询
-        const skip = (page - 1) * pageSize;
-        const queryList = await collection
-            .where(whereCondition)
-            .orderBy('gmtModify', 'desc')
-            .skip(skip)
-            .limit(pageSize)
-            .get();
+            // 分页查询
+            const skip = (page - 1) * pageSize;
+            const queryList = await collection
+                .where(whereCondition)
+                .orderBy('gmtModify', 'desc')
+                .skip(skip)
+                .limit(pageSize)
+                .get();
 
-        // 格式化数据
-        const list = queryList.map(item => {
-            // 计算总值和点位数量
-            const locations = item.locations || {};
-            const locationKeys = Object.keys(locations);
-            const totalValue = locationKeys.reduce((sum, key) => sum + (locations[key].value || 0), 0);
-            
-            return {
-                _id: item._id,
-                key: item.key,
-                locations: locations,
-                locationCount: locationKeys.length,
-                totalValue: totalValue,
-                resetType: item.resetType || 'permanent',
-                resetValue: item.resetValue || null,
-                resetTime: item.resetTime || null,
-                description: item.description || '',
-                gmtCreate: item.gmtCreate,
-                gmtModify: item.gmtModify
+            // 格式化数据为分组格式
+            const list = queryList.map(item => {
+                // 计算总值和点位数量
+                const locations = item.locations || {};
+                const locationKeys = Object.keys(locations);
+                const totalValue = locationKeys.reduce((sum, key) => sum + (locations[key].value || 0), 0);
+                
+                // 转换locations为数组格式（前端期望的格式）
+                const locationsArray = locationKeys.map(locationKey => ({
+                    location: locationKey,
+                    value: locations[locationKey].value || 0
+                }));
+                
+                return {
+                    _id: item._id,
+                    key: item.key,
+                    locations: locationsArray,
+                    locationCount: locationKeys.length,
+                    totalValue: totalValue,
+                    resetType: item.resetType || 'permanent',
+                    resetValue: item.resetValue || null,
+                    resetTime: item.resetTime || null,
+                    description: item.description || '',
+                    gmtCreate: item.gmtCreate,
+                    gmtModify: item.gmtModify
+                };
+            });
+
+            ret.data = {
+                list: list,
+                total: total,
+                page: page,
+                pageSize: pageSize
             };
-        });
+        } else {
+            // 列表模式：返回扁平化的数据
+            // 获取所有数据
+            const allCounters = await collection.where(whereCondition).get();
+            
+            // 扁平化数据
+            const flatList = [];
+            allCounters.forEach(counter => {
+                const locations = counter.locations || {};
+                Object.keys(locations).forEach(locationKey => {
+                    flatList.push({
+                        _id: counter._id,
+                        key: counter.key,
+                        location: locationKey,
+                        value: locations[locationKey].value || 0,
+                        resetType: counter.resetType || 'permanent',
+                        resetValue: counter.resetValue || null,
+                        resetTime: counter.resetTime || null,
+                        description: counter.description || '',
+                        gmtCreate: counter.gmtCreate,
+                        gmtModify: counter.gmtModify
+                    });
+                });
+            });
 
-        ret.data = {
-            list: list,
-            total: total,
-            page: page,
-            pageSize: pageSize
-        };
+            // 排序
+            flatList.sort((a, b) => new Date(b.gmtModify) - new Date(a.gmtModify));
+
+            // 分页
+            const total = flatList.length;
+            const skip = (page - 1) * pageSize;
+            const paginatedList = flatList.slice(skip, skip + pageSize);
+
+            ret.data = {
+                list: paginatedList,
+                total: total,
+                page: page,
+                pageSize: pageSize
+            };
+        }
 
     } catch (e) {
         ret.code = 5001;

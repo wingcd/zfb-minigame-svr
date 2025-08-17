@@ -1,4 +1,5 @@
 import { Env } from "./env";
+import { GenHash } from "./hash";
 
 export class Http {
     private static _inst: Http;
@@ -23,17 +24,27 @@ export class Http {
             let xhr = new XMLHttpRequest();
             xhr.open(method, url, true);
             xhr.timeout = Env.timeout;
+            xhr.setRequestHeader('Content-Type', 'application/json');
             xhr.onreadystatechange = () => {
                 let resp = xhr.responseText || xhr.response;
                 if(typeof resp === 'string') {
                     try {
-                        resp = JSON.parse(resp);
+                        resp = JSON.parse(resp || '{}');
+                        if(resp.code == 200) {
+                            resp.code = 0;
+                        }else if(resp.code) {
+                            console.error('response error', resp);
+                            reject(resp);
+                        }
                     } catch (e) {
                         resp = {
                             code: 500,
                             message: 'response parse error',
+                            timespan: Date.now(),
                             data: {}
                         };
+                        console.error('response parse error', e, resp);
+                        reject(resp);
                     }
                 }
                 
@@ -45,7 +56,8 @@ export class Http {
                     }
                 }
             };
-            xhr.send(data);
+            let content = data ? JSON.stringify(data) : null;
+            xhr.send(content);
         });
     }
 
@@ -75,7 +87,22 @@ export class Http {
         return await this._requestWithRetry(`${Env.baseUrl}${url}${query}`, 'GET', null);
     }
 
-    public async post(url: string, data: any) {
+    public async post(url: string, data: any, checkLogin: boolean = true) {
+        if(checkLogin && !Env.isLogined()) {
+            return {
+                res: {
+                    code: 401,
+                    message: 'not logined',
+                },
+                data: {},
+            };
+        }
+
+        data.sign = GenHash(data);
         return await this._requestWithRetry(`${Env.baseUrl}${url}`, 'POST', data);
+    }
+
+    public async ttClickPost(url: string, data: any) {
+        return await this._requestWithRetry(`${url}`, 'POST', data);
     }
 }

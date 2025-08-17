@@ -151,8 +151,9 @@
             {{ formatDate(scope.row.gmtCreate) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="200" align="center" fixed="right">
+                        <el-table-column label="操作" width="200" align="center" fixed="right">
           <template #default="scope">
+            <el-button type="text" @click="editCounterConfig(scope.row)">编辑配置</el-button>
             <el-button type="text" class="danger" @click="deleteCounterAllLocations(scope.row)">删除全部</el-button>
           </template>
         </el-table-column>
@@ -258,7 +259,7 @@
             placeholder="输入重置间隔小时数"
           />
         </el-form-item>
-        <el-form-item v-if="isEdit" label="当前值" prop="value">
+        <el-form-item v-if="isEdit && form.value !== null" label="当前值" prop="value">
           <el-input-number 
             v-model="form.value" 
             :min="0"
@@ -436,10 +437,10 @@ export default {
         appId: selectedAppId.value,
         key: counter.key,
         location: location.location,
-        description: counter.description,
-        resetType: counter.resetType,
+        description: counter.description || '',
+        resetType: counter.resetType || 'permanent',
         resetValue: counter.resetValue,
-        value: location.value
+        value: location.value || 0
       })
       dialogVisible.value = true
     }
@@ -456,6 +457,22 @@ export default {
         resetType: counter.resetType,
         resetValue: counter.resetValue,
         value: counter.value
+      })
+      dialogVisible.value = true
+    }
+    
+    // 编辑计数器配置（分组模式）
+    const editCounterConfig = (counter) => {
+      isEdit.value = true
+      Object.assign(form, {
+        _id: counter._id,
+        appId: selectedAppId.value,
+        key: counter.key,
+        location: 'default', // 配置编辑不涉及具体点位
+        description: counter.description || '',
+        resetType: counter.resetType || 'permanent',
+        resetValue: counter.resetValue,
+        value: null // 配置编辑不修改具体值
       })
       dialogVisible.value = true
     }
@@ -479,6 +496,11 @@ export default {
           data.resetValue = null
         }
         
+        // 如果是配置编辑且value为null，则不传递value参数
+        if (isEdit.value && data.value === null) {
+          delete data.value
+        }
+        
         let response
         if (isEdit.value) {
           response = await counterAPI.update(data)
@@ -489,7 +511,9 @@ export default {
         if (response.code === 0) {
           ElMessage.success(isEdit.value ? '更新成功' : '创建成功')
           dialogVisible.value = false
+          // 刷新计数器列表和统计数据
           loadCounters()
+          loadStats()
         } else {
           ElMessage.error(response.msg || (isEdit.value ? '更新失败' : '创建失败'))
         }
@@ -521,7 +545,9 @@ export default {
         
         if (response.code === 0) {
           ElMessage.success('删除成功')
+          // 刷新计数器列表和统计数据
           loadCounters()
+          loadStats()
         } else {
           ElMessage.error(response.msg || '删除失败')
         }
@@ -536,8 +562,27 @@ export default {
     // 删除计数器的所有点位
     const deleteCounterAllLocations = async (counter) => {
       try {
-        if (!counter?.locations || !Array.isArray(counter.locations)) {
-          ElMessage.error('计数器数据异常')
+        if (!counter?.locations) {
+          ElMessage.error('计数器数据异常：缺少locations字段')
+          return
+        }
+        
+        // 处理不同的locations数据格式
+        let locationsToDelete = []
+        if (Array.isArray(counter.locations)) {
+          // 数组格式（分组模式）
+          locationsToDelete = counter.locations.filter(loc => loc && loc.location)
+        } else if (typeof counter.locations === 'object' && counter.locations !== null) {
+          // 对象格式，转换为数组
+          const locationKeys = Object.keys(counter.locations)
+          locationsToDelete = locationKeys.map(locationKey => ({
+            location: locationKey,
+            value: counter.locations[locationKey]?.value || 0
+          }))
+        }
+        
+        if (locationsToDelete.length === 0) {
+          ElMessage.error('没有找到要删除的点位')
           return
         }
         
@@ -552,7 +597,7 @@ export default {
         )
         
         // 删除所有点位
-        const deletePromises = counter.locations.map(location => 
+        const deletePromises = locationsToDelete.map(location => 
           counterAPI.delete({
             appId: selectedAppId.value,
             key: counter.key,
@@ -569,7 +614,9 @@ export default {
           ElMessage.warning(`部分删除失败，失败数量：${failedCount}`)
         }
         
+        // 刷新计数器列表和统计数据
         loadCounters()
+        loadStats()
       } catch (error) {
         if (error !== 'cancel') {
           console.error('删除计数器失败:', error)
@@ -663,6 +710,7 @@ export default {
       showCreateDialog,
       editLocationCounter,
       editCounter,
+      editCounterConfig,
       saveCounter,
       deleteCounter,
       deleteCounterAllLocations,

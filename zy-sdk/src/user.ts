@@ -11,12 +11,13 @@ export class User {
      * @param unionId 
      * @returns 
      */
-    public login(openId: string): Promise<{
-        res: ResponseCommon,
+    public login(code: string): Promise<ResponseCommon & {
         data: {
             token: string,
             playerId: string,
             isNew: boolean,
+            openId: string,
+            unionid: string,
             data: any,
         }
     }> {
@@ -26,21 +27,23 @@ export class User {
         }
 
         return Http.inst.post(url, {
-            appId: Env.appId,
-            openId,
-        }) as any;
+            ...Env.getCommonParams(),
+            code,
+        }, false) as any;
     }    
 
-    public getData(): Promise<{
-        res: ResponseCommon,
+    public getData(): Promise<ResponseCommon & {
         data: any
     }> {
-        return Http.inst.get('/user/getData') as any;
+        return Http.inst.post('/user/getData', {
+            ...Env.getCommonParams(),
+        }) as any;
     }
 
-    public setData(data: any): Promise<{
-        res: ResponseCommon,
-    }> {
-        return Http.inst.post('/user/setData', data) as any;
+    public saveData(data: any): Promise<ResponseCommon> {
+        return Http.inst.post('/user/saveData', {
+            ...Env.getCommonParams(),
+            data,
+        }) as any;
     }
 }

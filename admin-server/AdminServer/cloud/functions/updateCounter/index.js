@@ -5,7 +5,7 @@ const { requirePermission } = require("./common/auth");
 /**
  * 函数：updateCounter
  * 说明：更新计数器配置（支持指定点位或整体配置）
- * 权限：需要 leaderboard_manage 权限
+ * 权限：需要 counter_manage 权限
  * 参数：
     | 参数名 | 类型 | 必选 | 说明 |
     | --- | --- | --- | --- |

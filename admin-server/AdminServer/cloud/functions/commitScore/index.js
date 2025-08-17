@@ -111,6 +111,23 @@ exports.main = async (event, context) => {
   // 获取 cloud 环境中的 mongoDB 数据库对象
   const db = cloud.database();
 
+  // 获取用户数据
+  let userTableName = `user_${appId}`;
+  let collection = db.collection(userTableName);
+
+  // 查询用户是否存在
+  let userList = await collection
+      .where({ playerId: playerId })
+      .get();
+
+  if (userList.length === 0) {
+      ret.code = 4004;
+      ret.msg = "用户不存在";
+      return ret;
+  }
+
+  let user = userList[0];
+
   //获取更新策略
   let queryList = await db.collection('leaderboard_config')
     .where({
@@ -209,6 +226,7 @@ exports.main = async (event, context) => {
         data: {
           "appId": appId,
           "playerId": playerId,
+          "test": user.test,
           "leaderboardType": leaderboardType,
           "score": currentScore,
           "playerInfo": playerInfo,
@@ -252,6 +270,7 @@ exports.main = async (event, context) => {
           .doc(id)
           .update({
             data: {
+              "test": user.test,
               "score": score,
               "gmtModify": now,
               "playerInfo": playerInfo,

@@ -4,7 +4,7 @@ const { requirePermission } = require("./common/auth");
 /**
  * 函数：deleteCounter
  * 说明：删除计数器
- * 权限：需要 leaderboard_manage 权限
+ * 权限：需要 counter_manage 权限
  * 参数：
     | 参数名 | 类型 | 必选 | 说明 |
     | --- | --- | --- | --- |

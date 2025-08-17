@@ -11,12 +11,9 @@ export class Leaderboard {
      * @param score 分数
      * @returns
      */
-    public commitScore(type: string, score: number): Promise<{
-        res: ResponseCommon,
-    }> {
+    public commitScore(type: string, score: number): Promise<ResponseCommon> {
         return Http.inst.post('/leaderboard/commit', {
-            appId: Env.appId,
-            playerId: Env.playerId,
+            ...Env.getCommonParams(),
             type,
             score,
             playerInfo: {
@@ -33,8 +30,7 @@ export class Leaderboard {
      * @param startRank 开始排名名次
      * @returns
      */
-    public queryTopRank(type: string, count: number, startRank?: number): Promise<{
-        res: ResponseCommon,
+    public queryTopRank(type: string, count: number, startRank?: number, test?: boolean): Promise<ResponseCommon & {
         data: {
             type: string,
             count: number,
@@ -48,10 +44,11 @@ export class Leaderboard {
             }[]
         }
     }> {
-        return Http.inst.get('/leaderboard/queryTopRank', {
-            appId: Env.appId,
+        return Http.inst.post('/leaderboard/queryTopRank', {
+            ...Env.getCommonParams(),
             type,
             count,
+            test,
             startRank,
         }) as any;
     }

@@ -19,6 +19,8 @@ const { requirePermission, logOperation } = require("./common/auth");
     | category | string | 否 | 排行榜分类 |
     | resetType | string | 否 | 重置类型 (permanent/daily/weekly/monthly/custom) |
     | resetValue | number | 否 | 自定义重置间隔(小时)，仅resetType为custom时有效 |
+    | updateStrategy | number | 否 | 更新策略 (0=最高分, 1=最新分, 2=累计分) |
+    | sort | number | 否 | 排序方式 (0=升序, 1=降序) |
  * 
  * 测试数据：
     {
@@ -72,6 +74,8 @@ async function createLeaderboardHandler(event, context) {
     let category = event.category || 'default';
     let resetType = event.resetType || 'permanent';
     let resetValue = event.resetValue || null;
+    let updateStrategy = event.updateStrategy || 0; // 默认最高分
+    let sort = event.sort || 1; // 默认降序
 
     // 返回结果
     let ret = {
@@ -127,6 +131,22 @@ async function createLeaderboardHandler(event, context) {
     if (resetType === 'custom' && (typeof resetValue !== 'number' || resetValue < 1)) {
         ret.code = 4001;
         ret.msg = "自定义重置类型需要提供有效的重置间隔(小时)";
+        return ret;
+    }
+
+    // 验证更新策略
+    const validUpdateStrategies = [0, 1, 2];
+    if (!validUpdateStrategies.includes(updateStrategy)) {
+        ret.code = 4001;
+        ret.msg = "无效的更新策略";
+        return ret;
+    }
+
+    // 验证排序方式
+    const validSorts = [0, 1];
+    if (!validSorts.includes(sort)) {
+        ret.code = 4001;
+        ret.msg = "无效的排序方式";
         return ret;
     }
 
@@ -190,6 +210,8 @@ async function createLeaderboardHandler(event, context) {
             resetType: resetType,
             resetValue: resetValue,
             resetTime: resetTime,
+            updateStrategy: updateStrategy,
+            sort: sort,
             createTime: moment().format("YYYY-MM-DD HH:mm:ss"),
             createdBy: event.adminInfo.username,
             scoreCount: 0,
@@ -225,6 +247,8 @@ async function createLeaderboardHandler(event, context) {
             resetType: resetType,
             resetValue: resetValue,
             resetTime: resetTime,
+            updateStrategy: updateStrategy,
+            sort: sort,
             createTime: newLeaderboard.createTime
         };
 
