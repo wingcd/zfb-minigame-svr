@@ -155,6 +155,7 @@ exports.main = async (event, context) => {
                     data: {
                         "token": token,
                         "gmtModify": now,
+                        "test": 1,
                     }
                 });
 
