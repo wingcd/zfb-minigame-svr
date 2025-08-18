@@ -73,10 +73,10 @@
       </el-table-column>
       <el-table-column label="玩家信息" width="200">
         <template #default="scope">
-          <div v-if="scope.row.playerInfo">
-            <div class="player-name">{{ scope.row.playerInfo.name || '未设置' }}</div>
-            <div class="player-avatar" v-if="scope.row.playerInfo.avatar">
-              <el-avatar :src="scope.row.playerInfo.avatar" size="small"></el-avatar>
+          <div v-if="scope.row.userInfo">
+            <div class="player-name">{{ scope.row.userInfo.nickName || '未设置' }}</div>
+            <div class="player-avatar" v-if="scope.row.userInfo.avatarUrl">
+              <el-avatar :src="scope.row.userInfo.avatarUrl" size="small"></el-avatar>
             </div>
           </div>
           <span v-else>无信息</span>

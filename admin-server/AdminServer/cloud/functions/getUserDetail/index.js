@@ -157,19 +157,13 @@ async function getUserDetailHandler(event, context) {
         }
 
         ret.data = {
-            userInfo: {
+            baseInfo: {
                 id: userInfo._id,
                 openId: userInfo.openId,
-                nickName: userInfo.nickName || '',
-                avatarUrl: userInfo.avatarUrl || '',
-                gender: userInfo.gender || 0,
-                province: userInfo.province || '',
-                city: userInfo.city || '',
-                userData: userInfo.data || '{}',
-                banned: userInfo.banned || false,
-                gmtCreate: userInfo.gmtCreate,
-                gmtModify: userInfo.gmtModify
+                playerId: userInfo.playerId,
             },
+            userData: userInfo.data,
+            userInfo: userInfo.userInfo,
             gameStats: gameStats
         };
 
