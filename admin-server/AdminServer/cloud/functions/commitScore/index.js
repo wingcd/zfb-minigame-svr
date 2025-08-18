@@ -14,7 +14,6 @@ const common = require("./common");
     | type | string | 是 | 排行榜类型 |
     | id | string | 否 | 具体记录id，用于更新 |
     | score | number | 是 | 当前分数 |
-    | playerInfo | object | 否 | 玩家信息 |
 
   * 测试数据
     {
@@ -22,10 +21,6 @@ const common = require("./common");
         "appId": "6a5f86e9-d59b-4a2a-a63b-c06c772bcee9",
         "type": "easy",
         "score": 100,
-        "playerInfo": {
-            "name": "小明",
-            "avatar": "https://xxx.com/xxx.jpg"
-        }
     }
     
     * 返回结果
@@ -48,8 +43,6 @@ exports.main = async (event, context) => {
   let id;
   //当前分数
   let currentScore;
-  //玩家信息
-  let playerInfo;
 
   //返回结果
   let ret = {
@@ -105,8 +98,6 @@ exports.main = async (event, context) => {
   id = event.hasOwnProperty("id") ? event.id.trim() : "";//分数记录id
 
   currentScore = event.score; //分数
-
-  playerInfo = event.hasOwnProperty("playerInfo") ? event.playerInfo : {};//玩家信息
 
   // 获取 cloud 环境中的 mongoDB 数据库对象
   const db = cloud.database();
@@ -229,7 +220,7 @@ exports.main = async (event, context) => {
           "test": user.test,
           "leaderboardType": leaderboardType,
           "score": currentScore,
-          "playerInfo": playerInfo,
+          "hasUserInfo": user.userInfo ? 1 : 0,
           "gmtCreate": now,
           "gmtModify": now,
         }
@@ -272,8 +263,8 @@ exports.main = async (event, context) => {
             data: {
               "test": user.test,
               "score": score,
+              "hasUserInfo": user.userInfo ? 1 : 0,
               "gmtModify": now,
-              "playerInfo": playerInfo,
             }
           });
       } catch (e) {

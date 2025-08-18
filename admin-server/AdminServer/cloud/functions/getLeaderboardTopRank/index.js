@@ -213,6 +213,7 @@ const getLeaderboardTopRankHandler = async (event, context) => {
     let whereInfo = {
       appId: appId,
       leaderboardType: leaderboardType,
+      hasUserInfo: 1
     }
     if (!test) {
       whereInfo.test = 0;
