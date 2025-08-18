@@ -16,10 +16,6 @@ export class Leaderboard {
             ...Env.getCommonParams(),
             type,
             score,
-            playerInfo: {
-                name: Env.playerName,
-                avatar: Env.playerAvatar,
-            },
         }) as any;
     }
 
@@ -37,9 +33,9 @@ export class Leaderboard {
             list: {
                     playerId: string,
                     score: number,
-                    playerInfo: {
-                        name: string,
-                        avatar: string,
+                    userInfo: {
+                        nickName: string,
+                        avatarUrl: string,
                     }
             }[]
         }

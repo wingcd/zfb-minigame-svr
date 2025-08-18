@@ -33,12 +33,11 @@ const common = require("./common");
             "count": 10,
             "list": [
                 {
-                    "_id": "5f9b3b7b7b4b4b0001b4b4b4",
                     "playerId": "player001",
                     "score": 100,
-                    "playerInfo": {
-                        "name": "小明",
-                        "avatar": "https://xxx.com/xxx.jpg"
+                    "userInfo": {
+                        "nickName": "小明",
+                        "avatarUrl": "https://xxx.com/xxx.jpg"
                     }
                 }
             ]
@@ -68,35 +67,35 @@ const getLeaderboardTopRankHandler = async (event, context) => {
   }
 
   var parmErr = common.hash.CheckParams(event);
-  if(parmErr) {
-      ret.code = 4001;
-      ret.msg = "参数错误, error code:" + parmErr;
-      return ret;
+  if (parmErr) {
+    ret.code = 4001;
+    ret.msg = "参数错误, error code:" + parmErr;
+    return ret;
   }
 
   //参数校验 字段存在  为空   类型
-  if(!event.hasOwnProperty("appId") || !event.appId || typeof event.appId != "string") {
+  if (!event.hasOwnProperty("appId") || !event.appId || typeof event.appId != "string") {
     ret.code = 4001;
     ret.msg = "参数[appId]错误"
     return ret;
   }
 
-  if(!event.hasOwnProperty("type") || !event.type || typeof event.type != "string") {
+  if (!event.hasOwnProperty("type") || !event.type || typeof event.type != "string") {
     ret.code = 4001;
     ret.msg = "参数[type]错误"
     return ret;
   }
-  if(event.hasOwnProperty("startRank") && !Number.isInteger(event.startRank)) {
+  if (event.hasOwnProperty("startRank") && !Number.isInteger(event.startRank)) {
     ret.code = 4001;
     ret.msg = "参数[startRank]错误"
     return ret;
   }
-  if(event.hasOwnProperty("count") && !Number.isInteger(event.count)) {
+  if (event.hasOwnProperty("count") && !Number.isInteger(event.count)) {
     ret.code = 4001;
     ret.msg = "参数[count]错误"
     return ret;
   }
-  if(event.hasOwnProperty("sort") && !Number.isInteger(event.sort)) {
+  if (event.hasOwnProperty("sort") && !Number.isInteger(event.sort)) {
     ret.code = 4001;
     ret.msg = "参数[sort]错误"
     return ret;
@@ -105,24 +104,24 @@ const getLeaderboardTopRankHandler = async (event, context) => {
   //请求参数
   appId = event.appId.trim();
   leaderboardType = event.type.trim();
-  startRank = event.hasOwnProperty("startRank") ? event.startRank : startRank; 
+  startRank = event.hasOwnProperty("startRank") ? event.startRank : startRank;
   count = event.hasOwnProperty("count") ? event.count : count;
   let test = event.hasOwnProperty("test") ? event.test : false;
-  
+
   //数据库实例
   const db = cloud.database();
 
   let config;
-  if(!event.hasOwnProperty("sort") || typeof event.sort == undefined || event.sort == null) {
-    try{
+  if (!event.hasOwnProperty("sort") || typeof event.sort == undefined || event.sort == null) {
+    try {
       config = await db.collection('leaderboard_config')
-      .where({
-        appId : appId,
-        leaderboardType : leaderboardType
-      })
-      .get();
+        .where({
+          appId: appId,
+          leaderboardType: leaderboardType
+        })
+        .get();
       sort = config[0].sort;
-    } catch(e) {
+    } catch (e) {
       ret.code = 5001;
       ret.msg = e.message;
       return ret;
@@ -130,14 +129,14 @@ const getLeaderboardTopRankHandler = async (event, context) => {
   } else {
     sort = event.sort;
     // 仍需获取配置以检查重置
-    try{
+    try {
       config = await db.collection('leaderboard_config')
-      .where({
-        appId : appId,
-        leaderboardType : leaderboardType
-      })
-      .get();
-    } catch(e) {
+        .where({
+          appId: appId,
+          leaderboardType: leaderboardType
+        })
+        .get();
+    } catch (e) {
       ret.code = 5001;
       ret.msg = e.message;
       return ret;
@@ -148,10 +147,10 @@ const getLeaderboardTopRankHandler = async (event, context) => {
   if (config && config.length > 0) {
     let leaderboardConfig = config[0];
     let now = moment();
-    
+
     if (leaderboardConfig.resetTime && leaderboardConfig.resetType !== 'permanent') {
       let resetTime = moment(leaderboardConfig.resetTime);
-      
+
       if (now.isAfter(resetTime)) {
         // 清空排行榜数据
         try {
@@ -161,12 +160,12 @@ const getLeaderboardTopRankHandler = async (event, context) => {
               leaderboardType: leaderboardType
             })
             .remove();
-        } catch(e) {
+        } catch (e) {
           ret.code = 5001;
           ret.msg = "重置排行榜失败: " + e.message;
           return ret;
         }
-        
+
         // 重新计算下次重置时间
         let newResetTime = null;
         if (leaderboardConfig.resetType) {
@@ -187,7 +186,7 @@ const getLeaderboardTopRankHandler = async (event, context) => {
               break;
           }
         }
-        
+
         // 更新配置中的重置时间
         if (newResetTime) {
           try {
@@ -199,7 +198,7 @@ const getLeaderboardTopRankHandler = async (event, context) => {
                   gmtModify: now.format("YYYY-MM-DD HH:mm:ss")
                 }
               });
-          } catch(e) {
+          } catch (e) {
             ret.code = 5001;
             ret.msg = "更新重置时间失败: " + e.message;
             return ret;
@@ -208,14 +207,14 @@ const getLeaderboardTopRankHandler = async (event, context) => {
       }
     }
   }
-   
+
 
   try {
     let whereInfo = {
       appId: appId,
       leaderboardType: leaderboardType,
     }
-    if(!test) {
+    if (!test) {
       whereInfo.test = 0;
     }
     let topList = await db.collection('leaderboard_score')
@@ -225,23 +224,59 @@ const getLeaderboardTopRankHandler = async (event, context) => {
       .limit(count)
       .get()
 
-      // 删除不需要的字段
-      topList = topList.map(item => {
-        delete item._id;
-        delete item._openid;
-        delete item.appId;
-        delete item.leaderboardType;
-        delete item.gmtCreate;
-        delete item.gmtModify;
-        return item;
-      });
+    // 获取用户信息
+    let userInfoMap = {};
+    if (topList.length > 0) {
+      const ids = [...new Set(topList.map(score => score.playerId))];
+      const userTableName = `user_${appId}`;
 
-      ret.data = {
-        "type" : leaderboardType,
-        "count" : topList.length,
-        "list" : topList
+      if (ids.length > 0) {
+        try {
+          const userList = await db.collection(userTableName)
+            .where({
+              playerId: db.command.in(ids)
+            })
+            .get();
+
+          userList.forEach(user => {
+            if(userInfoMap[user.playerId] && !user.userInfo) {
+              console.log("userInfoMap[user.playerId]:", user.playerId, userInfoMap[user.playerId]);
+              return;
+            }
+
+            let userInfo = user.userInfo || {};
+            let nickName = userInfo.nickName || '';
+            let avatarUrl = userInfo.avatarUrl || '';
+            userInfoMap[user.playerId] = {
+              nickName: nickName,
+              avatarUrl: avatarUrl
+            };
+          });
+        } catch (e) {
+          // 用户表查询失败，忽略用户信息
+          console.log('User info query failed:', e.message);
+        }
       }
-  } catch(e) {
+    }
+
+    // 删除不需要的字段并添加用户信息
+    topList = topList.map(item => {
+      const result = {
+        playerId: item.playerId,
+        score: item.score,
+      };
+
+      // 添加用户信息
+      result.userInfo = userInfoMap[item.playerId] || {};
+      return result;
+    });
+
+    ret.data = {
+      "type": leaderboardType,
+      "count": topList.length,
+      "list": topList
+    }
+  } catch (e) {
     ret.code = 5001;
     ret.msg = e.message;
   }

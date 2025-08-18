@@ -152,19 +152,19 @@ async function getLeaderboardDataHandler(event, context) {
         // 如果需要包含用户信息，查询用户数据
         let userInfoMap = {};
         if (includeUserInfo && scoreList.length > 0) {
-            const openIds = [...new Set(scoreList.map(score => score.openId))];
+            const playerIds = [...new Set(scoreList.map(score => score.playerId))];
             const userTableName = `user_${appId}`;
             
             try {
                 // 分批查询用户信息（避免查询过多）
                 const userList = await db.collection(userTableName)
                     .where({
-                        openId: db.command.in(openIds)
+                        playerId: db.command.in(playerIds)
                     })
                     .get();
 
                 userList.forEach(user => {
-                    userInfoMap[user.openId] = {
+                    userInfoMap[user.playerId] = {
                         nickName: user.nickName || '',
                         avatarUrl: user.avatarUrl || ''
                     };
@@ -179,13 +179,14 @@ async function getLeaderboardDataHandler(event, context) {
         const scores = scoreList.map((score, index) => {
             const item = {
                 rank: offset + index + 1,
+                playerId: score.playerId,
                 openId: score.openId,
                 score: score.score,
                 gmtCreate: score.gmtCreate
             };
 
-            if (includeUserInfo && userInfoMap[score.openId]) {
-                item.userInfo = userInfoMap[score.openId];
+            if (userInfoMap[score.playerId]) {
+                item.userInfo = userInfoMap[score.playerId];
             }
 
             return item;

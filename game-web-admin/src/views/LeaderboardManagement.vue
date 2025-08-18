@@ -519,7 +519,7 @@ export default {
         
         const result = await leaderboardAPI.delete({
           appId: selectedAppId.value,
-          leaderboardType: config.leaderboardType
+          leaderboardType: config.leaderboardType,
         })
         
         if (result.code === 0) {
@@ -586,7 +586,7 @@ export default {
         
         const result = await leaderboardAPI.deleteScore({
           appId: selectedAppId.value,
-          playerId: scoreData.openId,
+          playerId: scoreData.playerId,
           leaderboardId: selectedLeaderboard.value.leaderboardId,
           leaderboardType: selectedLeaderboard.value.leaderboardType,
         })
