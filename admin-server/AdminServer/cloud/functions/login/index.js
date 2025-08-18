@@ -90,8 +90,37 @@ exports.main = async (event, context) => {
     let row = null;
     //更新 or 插入 
     if (queryList.length === 0) {
-        let count = await collection.where({}).count();
-        let playerId = `${600000 + count.total + 1}`;
+        // 生成唯一的playerId，采用重试机制确保唯一性
+        let playerId;
+        let maxRetries = 5;
+        let retryCount = 0;
+        
+        while (retryCount < maxRetries) {
+            try {
+                // 使用时间戳 + 随机数 + 计数器的方式生成ID
+                let count = await collection.where({}).count();
+                let timestamp = Date.now().toString().slice(-6); // 取时间戳后6位
+                let random = Math.floor(Math.random() * 1000).toString().padStart(3, '0'); // 3位随机数
+                playerId = `6${timestamp}${random}`;
+                
+                // 检查ID是否已存在
+                let existingUser = await collection.where({ "playerId": playerId }).get();
+                if (existingUser.length === 0) {
+                    break; // ID唯一，跳出循环
+                }
+                
+                retryCount++;
+                if (retryCount >= maxRetries) {
+                    // 如果重试多次仍然冲突，使用UUID作为后备方案
+                    playerId = `6${randomUUID().replace(/-/g, '').slice(0, 9)}`;
+                }
+            } catch (e) {
+                retryCount++;
+                if (retryCount >= maxRetries) {
+                    throw e;
+                }
+            }
+        }
 
         //插入
         try {
