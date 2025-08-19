@@ -164,9 +164,10 @@ async function getLeaderboardDataHandler(event, context) {
                     .get();
 
                 userList.forEach(user => {
+                    let userInfo = user.userInfo || {};
                     userInfoMap[user.playerId] = {
-                        nickName: user.nickName || '',
-                        avatarUrl: user.avatarUrl || ''
+                        nickName: userInfo.nickName || '',
+                        avatarUrl: userInfo.avatarUrl || ''
                     };
                 });
             } catch (e) {
