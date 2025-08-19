@@ -61,16 +61,10 @@ exports.main = async (event, context) => {
         return ret;
     }
 
-    if (!event.hasOwnProperty("data") || !event.data || typeof event.data != "string") {
-        ret.code = 4001;
-        ret.msg = "参数[data]错误"
-        return ret;
-    }
-
     //请求参数
     appId = event.appId.trim();  //app id
     playerId = event.playerId.trim();  //玩家id
-    data = event.data.trim();  //数据
+    data = event.data ? event.data.trim() : "";  //数据
 
     // 获取 cloud 环境中的 mongoDB 数据库对象
     const db = cloud.database();
