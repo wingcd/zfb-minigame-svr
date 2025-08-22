@@ -84,6 +84,12 @@
             <el-option label="前50名" :value="50"></el-option>
             <el-option label="前100名" :value="100"></el-option>
           </el-select>
+          <el-tooltip content="修复排行榜中的用户信息标记，根据用户昵称重新设置hasUserInfo字段" placement="top">
+            <el-button type="warning" @click="fixUserInfoData" :loading="fixingUserInfo" :disabled="!selectedLeaderboard">
+              <el-icon><Tools /></el-icon>
+              {{ fixingUserInfo ? '修复中...' : '修复用户信息' }}
+            </el-button>
+          </el-tooltip>
           <el-button @click="loadLeaderboardData">刷新数据</el-button>
         </div>
       </div>
@@ -274,6 +280,7 @@
 <script>
 import { ref, reactive, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Tools } from '@element-plus/icons-vue'
 import { leaderboardAPI, appAPI, statsAPI } from '../services/api.js'
 import { selectedAppId, getAppName } from '../utils/appStore.js'
 
@@ -282,6 +289,7 @@ export default {
   setup() {
     const configLoading = ref(false)
     const dataLoading = ref(false)
+    const fixingUserInfo = ref(false)
     const leaderboardConfigs = ref([])
     const selectedLeaderboard = ref(null)
     const leaderboardData = ref([])
@@ -605,6 +613,63 @@ export default {
       }
     }
     
+    // 修复用户信息标记
+    const fixUserInfoData = async () => {
+      if (!selectedLeaderboard.value) {
+        ElMessage.warning('请先选择一个排行榜')
+        return
+      }
+      
+      try {
+        await ElMessageBox.confirm(
+          `确定要修复排行榜 "${selectedLeaderboard.value.name}" 的用户信息标记吗？<br/><br/>
+          <strong>修复说明：</strong><br/>
+          • 此操作会检查每个玩家的用户数据中是否有有效的昵称<br/>
+          • 有昵称的玩家hasUserInfo字段会被设为1<br/>
+          • 无昵称的玩家hasUserInfo字段会被设为0<br/>
+          • 修复后排行榜显示会更准确<br/><br/>
+          <span style="color: #E6A23C;">注意：此操作可能需要一些时间，请耐心等待。</span>`, 
+          '确认修复用户信息标记', 
+          { 
+            type: 'warning',
+            dangerouslyUseHTMLString: true,
+            confirmButtonText: '开始修复',
+            cancelButtonText: '取消'
+          }
+        )
+        
+        fixingUserInfo.value = true
+        
+        const result = await leaderboardAPI.fixUserInfo({
+          appId: selectedAppId.value,
+          leaderboardType: selectedLeaderboard.value.leaderboardType
+        })
+        
+        if (result.code === 0) {
+          const { totalProcessed, updatedCount, errorCount } = result.data
+          
+          if (updatedCount === 0) {
+            ElMessage.info(`修复完成！检查了 ${totalProcessed} 条记录，所有记录的用户信息标记都已正确，无需更新。`)
+          } else {
+            ElMessage.success(
+              `修复完成！处理了 ${totalProcessed} 条记录，成功更新了 ${updatedCount} 条记录${errorCount > 0 ? `，${errorCount} 条记录出错` : ''}。`
+            )
+          }
+          
+          await loadLeaderboardData()
+        } else {
+          ElMessage.error(result.msg || '修复失败')
+        }
+      } catch (error) {
+        if (error !== 'cancel') {
+          console.error('修复用户信息标记失败:', error)
+          ElMessage.error('修复失败')
+        }
+      } finally {
+        fixingUserInfo.value = false
+      }
+    }
+    
     // 工具函数
     const getRankClass = (rank) => {
       if (rank === 1) return 'rank-gold'
@@ -688,6 +753,7 @@ export default {
     return {
       configLoading,
       dataLoading,
+      fixingUserInfo,
       leaderboardConfigs,
       selectedLeaderboard,
       leaderboardData,
@@ -707,6 +773,7 @@ export default {
       editScore,
       saveScore,
       deleteScore,
+      fixUserInfoData,
       getRankClass,
       getResetTypeText,
       getResetTypeTagType,
@@ -714,7 +781,8 @@ export default {
       refreshData,
       getAppName,
       getUpdateStrategyText,
-      getUpdateStrategyTagType
+      getUpdateStrategyTagType,
+      Tools
     }
   }
 }
@@ -846,5 +914,17 @@ export default {
 
 .el-button.danger {
   color: #f56c6c;
+}
+
+.header-actions .el-button {
+  margin-left: 10px;
+}
+
+.header-actions .el-button:first-child {
+  margin-left: 0;
+}
+
+.header-actions .el-button .el-icon {
+  margin-right: 5px;
 }
 </style>

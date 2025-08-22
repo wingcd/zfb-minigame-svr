@@ -155,6 +155,9 @@ const unifiedAPI = {
     getData: (params) => api.post('/leaderboard/getData', params),
     updateScore: (data) => api.post('/leaderboard/updateScore', data),
     deleteScore: (data) => api.post('/leaderboard/deleteScore', data),
+    commitScore: (data) => api.post('/leaderboard/commitScore', data),
+    queryScore: (params) => api.post('/leaderboard/queryScore', params),
+    fixUserInfo: (params) => api.post('/leaderboard/fixUserInfo', params),
   },
   
   // 计数器相关
@@ -270,6 +273,7 @@ export const createLeaderboard = unifiedAPI.leaderboard.create
 export const getLeaderboardData = unifiedAPI.leaderboard.getData
 export const updateLeaderboardScore = unifiedAPI.leaderboard.updateScore
 export const deleteLeaderboardScore = unifiedAPI.leaderboard.deleteScore
+export const fixLeaderboardUserInfo = unifiedAPI.leaderboard.fixUserInfo
 
 export const getCounterList = unifiedAPI.counter.getList
 export const createCounter = unifiedAPI.counter.create
