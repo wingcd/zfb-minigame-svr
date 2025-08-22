@@ -263,7 +263,7 @@ exports.main = async (event, context) => {
             data: {
               "test": user.test,
               "score": score,
-              "hasUserInfo": user.userInfo ? 1 : 0,
+              "hasUserInfo": user.userInfo && user.userInfo.nickName ? 1 : 0,
               "gmtModify": now,
             }
           });
