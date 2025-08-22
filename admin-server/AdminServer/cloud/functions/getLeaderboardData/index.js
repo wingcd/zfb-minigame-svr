@@ -13,6 +13,7 @@ const { requirePermission, logOperation } = require("./common/auth");
     | limit | number | 否 | 返回记录数量(默认100) |
     | offset | number | 否 | 分页偏移量(默认0) |
     | includeUserInfo | boolean | 否 | 是否包含用户信息(默认true) |
+    | hasUserInfo | number | 否 | 用户信息过滤(0=无用户信息,1=有用户信息,null=不过滤) |
  * 
  * 测试数据：
     {
@@ -20,7 +21,8 @@ const { requirePermission, logOperation } = require("./common/auth");
         "leaderboardType": "weekly_score",
         "limit": 50,
         "offset": 0,
-        "includeUserInfo": true
+        "includeUserInfo": true,
+        "hasUserInfo": 1
     }
     
  * 返回结果：
@@ -76,6 +78,7 @@ async function getLeaderboardDataHandler(event, context) {
     let limit = event.limit || 100;
     let offset = event.offset || 0;
     let includeUserInfo = event.includeUserInfo !== false; // 默认包含用户信息
+    let hasUserInfo = event.hasUserInfo; // 用户信息过滤参数
 
     // 返回结果
     let ret = {
@@ -125,12 +128,20 @@ async function getLeaderboardDataHandler(event, context) {
 
         const leaderboardInfo = leaderboardList[0];
 
+        // 构建查询条件
+        let queryCondition = { 
+            appId: appId,
+            leaderboardType: leaderboardType 
+        };
+        
+        // 添加用户信息过滤条件
+        if (hasUserInfo !== null && hasUserInfo !== undefined) {
+            queryCondition.hasUserInfo = hasUserInfo;
+        }
+
         // 获取总记录数
         const totalCount = await db.collection('leaderboard_score')
-            .where({ 
-                appId: appId,
-                leaderboardType: leaderboardType 
-            })
+            .where(queryCondition)
             .count();
 
         // 根据分数类型决定排序方式
@@ -138,10 +149,7 @@ async function getLeaderboardDataHandler(event, context) {
 
         // 获取分数记录
         let scoreQuery = db.collection('leaderboard_score')
-            .where({ 
-                appId: appId,
-                leaderboardType: leaderboardType 
-            })
+            .where(queryCondition)
             .orderBy('score', orderBy)
             .orderBy('gmtCreate', 'asc') // 同分数时按时间排序
             .skip(offset)

@@ -84,12 +84,12 @@
             <el-option label="前50名" :value="50"></el-option>
             <el-option label="前100名" :value="100"></el-option>
           </el-select>
-          <el-tooltip content="修复排行榜中的用户信息标记，根据用户昵称重新设置hasUserInfo字段" placement="top">
+          <!--<el-tooltip content="修复排行榜中的用户信息标记，根据用户昵称重新设置hasUserInfo字段" placement="top">
             <el-button type="warning" @click="fixUserInfoData" :loading="fixingUserInfo" :disabled="!selectedLeaderboard">
               <el-icon><Tools /></el-icon>
               {{ fixingUserInfo ? '修复中...' : '修复用户信息' }}
             </el-button>
-          </el-tooltip>
+          </el-tooltip>-->
           <el-button @click="loadLeaderboardData">刷新数据</el-button>
         </div>
       </div>
@@ -102,6 +102,22 @@
           </el-form-item>
           <el-form-item>
             <el-button type="primary" @click="searchPlayerScore">搜索</el-button>
+          </el-form-item>
+        </el-form>
+      </div>
+
+      <!-- 数据过滤选项 -->
+      <div class="filter-options">
+        <el-form :model="filterForm" :inline="true">
+          <el-form-item label="用户信息过滤:">
+            <el-select v-model="filterForm.hasUserInfo" @change="loadLeaderboardData" style="width: 180px;">
+              <el-option label="显示所有记录" :value="null"></el-option>
+              <el-option label="仅显示有用户信息" :value="1"></el-option>
+              <el-option label="仅显示无用户信息" :value="0"></el-option>
+            </el-select>
+          </el-form-item>
+          <el-form-item>
+            <el-button @click="resetFilter">重置过滤</el-button>
           </el-form-item>
         </el-form>
       </div>
@@ -304,6 +320,10 @@ export default {
       playerId: ''
     })
     
+    const filterForm = reactive({
+      hasUserInfo: null
+    })
+    
     const configDialog = reactive({
       visible: false,
       isEdit: false,
@@ -400,7 +420,8 @@ export default {
           leaderboardType: selectedLeaderboard.value.leaderboardType,
           offset: rankParams.startRank,
           limit: rankParams.count,
-          includeUserInfo: true
+          includeUserInfo: true,
+          hasUserInfo: filterForm.hasUserInfo
         })
         
         if (result.code === 0) {
@@ -742,6 +763,11 @@ export default {
         loadLeaderboardStats()
       }
     }
+
+    const resetFilter = () => {
+      filterForm.hasUserInfo = null
+      loadLeaderboardData()
+    }
     
     onMounted(() => {
       // 组件挂载时如果已有选择的app，则加载配置
@@ -760,6 +786,7 @@ export default {
       leaderboardStats,
       rankParams,
       playerSearchForm,
+      filterForm,
       configDialog,
       scoreDialog,
       configRules,
@@ -782,7 +809,8 @@ export default {
       getAppName,
       getUpdateStrategyText,
       getUpdateStrategyTagType,
-      Tools
+      Tools,
+      resetFilter
     }
   }
 }
@@ -841,6 +869,22 @@ export default {
   padding: 15px;
   border-radius: 8px;
   margin-bottom: 20px;
+}
+
+.filter-options {
+  background: #f5f5f5;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.filter-options .el-form-item {
+  margin-bottom: 0;
+}
+
+.filter-options .el-form-item__label {
+  font-weight: 500;
+  color: #606266;
 }
 
 .leaderboard-stats {
