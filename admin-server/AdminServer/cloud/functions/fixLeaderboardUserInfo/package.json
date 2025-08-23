@@ -1,0 +1,10 @@
+{
+  "name": "fixLeaderboardUserInfo",
+  "version": "1.0.0",
+  "description": "修复排行榜用户信息标记",
+  "main": "index.js",
+  "dependencies": {
+    "@alipay/faas-server-sdk": "^1.0.0",
+    "moment": "^2.29.4"
+  }
+} 

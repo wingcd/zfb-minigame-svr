@@ -169,7 +169,7 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column prop="openId" label="玩家ID" width="120">
+        <el-table-column prop="playerId" label="玩家ID" width="120">
         </el-table-column>
         <el-table-column label="玩家信息" width="200">
           <template #default="scope">
@@ -572,7 +572,7 @@ export default {
     // 编辑分数
     const editScore = (scoreData) => {
       scoreDialog.form = {
-        playerId: scoreData.openId,
+        playerId: scoreData.playerId,
         score: scoreData.score
       }
       scoreDialog.originalData = scoreData
@@ -608,7 +608,7 @@ export default {
     const deleteScore = async (scoreData) => {
       try {
         await ElMessageBox.confirm(
-          `确定要删除玩家 ${scoreData.openId} 的分数记录吗？`, 
+          `确定要删除玩家 ${scoreData.playerId} 的分数记录吗？`, 
           '确认删除', 
           { type: 'warning' }
         )

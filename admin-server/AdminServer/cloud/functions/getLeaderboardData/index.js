@@ -191,7 +191,8 @@ async function getLeaderboardDataHandler(event, context) {
                 playerId: score.playerId,
                 openId: score.openId,
                 score: score.score,
-                gmtCreate: score.gmtCreate
+                gmtCreate: score.gmtCreate,
+                gmtModify: score.gmtModify
             };
 
             if (userInfoMap[score.playerId]) {
