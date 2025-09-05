@@ -50,7 +50,7 @@ func init() {
 	mysqlPort := appconf.DefaultString("mysql_port", "3306")
 	mysqlUser := appconf.DefaultString("mysql_user", "root")
 	mysqlPassword := appconf.DefaultString("mysql_password", "")
-	mysqlDatabase := appconf.DefaultString("mysql_database", "game_service")
+	mysqlDatabase := appconf.DefaultString("mysql_database", "minigame_game")
 	mysqlCharset := appconf.DefaultString("mysql_charset", "utf8mb4")
 
 	// 构建数据库连接字符串

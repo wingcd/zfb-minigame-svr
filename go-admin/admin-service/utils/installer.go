@@ -130,6 +130,64 @@ func checkAdminExists() bool {
 	return false
 }
 
+func getMySQLDB() (*sql.DB, error) {
+	configPath := FindConfigFile()
+	appconf, err := config.NewConfig("ini", configPath)
+	if err != nil {
+		return nil, err
+	}
+
+	mysqlHost := getConfigString(appconf, "mysql_host", "127.0.0.1")
+	mysqlPort := getConfigString(appconf, "mysql_port", "3306")
+	mysqlUser := getConfigString(appconf, "mysql_user", "root")
+	mysqlPassword := getConfigString(appconf, "mysql_password", "")
+	mysqlDatabase := getConfigString(appconf, "mysql_database", "minigame_admin")
+
+	dataSource := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=true&loc=Local",
+		mysqlUser, mysqlPassword, mysqlHost, mysqlPort, mysqlDatabase)
+
+	db, err := sql.Open("mysql", dataSource)
+	if err != nil {
+		return nil, err
+	}
+	return db, nil
+}
+
+// AutoInstallWithParams 使用指定参数自动安装
+func AutoInstallWithParams(username, password string) error {
+	log.Println("开始系统初始化...")
+
+	var db *sql.DB
+	var err error
+	if testMySQLConnection() {
+		db, err = getMySQLDB()
+		if err != nil {
+			return fmt.Errorf("获取MySQL连接失败: %v", err)
+		}
+		defer db.Close()
+	} else {
+		return fmt.Errorf("MySQL连接失败，当前版本需要MySQL数据库")
+	}
+
+	// 1. 创建数据库表
+	if err = createTables(db, "mysql"); err != nil {
+		return fmt.Errorf("创建数据库表失败: %v", err)
+	}
+
+	// 2. 创建默认角色
+	if err = createDefaultRoles(db); err != nil {
+		return fmt.Errorf("创建默认角色失败: %v", err)
+	}
+
+	// 3. 创建默认管理员
+	if err = createDefaultAdminWithParams(db, username, password); err != nil {
+		return fmt.Errorf("创建默认管理员失败: %v", err)
+	}
+
+	log.Println("系统初始化完成")
+	return nil
+}
+
 // AutoInstall 自动安装
 func AutoInstall() error {
 	log.Println("开始自动安装...")
@@ -187,36 +245,20 @@ func AutoInstall() error {
 func installWithMySQL() error {
 	log.Println("初始化MySQL数据库...")
 
-	configPath := FindConfigFile()
-	appconf, err := config.NewConfig("ini", configPath)
-	if err != nil {
-		return err
-	}
-
-	mysqlHost := getConfigString(appconf, "mysql_host", "127.0.0.1")
-	mysqlPort := getConfigString(appconf, "mysql_port", "3306")
-	mysqlUser := getConfigString(appconf, "mysql_user", "root")
-	mysqlPassword := getConfigString(appconf, "mysql_password", "")
-	mysqlDatabase := getConfigString(appconf, "mysql_database", "minigame_admin")
-
-	// 连接MySQL（不指定数据库）
-	dataSource := fmt.Sprintf("%s:%s@tcp(%s:%s)/?charset=utf8mb4&parseTime=true&loc=Local",
-		mysqlUser, mysqlPassword, mysqlHost, mysqlPort)
-
-	db, err := sql.Open("mysql", dataSource)
+	db, err := getMySQLDB()
 	if err != nil {
 		return err
 	}
 	defer db.Close()
 
 	// 创建数据库
-	_, err = db.Exec(fmt.Sprintf("CREATE DATABASE IF NOT EXISTS %s CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci", mysqlDatabase))
+	_, err = db.Exec(fmt.Sprintf("CREATE DATABASE IF NOT EXISTS %s CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci", "minigame_admin"))
 	if err != nil {
 		return fmt.Errorf("创建数据库失败: %v", err)
 	}
 
 	// 选择数据库
-	_, err = db.Exec(fmt.Sprintf("USE %s", mysqlDatabase))
+	_, err = db.Exec(fmt.Sprintf("USE %s", "minigame_admin"))
 	if err != nil {
 		return err
 	}
@@ -224,6 +266,16 @@ func installWithMySQL() error {
 	// 创建表结构
 	if err := createTables(db, "mysql"); err != nil {
 		return err
+	}
+
+	// 创建默认角色
+	if err := createDefaultRoles(db); err != nil {
+		return fmt.Errorf("创建默认角色失败: %v", err)
+	}
+
+	// 创建默认管理员
+	if err := createDefaultAdmin(); err != nil {
+		return fmt.Errorf("创建默认管理员失败: %v", err)
 	}
 
 	log.Println("MySQL数据库初始化完成")
@@ -261,19 +313,26 @@ func createTables(db *sql.DB, dbType string) error {
 // getMySQLTables 获取MySQL表结构
 func getMySQLTables() []string {
 	return []string{
-		// 管理员表
-		`CREATE TABLE IF NOT EXISTS admins (
-			id INT PRIMARY KEY AUTO_INCREMENT,
+		// 管理员表 - 匹配AdminUser模型
+		`CREATE TABLE IF NOT EXISTS admin_users (
+			id BIGINT PRIMARY KEY AUTO_INCREMENT,
+			create_time DATETIME NOT NULL,
+			update_time DATETIME NOT NULL,
 			username VARCHAR(50) NOT NULL UNIQUE,
 			password VARCHAR(255) NOT NULL,
-			email VARCHAR(100),
-			role VARCHAR(20) DEFAULT 'admin',
-			status TINYINT DEFAULT 1,
-			last_login DATETIME,
-			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+			email VARCHAR(100) NOT NULL DEFAULT '',
+			phone VARCHAR(20) NOT NULL DEFAULT '',
+			real_name VARCHAR(50) NOT NULL DEFAULT '',
+			avatar VARCHAR(255) NOT NULL DEFAULT '',
+			status INT NOT NULL DEFAULT 1,
+			last_login_at DATETIME NULL,
+			last_login_ip VARCHAR(50) NOT NULL DEFAULT '',
+			role_id BIGINT NOT NULL DEFAULT 0,
+			token VARCHAR(128) NULL,
+			token_expire DATETIME NULL,
 			INDEX idx_username (username),
-			INDEX idx_email (email)
+			INDEX idx_email (email),
+			INDEX idx_status (status)
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
 
 		// 应用表
@@ -405,6 +464,123 @@ func getSQLiteTables() []string {
 	}
 }
 
+// createDefaultRoles 创建默认角色
+func createDefaultRoles(db *sql.DB) error {
+	log.Println("创建默认角色...")
+
+	// 定义默认角色
+	defaultRoles := []struct {
+		ID          int64
+		RoleCode    string
+		RoleName    string
+		Name        string
+		Description string
+		Permissions string
+		Status      int
+	}{
+		{
+			ID:          1,
+			RoleCode:    "super_admin",
+			RoleName:    "超级管理员",
+			Name:        "超级管理员",
+			Description: "拥有所有权限的超级管理员",
+			Permissions: `["admin_manage","role_manage","app_manage","user_manage","leaderboard_manage","mail_manage","stats_view","system_config","counter_manage"]`,
+			Status:      1,
+		},
+		{
+			ID:          2,
+			RoleCode:    "admin",
+			RoleName:    "管理员",
+			Name:        "管理员",
+			Description: "普通管理员，拥有大部分管理权限",
+			Permissions: `["app_manage","user_manage","leaderboard_manage","mail_manage","stats_view"]`,
+			Status:      1,
+		},
+		{
+			ID:          3,
+			RoleCode:    "operator",
+			RoleName:    "运营人员",
+			Name:        "运营人员",
+			Description: "运营人员，拥有内容管理权限",
+			Permissions: `["user_manage","leaderboard_manage","mail_manage","stats_view"]`,
+			Status:      1,
+		},
+		{
+			ID:          4,
+			RoleCode:    "viewer",
+			RoleName:    "查看者",
+			Name:        "查看者",
+			Description: "只读权限，可以查看统计数据",
+			Permissions: `["stats_view"]`,
+			Status:      1,
+		},
+	}
+
+	now := time.Now()
+
+	for _, role := range defaultRoles {
+		// 检查角色是否已存在
+		var count int
+		err := db.QueryRow("SELECT COUNT(*) FROM admin_roles WHERE id = ?", role.ID).Scan(&count)
+		if err != nil {
+			return fmt.Errorf("检查角色是否存在失败: %v", err)
+		}
+
+		if count > 0 {
+			log.Printf("角色 %s 已存在，跳过创建", role.RoleName)
+			continue
+		}
+
+		// 插入角色
+		_, err = db.Exec(`
+			INSERT INTO admin_roles (id, create_time, update_time, role_code, role_name, name, description, permissions, status) 
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			role.ID, now, now, role.RoleCode, role.RoleName, role.Name, role.Description, role.Permissions, role.Status)
+
+		if err != nil {
+			return fmt.Errorf("创建角色 %s 失败: %v", role.RoleName, err)
+		}
+
+		log.Printf("默认角色 %s 创建成功", role.RoleName)
+	}
+
+	return nil
+}
+
+// createDefaultAdminWithParams 使用指定参数创建默认管理员
+func createDefaultAdminWithParams(db *sql.DB, username, password string) error {
+	log.Printf("创建默认管理员: %s", username)
+
+	// MD5加密密码 (对齐登录验证逻辑)
+	hashedPassword := HashPassword(password)
+
+	// 检查管理员是否已存在
+	var count int
+	err := db.QueryRow("SELECT COUNT(*) FROM admin_users WHERE username = ?", username).Scan(&count)
+	if err != nil {
+		return err
+	}
+
+	if count > 0 {
+		log.Printf("管理员 %s 已存在，跳过创建", username)
+		return nil
+	}
+
+	// 插入默认管理员
+	now := time.Now()
+	_, err = db.Exec(`
+		INSERT INTO admin_users (create_time, update_time, username, password, email, phone, real_name, avatar, status, role_id) 
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		now, now, username, hashedPassword, "admin@example.com", "", "系统管理员", "", 1, 1)
+
+	if err != nil {
+		return err
+	}
+
+	log.Printf("默认管理员 %s 创建成功，密码: %s", username, password)
+	return nil
+}
+
 // createDefaultAdmin 创建默认管理员
 func createDefaultAdmin() error {
 	log.Println("创建默认管理员...")
@@ -419,35 +595,24 @@ func createDefaultAdmin() error {
 	username := getConfigString(appconf, "default_admin_username", "admin")
 	password := getConfigString(appconf, "default_admin_password", "admin123")
 
-	// 加密密码 (简化实现，实际应该使用bcrypt)
-	hashedPassword := password
+	// MD5加密密码 (对齐登录验证逻辑)
+	hashedPassword := HashPassword(password)
 
 	// 连接数据库
 	var db *sql.DB
 	if testMySQLConnection() {
-		// 使用MySQL
-		mysqlHost := getConfigString(appconf, "mysql_host", "127.0.0.1")
-		mysqlPort := getConfigString(appconf, "mysql_port", "3306")
-		mysqlUser := getConfigString(appconf, "mysql_user", "root")
-		mysqlPassword := getConfigString(appconf, "mysql_password", "")
-		mysqlDatabase := getConfigString(appconf, "mysql_database", "minigame_admin")
-
-		dataSource := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=true&loc=Local",
-			mysqlUser, mysqlPassword, mysqlHost, mysqlPort, mysqlDatabase)
-
-		db, err = sql.Open("mysql", dataSource)
+		db, err = getMySQLDB()
+		if err != nil {
+			return err
+		}
+		defer db.Close()
 	} else {
 		return fmt.Errorf("MySQL连接失败，当前版本需要MySQL数据库")
 	}
 
-	if err != nil {
-		return err
-	}
-	defer db.Close()
-
 	// 检查管理员是否已存在
 	var count int
-	err = db.QueryRow("SELECT COUNT(*) FROM admins WHERE username = ?", username).Scan(&count)
+	err = db.QueryRow("SELECT COUNT(*) FROM admin_users WHERE username = ?", username).Scan(&count)
 	if err != nil {
 		return err
 	}
@@ -458,10 +623,11 @@ func createDefaultAdmin() error {
 	}
 
 	// 插入默认管理员
+	now := time.Now()
 	_, err = db.Exec(`
-		INSERT INTO admins (username, password, email, role, status, created_at) 
-		VALUES (?, ?, ?, ?, ?, ?)`,
-		username, hashedPassword, "admin@example.com", "super_admin", 1, time.Now())
+		INSERT INTO admin_users (create_time, update_time, username, password, email, phone, real_name, avatar, status, role_id) 
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		now, now, username, hashedPassword, "admin@example.com", "", "系统管理员", "", 1, 1)
 
 	if err != nil {
 		return err
@@ -571,10 +737,11 @@ func createAdminWithConfig(config *InstallConfig) error {
 	}
 	defer db.Close()
 
+	now := time.Now()
 	_, err = db.Exec(`
-		INSERT INTO admins (username, password, email, role, status, created_at) 
-		VALUES (?, ?, ?, ?, ?, ?)`,
-		config.AdminUsername, hashedPassword, config.AdminEmail, "super_admin", 1, time.Now())
+		INSERT INTO admin_users (create_time, update_time, username, password, email, phone, real_name, avatar, status, role_id) 
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		now, now, config.AdminUsername, hashedPassword, config.AdminEmail, "", config.AdminUsername, "", 1, 1)
 
 	return err
 }
@@ -607,10 +774,236 @@ func Uninstall() error {
 	return nil
 }
 
+// ChangeAdminPassword 修改管理员密码
+func ChangeAdminPassword(username, oldPassword, newPassword string) error {
+	log.Printf("开始修改管理员密码: %s", username)
+
+	// 获取数据库连接
+	db, err := getMySQLDB()
+	if err != nil {
+		return fmt.Errorf("获取数据库连接失败: %v", err)
+	}
+	defer db.Close()
+
+	// 验证用户是否存在并检查原密码
+	var currentPassword string
+	err = db.QueryRow("SELECT password FROM admin_users WHERE username = ?", username).Scan(&currentPassword)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return fmt.Errorf("用户 %s 不存在", username)
+		}
+		return fmt.Errorf("查询用户失败: %v", err)
+	}
+
+	// 验证原密码
+	oldPasswordHash := HashPassword(oldPassword)
+	if currentPassword != oldPasswordHash {
+		return fmt.Errorf("原密码不正确")
+	}
+
+	// 加密新密码
+	newPasswordHash := HashPassword(newPassword)
+
+	// 更新密码
+	now := time.Now()
+	_, err = db.Exec("UPDATE admin_users SET password = ?, update_time = ? WHERE username = ?",
+		newPasswordHash, now, username)
+	if err != nil {
+		return fmt.Errorf("更新密码失败: %v", err)
+	}
+
+	log.Printf("管理员 %s 密码修改成功", username)
+	return nil
+}
+
+// ResetAdminPassword 重置管理员密码（不验证原密码）
+func ResetAdminPassword(username, newPassword string) error {
+	log.Printf("开始重置管理员密码: %s", username)
+
+	// 获取数据库连接
+	db, err := getMySQLDB()
+	if err != nil {
+		return fmt.Errorf("获取数据库连接失败: %v", err)
+	}
+	defer db.Close()
+
+	// 验证用户是否存在
+	var count int
+	err = db.QueryRow("SELECT COUNT(*) FROM admin_users WHERE username = ?", username).Scan(&count)
+	if err != nil {
+		return fmt.Errorf("查询用户失败: %v", err)
+	}
+
+	if count == 0 {
+		return fmt.Errorf("用户 %s 不存在", username)
+	}
+
+	// 加密新密码
+	newPasswordHash := HashPassword(newPassword)
+
+	// 更新密码
+	now := time.Now()
+	_, err = db.Exec("UPDATE admin_users SET password = ?, update_time = ?, token = NULL, token_expire = NULL WHERE username = ?",
+		newPasswordHash, now, username)
+	if err != nil {
+		return fmt.Errorf("重置密码失败: %v", err)
+	}
+
+	log.Printf("管理员 %s 密码重置成功", username)
+	return nil
+}
+
+// ListAdminUsers 列出所有管理员用户
+func ListAdminUsers() ([]map[string]interface{}, error) {
+	log.Println("获取管理员用户列表")
+
+	// 获取数据库连接
+	db, err := getMySQLDB()
+	if err != nil {
+		return nil, fmt.Errorf("获取数据库连接失败: %v", err)
+	}
+	defer db.Close()
+
+	// 查询管理员用户
+	rows, err := db.Query(`
+		SELECT id, username, email, phone, real_name, status, last_login_at, last_login_ip, role_id, create_time 
+		FROM admin_users 
+		ORDER BY create_time DESC
+	`)
+	if err != nil {
+		return nil, fmt.Errorf("查询管理员用户失败: %v", err)
+	}
+	defer rows.Close()
+
+	var users []map[string]interface{}
+	for rows.Next() {
+		var (
+			id          int64
+			username    string
+			email       string
+			phone       string
+			realName    string
+			status      int
+			lastLoginAt sql.NullTime
+			lastLoginIP string
+			roleID      int64
+			createTime  time.Time
+		)
+
+		err = rows.Scan(&id, &username, &email, &phone, &realName, &status, &lastLoginAt, &lastLoginIP, &roleID, &createTime)
+		if err != nil {
+			return nil, fmt.Errorf("扫描用户数据失败: %v", err)
+		}
+
+		user := map[string]interface{}{
+			"id":            id,
+			"username":      username,
+			"email":         email,
+			"phone":         phone,
+			"real_name":     realName,
+			"status":        status,
+			"last_login_ip": lastLoginIP,
+			"role_id":       roleID,
+			"create_time":   createTime.Format("2006-01-02 15:04:05"),
+		}
+
+		if lastLoginAt.Valid {
+			user["last_login_at"] = lastLoginAt.Time.Format("2006-01-02 15:04:05")
+		} else {
+			user["last_login_at"] = nil
+		}
+
+		users = append(users, user)
+	}
+
+	return users, nil
+}
+
 // getConfigString 获取配置字符串
 func getConfigString(conf config.Configer, key, defaultValue string) string {
 	if value, _ := conf.String(key); value != "" {
 		return value
 	}
 	return defaultValue
+}
+
+// ChangeAdminPasswordCLI 命令行修改管理员密码（不需要验证原密码）
+func ChangeAdminPasswordCLI(username, newPassword string) error {
+	// 检查系统是否已安装
+	status := CheckInstallStatus()
+	if !status.IsInstalled {
+		return fmt.Errorf("系统未安装，请先运行安装")
+	}
+
+	// 验证密码强度
+	if len(newPassword) < 6 {
+		return fmt.Errorf("密码长度至少6位")
+	}
+
+	// 调用重置密码函数（不需要验证原密码）
+	return ResetAdminPassword(username, newPassword)
+}
+
+// CreateAdminUser 创建新管理员用户
+func CreateAdminUser(username, password, email, realName string) error {
+	log.Printf("开始创建管理员用户: %s", username)
+
+	// 参数验证
+	if username == "" || password == "" {
+		return fmt.Errorf("用户名和密码不能为空")
+	}
+
+	// 验证密码强度
+	if len(password) < 6 {
+		return fmt.Errorf("密码长度至少6位")
+	}
+
+	// 连接数据库
+	var db *sql.DB
+	var err error
+	if testMySQLConnection() {
+		db, err = getMySQLDB()
+		if err != nil {
+			return fmt.Errorf("获取MySQL连接失败: %v", err)
+		}
+		defer db.Close()
+	} else {
+		return fmt.Errorf("MySQL连接失败，当前版本需要MySQL数据库")
+	}
+
+	// 检查管理员是否已存在
+	var count int
+	err = db.QueryRow("SELECT COUNT(*) FROM admin_users WHERE username = ?", username).Scan(&count)
+	if err != nil {
+		return fmt.Errorf("检查用户是否存在失败: %v", err)
+	}
+
+	if count > 0 {
+		return fmt.Errorf("用户名 '%s' 已存在", username)
+	}
+
+	// MD5加密密码 (对齐登录验证逻辑)
+	hashedPassword := HashPassword(password)
+
+	// 设置默认值
+	if email == "" {
+		email = username + "@example.com"
+	}
+	if realName == "" {
+		realName = username
+	}
+
+	// 插入新管理员
+	now := time.Now()
+	_, err = db.Exec(`
+		INSERT INTO admin_users (create_time, update_time, username, password, email, phone, real_name, avatar, status, role_id) 
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		now, now, username, hashedPassword, email, "", realName, "", 1, 1)
+
+	if err != nil {
+		return fmt.Errorf("创建管理员失败: %v", err)
+	}
+
+	log.Printf("管理员用户 %s 创建成功", username)
+	return nil
 }

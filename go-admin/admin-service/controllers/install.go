@@ -245,3 +245,229 @@ func testDatabaseConnection(config *utils.InstallConfig) (bool, string) {
 
 	return false, "不支持的数据库类型"
 }
+
+// InitSystemRequest 系统初始化请求
+type InitSystemRequest struct {
+	AdminUsername string `json:"adminUsername"`
+	AdminPassword string `json:"adminPassword"`
+	Force         bool   `json:"force"`
+}
+
+// InitSystem 系统初始化（前端调用的接口）
+func (c *InstallController) InitSystem() {
+	var req InitSystemRequest
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
+		c.Data["json"] = InstallResponse{
+			Code:    4001,
+			Message: "参数解析失败: " + err.Error(),
+		}
+		c.ServeJSON()
+		return
+	}
+
+	// 检查是否已安装
+	status := utils.CheckInstallStatus()
+	if status.IsInstalled && !req.Force {
+		c.Data["json"] = InstallResponse{
+			Code:    409,
+			Message: "系统已经初始化",
+		}
+		c.ServeJSON()
+		return
+	}
+
+	// 使用前端传递的参数进行安装
+	if err := utils.AutoInstallWithParams(req.AdminUsername, req.AdminPassword); err != nil {
+		log.Printf("系统初始化失败: %v", err)
+		c.Data["json"] = InstallResponse{
+			Code:    500,
+			Message: "初始化失败: " + err.Error(),
+		}
+		c.ServeJSON()
+		return
+	}
+
+	c.Data["json"] = InstallResponse{
+		Code:    200,
+		Message: "初始化成功",
+		Data: map[string]interface{}{
+			"createdCollections": 3,
+			"createdRoles":       4,
+			"createdAdmins":      1,
+			"defaultCredentials": map[string]interface{}{
+				"username": req.AdminUsername,
+				"password": req.AdminPassword,
+				"warning":  "请立即登录并修改默认密码！",
+			},
+		},
+	}
+	c.ServeJSON()
+}
+
+// ChangePasswordRequest 修改密码请求
+type ChangePasswordRequest struct {
+	Username    string `json:"username"`
+	OldPassword string `json:"oldPassword"`
+	NewPassword string `json:"newPassword"`
+}
+
+// ChangePassword 修改管理员密码
+func (c *InstallController) ChangePassword() {
+	var req ChangePasswordRequest
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
+		c.Data["json"] = InstallResponse{
+			Code:    400,
+			Message: "参数解析失败: " + err.Error(),
+		}
+		c.ServeJSON()
+		return
+	}
+
+	// 验证参数
+	if req.Username == "" {
+		c.Data["json"] = InstallResponse{
+			Code:    400,
+			Message: "用户名不能为空",
+		}
+		c.ServeJSON()
+		return
+	}
+
+	if req.OldPassword == "" {
+		c.Data["json"] = InstallResponse{
+			Code:    400,
+			Message: "原密码不能为空",
+		}
+		c.ServeJSON()
+		return
+	}
+
+	if req.NewPassword == "" {
+		c.Data["json"] = InstallResponse{
+			Code:    400,
+			Message: "新密码不能为空",
+		}
+		c.ServeJSON()
+		return
+	}
+
+	if len(req.NewPassword) < 6 {
+		c.Data["json"] = InstallResponse{
+			Code:    400,
+			Message: "新密码长度不能少于6位",
+		}
+		c.ServeJSON()
+		return
+	}
+
+	// 执行密码修改
+	if err := utils.ChangeAdminPassword(req.Username, req.OldPassword, req.NewPassword); err != nil {
+		log.Printf("修改密码失败: %v", err)
+		c.Data["json"] = InstallResponse{
+			Code:    500,
+			Message: "修改密码失败: " + err.Error(),
+		}
+		c.ServeJSON()
+		return
+	}
+
+	c.Data["json"] = InstallResponse{
+		Code:    200,
+		Message: "密码修改成功",
+	}
+	c.ServeJSON()
+}
+
+// ResetPasswordRequest 重置密码请求
+type ResetPasswordRequest struct {
+	Username    string `json:"username"`
+	NewPassword string `json:"newPassword"`
+	Force       bool   `json:"force"` // 是否强制重置（不验证原密码）
+}
+
+// ResetPassword 重置管理员密码（用于忘记密码的情况）
+func (c *InstallController) ResetPassword() {
+	var req ResetPasswordRequest
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
+		c.Data["json"] = InstallResponse{
+			Code:    400,
+			Message: "参数解析失败: " + err.Error(),
+		}
+		c.ServeJSON()
+		return
+	}
+
+	// 验证参数
+	if req.Username == "" {
+		c.Data["json"] = InstallResponse{
+			Code:    400,
+			Message: "用户名不能为空",
+		}
+		c.ServeJSON()
+		return
+	}
+
+	if req.NewPassword == "" {
+		c.Data["json"] = InstallResponse{
+			Code:    400,
+			Message: "新密码不能为空",
+		}
+		c.ServeJSON()
+		return
+	}
+
+	if len(req.NewPassword) < 6 {
+		c.Data["json"] = InstallResponse{
+			Code:    400,
+			Message: "新密码长度不能少于6位",
+		}
+		c.ServeJSON()
+		return
+	}
+
+	// 执行密码重置
+	if err := utils.ResetAdminPassword(req.Username, req.NewPassword); err != nil {
+		log.Printf("重置密码失败: %v", err)
+		c.Data["json"] = InstallResponse{
+			Code:    500,
+			Message: "重置密码失败: " + err.Error(),
+		}
+		c.ServeJSON()
+		return
+	}
+
+	c.Data["json"] = InstallResponse{
+		Code:    200,
+		Message: "密码重置成功",
+		Data: map[string]interface{}{
+			"username": req.Username,
+			"message":  "密码已重置，请使用新密码登录",
+		},
+	}
+	c.ServeJSON()
+}
+
+// ListAdmins 列出管理员用户
+func (c *InstallController) ListAdmins() {
+	// 获取管理员用户列表
+	users, err := utils.ListAdminUsers()
+	if err != nil {
+		log.Printf("获取管理员用户列表失败: %v", err)
+		c.Data["json"] = InstallResponse{
+			Code:    500,
+			Message: "获取用户列表失败: " + err.Error(),
+		}
+		c.ServeJSON()
+		return
+	}
+
+	c.Data["json"] = InstallResponse{
+		Code:    200,
+		Message: "获取用户列表成功",
+		Data: map[string]interface{}{
+			"users": users,
+			"total": len(users),
+		},
+	}
+	c.ServeJSON()
+}

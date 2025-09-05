@@ -60,8 +60,7 @@ func (c *AuthController) AdminLogin() {
 	}
 
 	// MD5密码加密（对齐云函数）
-	hash := md5.Sum([]byte(req.Password))
-	passwordHash := hex.EncodeToString(hash[:])
+	passwordHash := utils.HashPassword(req.Password)
 
 	// 验证登录
 	admin, err := models.AdminLoginWithMD5(req.Username, passwordHash)

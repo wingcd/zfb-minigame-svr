@@ -2,14 +2,18 @@ package routers
 
 import (
 	"admin-service/controllers"
+	"admin-service/middlewares"
 
 	"github.com/beego/beego/v2/server/web"
 )
 
 func init() {
+	// 注册CORS中间件 - 在所有路由之前处理
+	web.InsertFilter("/*", web.BeforeRouter, middlewares.CORSMiddleware)
 	// 安装相关路由
 	web.Router("/install", &controllers.InstallController{}, "get:ShowInstallPage")
 	web.Router("/install/status", &controllers.InstallController{}, "get:CheckStatus")
+	web.Router("/install/init", &controllers.InstallController{}, "post:InitSystem")
 	web.Router("/install/auto", &controllers.InstallController{}, "post:AutoInstall")
 	web.Router("/install/manual", &controllers.InstallController{}, "post:ManualInstall")
 	web.Router("/install/test", &controllers.InstallController{}, "post:TestConnection")
@@ -18,34 +22,71 @@ func init() {
 	// 健康检查
 	web.Router("/health", &controllers.HealthController{}, "get:Health")
 
-	// 基本认证模块（暂时注释其他路由以便启动）
-	web.Router("/adminLogin", &controllers.AuthController{}, "post:AdminLogin")
+	// 基本认证模块
 	web.Router("/admin/login", &controllers.AuthController{}, "post:AdminLogin")
 	web.Router("/admin/verifyToken", &controllers.AuthController{}, "post:VerifyToken")
-	web.Router("/verifyToken", &controllers.AuthController{}, "post:VerifyToken")
 
 	// 基本管理员管理模块
 	web.Router("/admin/create", &controllers.AdminController{}, "post:CreateAdmin")
-	web.Router("/createAdmin", &controllers.AdminController{}, "post:CreateAdmin")
 	web.Router("/admin/init", &controllers.AdminController{}, "post:InitAdmin")
-	web.Router("/initAdmin", &controllers.AdminController{}, "post:InitAdmin")
+	web.Router("/admin/getList", &controllers.AdminController{}, "post:GetAdmins")
+	web.Router("/admin/update", &controllers.AdminController{}, "post:UpdateAdmin")
+	web.Router("/admin/delete", &controllers.AdminController{}, "post:DeleteAdmin")
+	web.Router("/admin/resetPwd", &controllers.AdminController{}, "post:ResetPassword")
 
 	// 基本应用管理模块
 	web.Router("/app/getAll", &controllers.ApplicationController{}, "post:GetApplications")
 	web.Router("/app/create", &controllers.ApplicationController{}, "post:CreateApplication")
+	web.Router("/app/update", &controllers.ApplicationController{}, "post:UpdateApplication")
+	web.Router("/app/delete", &controllers.ApplicationController{}, "post:DeleteApplication")
+	web.Router("/app/init", &controllers.ApplicationController{}, "post:CreateApplication")
+	web.Router("/app/query", &controllers.ApplicationController{}, "post:GetApplication")
+	web.Router("/app/getDetail", &controllers.ApplicationController{}, "post:GetApplication")
 
 	// 用户管理模块
 	web.Router("/user/getAll", &controllers.UserController{}, "post:GetAllUsers")
+	web.Router("/user/ban", &controllers.UserController{}, "post:BanUser")
+	web.Router("/user/unban", &controllers.UserController{}, "post:UnbanUser")
+	web.Router("/user/delete", &controllers.UserController{}, "post:DeleteUser")
+	web.Router("/user/getDetail", &controllers.UserController{}, "post:GetUserDetail")
+	web.Router("/user/setDetail", &controllers.UserController{}, "post:SetUserDetail")
+	web.Router("/user/getStats", &controllers.UserController{}, "post:GetUserStats")
 	// 排行榜管理模块
 	web.Router("/leaderboard/getAll", &controllers.LeaderboardController{}, "post:GetAllLeaderboards")
+	web.Router("/leaderboard/create", &controllers.LeaderboardController{}, "post:CreateLeaderboard")
+	web.Router("/leaderboard/update", &controllers.LeaderboardController{}, "post:UpdateLeaderboard")
+	web.Router("/leaderboard/delete", &controllers.LeaderboardController{}, "post:DeleteLeaderboard")
+	web.Router("/leaderboard/getData", &controllers.LeaderboardController{}, "post:GetLeaderboardData")
+	web.Router("/leaderboard/updateScore", &controllers.LeaderboardController{}, "post:UpdateLeaderboardScore")
+	web.Router("/leaderboard/deleteScore", &controllers.LeaderboardController{}, "post:DeleteLeaderboardScore")
 	// 计数器管理模块
 	web.Router("/counter/getList", &controllers.CounterController{}, "post:GetCounterList")
+	web.Router("/counter/create", &controllers.CounterController{}, "post:CreateCounter")
+	web.Router("/counter/update", &controllers.CounterController{}, "post:UpdateCounter")
+	web.Router("/counter/delete", &controllers.CounterController{}, "post:DeleteCounter")
+	web.Router("/counter/getAllStats", &controllers.CounterController{}, "post:GetAllCounterStats")
 	// 统计模块
 	web.Router("/stat/dashboard", &controllers.StatsController{}, "post:GetDashboardStats")
+	web.Router("/stat/getTopApps", &controllers.StatsController{}, "post:GetTopApps")
+	web.Router("/stat/getRecentActivity", &controllers.StatsController{}, "post:GetRecentActivity")
+	web.Router("/stat/getUserGrowth", &controllers.StatsController{}, "post:GetUserGrowth")
+	web.Router("/stat/getAppStats", &controllers.StatsController{}, "post:GetAppStats")
+	web.Router("/stat/getLeaderboardStats", &controllers.StatsController{}, "post:GetLeaderboardStats")
 	// 邮件管理模块
 	web.Router("/mail/getAll", &controllers.MailController{}, "post:GetAllMails")
+	web.Router("/mail/create", &controllers.MailController{}, "post:CreateMail")
+	web.Router("/mail/update", &controllers.MailController{}, "post:UpdateMail")
+	web.Router("/mail/delete", &controllers.MailController{}, "post:DeleteMail")
+	web.Router("/mail/send", &controllers.MailController{}, "post:SendMail")
+	web.Router("/mail/getStats", &controllers.MailController{}, "post:GetMailStats")
+	web.Router("/mail/getUserMails", &controllers.MailController{}, "post:GetUserMails")
+	web.Router("/mail/initSystem", &controllers.MailController{}, "post:InitMailSystem")
 	// 游戏配置模块
 	web.Router("/gameConfig/getList", &controllers.GameConfigController{}, "post:GetGameConfigList")
+	web.Router("/gameConfig/create", &controllers.GameConfigController{}, "post:CreateGameConfig")
+	web.Router("/gameConfig/update", &controllers.GameConfigController{}, "post:UpdateGameConfig")
+	web.Router("/gameConfig/delete", &controllers.GameConfigController{}, "post:DeleteGameConfig")
+	web.Router("/gameConfig/get", &controllers.GameConfigController{}, "post:GetGameConfig")
 
 	apiNamespace := web.NewNamespace("/api",
 		// 认证相关

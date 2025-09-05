@@ -2,6 +2,7 @@ package models
 
 import (
 	"errors"
+
 	"github.com/beego/beego/v2/client/orm"
 )
 
@@ -32,7 +33,3 @@ func (a *Application) GetByAppId() error {
 	}
 	return nil
 }
-
-func init() {
-	orm.RegisterModel(new(Application))
-} 

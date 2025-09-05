@@ -64,27 +64,6 @@ func AuthMiddleware(ctx *context.Context) {
 	}
 }
 
-// CORSMiddleware CORS中间件
-func CORSMiddleware(ctx *context.Context) {
-	origin := ctx.Input.Header("Origin")
-	if origin != "" {
-		ctx.Output.Header("Access-Control-Allow-Origin", origin)
-	} else {
-		ctx.Output.Header("Access-Control-Allow-Origin", "*")
-	}
-
-	ctx.Output.Header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS")
-	ctx.Output.Header("Access-Control-Allow-Headers", "Origin,Content-Type,Accept,Authorization,X-Requested-With")
-	ctx.Output.Header("Access-Control-Allow-Credentials", "true")
-	ctx.Output.Header("Access-Control-Max-Age", "86400")
-
-	// 处理预检请求
-	if ctx.Input.Method() == "OPTIONS" {
-		ctx.Output.SetStatus(200)
-		return
-	}
-}
-
 // LogMiddleware 日志中间件
 func LogMiddleware(ctx *context.Context) {
 	// 记录请求日志

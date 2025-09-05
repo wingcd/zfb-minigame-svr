@@ -10,3 +10,7 @@
 /go-admin/game-admin/node_modules
 /go-admin/admin-service/tests/__debug_bin
 /go-admin/admin-service/test_binary.exe
+/go-admin/admin-service/bin/*.exe
+/go-admin/admin-service/__debug_bin.exe
+/go-admin/admin-service/__debug_bin.exe1669570047
+/go-admin/admin-service/*.exe

@@ -84,7 +84,7 @@
       </el-table-column>
       <el-table-column label="游戏数据" width="120">
         <template #default="scope">
-          <el-button type="text" @click="viewUserData(scope.row)">
+          <el-button link @click="viewUserData(scope.row)">
             查看数据
           </el-button>
         </template>
@@ -102,14 +102,14 @@
       </el-table-column>
       <el-table-column label="操作" width="200" fixed="right">
         <template #default="scope">
-          <el-button type="text" @click="editUserData(scope.row)">编辑数据</el-button>
+          <el-button link @click="editUserData(scope.row)">编辑数据</el-button>
           <el-button 
-            type="text" 
+            link 
             :class="scope.row.banned ? 'success' : 'danger'"
             @click="toggleUserBan(scope.row)">
             {{ scope.row.banned ? '解封' : '封禁' }}
           </el-button>
-          <el-button type="text" class="danger" @click="deleteUser(scope.row)">删除</el-button>
+          <el-button link class="danger" @click="deleteUser(scope.row)">删除</el-button>
         </template>
       </el-table-column>
     </el-table>

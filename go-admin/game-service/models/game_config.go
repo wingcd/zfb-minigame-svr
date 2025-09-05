@@ -177,7 +177,3 @@ func GetVersionList(appId string) ([]string, error) {
 
 	return versions, err
 }
-
-func init() {
-	orm.RegisterModel(new(GameConfig))
-}

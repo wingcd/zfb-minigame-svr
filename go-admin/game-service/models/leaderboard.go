@@ -38,20 +38,41 @@ func SubmitScore(appId, userId, leaderboardName string, score int64, extraData s
 		Filter("user_id", userId).
 		One(leaderboard)
 
-	if err == orm.ErrNoRows {
+	switch err {
+	case orm.ErrNoRows:
 		// 新建记录
 		leaderboard.LeaderboardName = leaderboardName
 		leaderboard.UserId = userId
 		leaderboard.Score = score
 		leaderboard.ExtraData = extraData
 		_, err = o.Insert(leaderboard)
-	} else if err == nil {
-		// 更新分数（只在新分数更高时更新）
-		if score > leaderboard.Score {
-			leaderboard.Score = score
-			leaderboard.ExtraData = extraData
-			_, err = o.Update(leaderboard, "score", "extra_data", "updated_at")
-		}
+	case nil:
+		leaderboard.Score = score
+		leaderboard.ExtraData = extraData
+		_, err = o.Update(leaderboard, "score", "extra_data", "updated_at")
+	}
+
+	return err
+}
+
+func UpdateScore(appId, userId, leaderboardName string, score int64, extraData string) error {
+	o := orm.NewOrm()
+
+	leaderboard := &Leaderboard{}
+	tableName := leaderboard.GetTableName(appId)
+
+	err := o.QueryTable(tableName).
+		Filter("leaderboard_name", leaderboardName).
+		Filter("user_id", userId).
+		One(leaderboard)
+
+	switch err {
+	case orm.ErrNoRows:
+		return fmt.Errorf("排行榜不存在")
+	case nil:
+		leaderboard.Score = score
+		leaderboard.ExtraData = extraData
+		_, err = o.Update(leaderboard, "score", "extra_data", "updated_at")
 	}
 
 	return err
@@ -140,8 +161,4 @@ func GetLeaderboardList(appId string, page, pageSize int, leaderboardName string
 	_, err := qs.OrderBy("-score", "created_at").Limit(pageSize, offset).All(&results)
 
 	return results, total, err
-}
-
-func init() {
-	orm.RegisterModel(new(Leaderboard))
 }

@@ -82,7 +82,7 @@
             <template #header>
               <div class="card-header">
                 <span>用户增长趋势</span>
-                <el-button type="text" @click="refreshUserTrend">刷新</el-button>
+                <el-button link @click="refreshUserTrend">刷新</el-button>
               </div>
             </template>
             <div class="chart-container" ref="userTrendChart" style="height: 300px;"></div>
@@ -93,7 +93,7 @@
             <template #header>
               <div class="card-header">
                 <span>平台分布</span>
-                <el-button type="text" @click="refreshPlatformStats">刷新</el-button>
+                <el-button link @click="refreshPlatformStats">刷新</el-button>
               </div>
             </template>
             <div class="chart-container" ref="platformChart" style="height: 300px;"></div>
@@ -110,7 +110,7 @@
             <template #header>
               <div class="card-header">
                 <span>热门应用 TOP 10</span>
-                <el-button type="text" @click="refreshTopApps">刷新</el-button>
+                <el-button link @click="refreshTopApps">刷新</el-button>
               </div>
             </template>
             <div class="top-apps-list">
@@ -144,7 +144,7 @@
             <template #header>
               <div class="card-header">
                 <span>最近活动</span>
-                <el-button type="text" @click="refreshRecentActivity">刷新</el-button>
+                <el-button link @click="refreshRecentActivity">刷新</el-button>
               </div>
             </template>
             <div class="activity-list">

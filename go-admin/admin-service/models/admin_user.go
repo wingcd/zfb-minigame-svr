@@ -1,6 +1,7 @@
 package models
 
 import (
+	"admin-service/utils"
 	"encoding/json"
 	"time"
 
@@ -18,7 +19,7 @@ type AdminUser struct {
 	Avatar      string    `orm:"size(255)" json:"avatar"`
 	Status      int       `orm:"default(1)" json:"status"` // 1:正常 0:禁用
 	LastLoginAt time.Time `orm:"type(datetime);null" json:"last_login_at"`
-	LastLoginIP string    `orm:"size(50)" json:"last_login_ip"`
+	LastLoginIP string    `orm:"size(50);column(last_login_ip)" json:"last_login_ip"`
 	RoleId      int64     `orm:"default(0)" json:"role_id"`
 	Token       string    `orm:"size(128);null" json:"-"`      // 添加token字段
 	TokenExpire time.Time `orm:"type(datetime);null" json:"-"` // 添加token过期时间
@@ -32,7 +33,7 @@ func (u *AdminUser) TableName() string {
 // GetAllAdminUsers 获取所有管理员
 func GetAllAdminUsers(page, pageSize int, keyword string) ([]*AdminUser, int64, error) {
 	o := orm.NewOrm()
-	qs := o.QueryTable("admin_users").RelatedSel("Role")
+	qs := o.QueryTable("admin_users")
 
 	if keyword != "" {
 		qs = qs.Filter("username__icontains", keyword)
@@ -55,7 +56,7 @@ func GetAllAdminUsers(page, pageSize int, keyword string) ([]*AdminUser, int64, 
 func GetAdminUserById(id int64) (*AdminUser, error) {
 	o := orm.NewOrm()
 	user := &AdminUser{BaseModel: BaseModel{Id: id}}
-	err := o.QueryTable("admin_users").RelatedSel("Role").Filter("id", id).One(user)
+	err := o.QueryTable("admin_users").Filter("id", id).One(user)
 	return user, err
 }
 
@@ -63,7 +64,7 @@ func GetAdminUserById(id int64) (*AdminUser, error) {
 func GetAdminUserByUsername(username string) (*AdminUser, error) {
 	o := orm.NewOrm()
 	user := &AdminUser{}
-	err := o.QueryTable("admin_users").RelatedSel("Role").Filter("username", username).One(user)
+	err := o.QueryTable("admin_users").Filter("username", username).One(user)
 	return user, err
 }
 
@@ -98,8 +99,8 @@ func DeleteAdminUser(id int64) error {
 // UpdateAdminUserStatus 更新管理员状态
 func UpdateAdminUserStatus(id int64, status int) error {
 	return UpdateAdminUserFields(id, map[string]interface{}{
-		"status":     status,
-		"updated_at": time.Now(),
+		"status":      status,
+		"update_time": time.Now(),
 	})
 }
 
@@ -108,7 +109,7 @@ func UpdateAdminUserLoginInfo(id int64, loginIP string) error {
 	return UpdateAdminUserFields(id, map[string]interface{}{
 		"last_login_at": time.Now(),
 		"last_login_ip": loginIP,
-		"updated_at":    time.Now(),
+		"update_time":   time.Now(),
 	})
 }
 
@@ -137,9 +138,9 @@ func GetAdminById(id int64) (*AdminUser, error) {
 // UpdateAdminProfile 更新管理员资料
 func UpdateAdminProfile(id int64, nickname, email string) error {
 	return UpdateAdminUserFields(id, map[string]interface{}{
-		"real_name":  nickname,
-		"email":      email,
-		"updated_at": time.Now(),
+		"real_name":   nickname,
+		"email":       email,
+		"update_time": time.Now(),
 	})
 }
 
@@ -147,9 +148,10 @@ func UpdateAdminProfile(id int64, nickname, email string) error {
 func ChangeAdminPassword(id int64, oldPassword, newPassword string) error {
 	// 这里需要实现密码验证和更新逻辑
 	// 暂时简单实现
+	hashedPassword := utils.HashPassword(newPassword)
 	return UpdateAdminUserFields(id, map[string]interface{}{
-		"password":   newPassword, // 实际应该加密
-		"updated_at": time.Now(),
+		"password":    hashedPassword,
+		"update_time": time.Now(),
 	})
 }
 
@@ -157,7 +159,7 @@ func ChangeAdminPassword(id int64, oldPassword, newPassword string) error {
 func AdminLoginWithMD5(username, passwordHash string) (*AdminUser, error) {
 	o := orm.NewOrm()
 	admin := &AdminUser{}
-	err := o.QueryTable("admin_users").RelatedSel("Role").
+	err := o.QueryTable("admin_users").
 		Filter("username", username).
 		Filter("password", passwordHash).
 		Filter("status", 1). // 只允许活跃用户登录
@@ -176,7 +178,7 @@ func UpdateAdminToken(id int64, token string, tokenExpire time.Time, loginIP str
 		"token_expire":  tokenExpire,
 		"last_login_at": time.Now(),
 		"last_login_ip": loginIP,
-		"updated_at":    time.Now(),
+		"update_time":   time.Now(),
 	})
 }
 
@@ -192,9 +194,11 @@ func GetAdminRolePermissions(roleId int64) (*AdminRole, []string, error) {
 	// 解析权限JSON
 	var permissions []string
 	if role.Permissions != "" {
-		// 这里需要根据实际的权限存储格式解析
-		// 暂时返回空权限列表
-		permissions = []string{}
+		err := json.Unmarshal([]byte(role.Permissions), &permissions)
+		if err != nil {
+			// 如果JSON解析失败，记录错误但不中断流程
+			permissions = []string{}
+		}
 	}
 
 	return role, permissions, nil
@@ -204,7 +208,7 @@ func GetAdminRolePermissions(roleId int64) (*AdminRole, []string, error) {
 func GetAdminByToken(token string) (*AdminUser, error) {
 	o := orm.NewOrm()
 	admin := &AdminUser{}
-	err := o.QueryTable("admin_users").RelatedSel("Role").
+	err := o.QueryTable("admin_users").
 		Filter("token", token).
 		Filter("status", 1). // 只允许活跃用户
 		One(admin)

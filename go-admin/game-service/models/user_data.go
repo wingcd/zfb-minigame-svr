@@ -90,7 +90,3 @@ func GetUserDataList(appId string, page, pageSize int) ([]UserData, int64, error
 
 	return dataList, total, err
 }
-
-func init() {
-	orm.RegisterModel(new(UserData))
-}

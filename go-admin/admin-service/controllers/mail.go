@@ -4,13 +4,69 @@ import (
 	"admin-service/models"
 	"admin-service/utils"
 	"encoding/json"
+	"fmt"
 	"time"
 
+	"github.com/beego/beego/v2/client/orm"
 	"github.com/beego/beego/v2/server/web"
 )
 
 type MailController struct {
 	web.Controller
+}
+
+// InitMailSystem 初始化邮件系统
+func (c *MailController) InitMailSystem() {
+	var requestData struct {
+		AppId string `json:"appId"`
+		Force bool   `json:"force"`
+	}
+
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &requestData); err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4001,
+			"msg":       "参数错误",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	if requestData.AppId == "" {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4001,
+			"msg":       "appId不能为空",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	// 创建邮件表
+	err := createMailTable(requestData.AppId, requestData.Force)
+	if err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      5001,
+			"msg":       "邮件系统初始化失败: " + err.Error(),
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	c.Data["json"] = map[string]interface{}{
+		"code":      0,
+		"msg":       "邮件系统初始化完成",
+		"timestamp": utils.UnixMilli(),
+		"data": map[string]interface{}{
+			"createdTables": 1,
+			"warning":       "邮件系统已成功初始化！",
+		},
+	}
+	c.ServeJSON()
 }
 
 // GetAllMails 获取所有邮件
@@ -442,4 +498,65 @@ func (c *MailController) SendBroadcastMail() {
 		"data":      nil,
 	}
 	c.ServeJSON()
+}
+
+// createMailTable 创建邮件表
+func createMailTable(appId string, force bool) error {
+	o := orm.NewOrm()
+
+	mail := &models.Mail{}
+	tableName := mail.GetTableName(appId)
+
+	// 检查表是否已存在
+	var count int64
+	err := o.Raw("SELECT COUNT(*) FROM information_schema.tables WHERE table_name = ? AND table_schema = DATABASE()", tableName).QueryRow(&count)
+	if err != nil {
+		return fmt.Errorf("检查表是否存在时出错: %v", err)
+	}
+
+	// 如果表已存在且不是强制模式
+	if count > 0 && !force {
+		// 检查表中是否有数据
+		var dataCount int64
+		err = o.Raw(fmt.Sprintf("SELECT COUNT(*) FROM %s", tableName)).QueryRow(&dataCount)
+		if err == nil && dataCount > 0 {
+			return fmt.Errorf("邮件系统已初始化，如需重新初始化请设置 force=true")
+		}
+	}
+
+	// 如果是强制模式，先删除现有表
+	if force && count > 0 {
+		_, err = o.Raw(fmt.Sprintf("DROP TABLE IF EXISTS %s", tableName)).Exec()
+		if err != nil {
+			return fmt.Errorf("删除现有表失败: %v", err)
+		}
+	}
+
+	// 创建邮件表
+	createTableSQL := fmt.Sprintf(`
+		CREATE TABLE IF NOT EXISTS %s (
+			id BIGINT PRIMARY KEY AUTO_INCREMENT,
+			app_id VARCHAR(100) NOT NULL,
+			user_id VARCHAR(100) NOT NULL,
+			title VARCHAR(200) NOT NULL,
+			content TEXT,
+			rewards TEXT,
+			status INT DEFAULT 0 COMMENT '0:未读 1:已读 2:已领取',
+			expire_at DATETIME NULL,
+			create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+			update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+			INDEX idx_app_id (app_id),
+			INDEX idx_user_id (user_id),
+			INDEX idx_status (status),
+			INDEX idx_expire_at (expire_at),
+			INDEX idx_create_time (create_time)
+		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='邮件表'
+	`, tableName)
+
+	_, err = o.Raw(createTableSQL).Exec()
+	if err != nil {
+		return fmt.Errorf("创建邮件表失败: %v", err)
+	}
+
+	return nil
 }

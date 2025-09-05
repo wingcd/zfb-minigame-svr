@@ -262,7 +262,3 @@ func GetAllGlobalCounters(appId string) ([]Counter, error) {
 
 	return results, err
 }
-
-func init() {
-	orm.RegisterModel(new(Counter))
-}

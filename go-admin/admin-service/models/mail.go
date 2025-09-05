@@ -54,6 +54,13 @@ func (m *Mail) TableName() string {
 	return "mail"
 }
 
+// GetTableName 获取动态表名
+func (m *Mail) GetTableName(appId string) string {
+	cleanAppId := strings.ReplaceAll(appId, "-", "_")
+	cleanAppId = strings.ReplaceAll(cleanAppId, ".", "_")
+	return fmt.Sprintf("mail_%s", cleanAppId)
+}
+
 // TableName 获取表名
 func (mc *MailConfig) TableName() string {
 	return "mail_config"

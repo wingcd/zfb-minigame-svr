@@ -116,15 +116,15 @@
       </el-table-column>
       <el-table-column label="操作" width="250" fixed="right">
         <template #default="scope">
-          <el-button type="text" @click="viewAppDetail(scope.row)">详情</el-button>
-          <el-button type="text" @click="editApp(scope.row)">编辑</el-button>
+          <el-button link @click="viewAppDetail(scope.row)">详情</el-button>
+          <el-button link @click="editApp(scope.row)">编辑</el-button>
           <el-button 
-            type="text" 
+            link 
             :class="scope.row.status === 'active' ? 'warning' : 'success'"
             @click="toggleAppStatus(scope.row)">
             {{ scope.row.status === 'active' ? '停用' : '启用' }}
           </el-button>
-          <el-button type="text" class="danger" @click="deleteApp(scope.row)">删除</el-button>
+          <el-button link class="danger" @click="deleteApp(scope.row)">删除</el-button>
         </template>
       </el-table-column>
     </el-table>

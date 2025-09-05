@@ -216,7 +216,3 @@ func CleanExpiredMails(appId string) error {
 	_, err := o.QueryTable(tableName).Filter("expire_at__lt", now).Delete()
 	return err
 }
-
-func init() {
-	orm.RegisterModel(new(Mail))
-}
