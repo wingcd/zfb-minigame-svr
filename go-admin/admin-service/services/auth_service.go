@@ -140,7 +140,7 @@ func (s *AuthService) ChangePassword(userId int64, oldPassword, newPassword stri
 
 	// 更新新密码
 	user.Password = utils.HashPassword(newPassword)
-	user.UpdatedAt = time.Now().Format("2006-01-02 15:04:05")
+	user.UpdatedAt = time.Now()
 
 	_, err = o.Update(user, "password", "updated_at")
 	if err != nil {
@@ -171,7 +171,7 @@ func (s *AuthService) CreateInitialAdmin() error {
 		RealName: "超级管理员",
 		Status:   1,
 	}
-	admin.CreatedAt = time.Now().Format("2006-01-02 15:04:05")
+	admin.CreatedAt = time.Now()
 	admin.UpdatedAt = admin.CreatedAt
 
 	_, err = o.Insert(admin)

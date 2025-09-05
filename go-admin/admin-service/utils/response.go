@@ -33,9 +33,9 @@ var ResponseMessage = map[int]string{
 
 // APIResponse API响应结构
 type APIResponse struct {
-	Code    int         `json:"code"`
-	Message string      `json:"message"`
-	Data    interface{} `json:"data,omitempty"`
+	Code int         `json:"code"`
+	Msg  string      `json:"msg"`
+	Data interface{} `json:"data,omitempty"`
 }
 
 // PageResponse 分页响应结构
@@ -50,9 +50,9 @@ type PageResponse struct {
 // Success 成功响应
 func Success(ctx *web.Controller, data interface{}) {
 	response := APIResponse{
-		Code:    CodeSuccess,
-		Message: ResponseMessage[CodeSuccess],
-		Data:    data,
+		Code: CodeSuccess,
+		Msg:  ResponseMessage[CodeSuccess],
+		Data: data,
 	}
 	ctx.Data["json"] = response
 	ctx.ServeJSON()
@@ -66,8 +66,8 @@ func Error(ctx *web.Controller, code int, message ...string) {
 	}
 
 	response := APIResponse{
-		Code:    code,
-		Message: msg,
+		Code: code,
+		Msg:  msg,
 	}
 	ctx.Data["json"] = response
 	ctx.ServeJSON()
@@ -76,9 +76,9 @@ func Error(ctx *web.Controller, code int, message ...string) {
 // ErrorResponse 错误响应（用于web.Controller，对齐云函数格式）
 func ErrorResponse(ctx *web.Controller, code int, message string, data interface{}) {
 	response := APIResponse{
-		Code:    code,
-		Message: message,
-		Data:    data,
+		Code: code,
+		Msg:  message,
+		Data: data,
 	}
 	ctx.Data["json"] = response
 	ctx.ServeJSON()
@@ -87,9 +87,9 @@ func ErrorResponse(ctx *web.Controller, code int, message string, data interface
 // SuccessResponse 成功响应（用于web.Controller，对齐云函数格式）
 func SuccessResponse(ctx *web.Controller, message string, data interface{}) {
 	response := APIResponse{
-		Code:    CodeSuccess,
-		Message: message,
-		Data:    data,
+		Code: CodeSuccess,
+		Msg:  message,
+		Data: data,
 	}
 	ctx.Data["json"] = response
 	ctx.ServeJSON()
@@ -98,9 +98,9 @@ func SuccessResponse(ctx *web.Controller, message string, data interface{}) {
 // ErrorResponseContext 错误响应（用于context.Context）
 func ErrorResponseContext(ctx *context.Context, code int, message string, data interface{}) {
 	response := APIResponse{
-		Code:    code,
-		Message: message,
-		Data:    data,
+		Code: code,
+		Msg:  message,
+		Data: data,
 	}
 	ctx.Output.JSON(response, false, false)
 }
@@ -108,9 +108,9 @@ func ErrorResponseContext(ctx *context.Context, code int, message string, data i
 // SuccessResponseContext 成功响应（用于context.Context）
 func SuccessResponseContext(ctx *context.Context, message string, data interface{}) {
 	response := APIResponse{
-		Code:    CodeSuccess,
-		Message: message,
-		Data:    data,
+		Code: CodeSuccess,
+		Msg:  message,
+		Data: data,
 	}
 	ctx.Output.JSON(response, false, false)
 }

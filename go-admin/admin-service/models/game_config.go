@@ -257,3 +257,7 @@ func GetConfigCount(appId string) (int64, error) {
 	count, err := o.QueryTable("game_configs").Filter("app_id", appId).Count()
 	return count, err
 }
+
+func init() {
+	orm.RegisterModel(new(GameConfig))
+}

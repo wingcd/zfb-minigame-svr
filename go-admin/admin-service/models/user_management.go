@@ -24,7 +24,7 @@ type GameUser struct {
 
 // UserBanRecord 用户封禁记录
 type UserBanRecord struct {
-	ID           string     `orm:"pk;size(64)" json:"id"`
+	ID           string     `orm:"pk;size(64);column(id)" json:"id"`
 	AppId        string     `orm:"size(100)" json:"appId"`
 	PlayerId     string     `orm:"size(100)" json:"playerId"`
 	AdminId      int64      `json:"adminId"`
@@ -38,6 +38,10 @@ type UserBanRecord struct {
 	UnbanReason  string     `orm:"type(text)" json:"unbanReason"`
 	CreateTime   time.Time  `orm:"auto_now_add;type(datetime)" json:"createTime"`
 	UpdateTime   time.Time  `orm:"auto_now;type(datetime)" json:"updateTime"`
+}
+
+func (u *UserBanRecord) TableName() string {
+	return "user_ban_records"
 }
 
 // UserStats 用户统计信息
@@ -574,7 +578,7 @@ func GetGameUserStats(appId, playerId string) (*UserStats, error) {
 		SELECT 
 		COUNT(*) as total_received,
 		SUM(CASE WHEN is_read = 1 THEN 1 ELSE 0 END) as total_read,
-		SUM(CASE WHEN is_received = 1 THEN 1 ELSE 0 END) as total_claimed,
+		SUM(CASE WHEN is_claimed = 1 THEN 1 ELSE 0 END) as total_claimed,
 		SUM(CASE WHEN is_read = 0 THEN 1 ELSE 0 END) as unread_count
 		FROM %s WHERE player_id = ?
 	`, mailTable)

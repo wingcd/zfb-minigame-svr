@@ -7,8 +7,14 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
+
+	_ "admin-service/routers" // 导入路由以注册所有路由
+	"admin-service/utils"
+
+	"github.com/beego/beego/v2/server/web"
 )
 
 // TestFramework 测试框架结构
@@ -19,10 +25,9 @@ type TestFramework struct {
 
 // APIResponse 标准API响应结构（参考云函数格式）
 type APIResponse struct {
-	Code      int         `json:"code"`
-	Msg       string      `json:"msg"`
-	Timestamp int64       `json:"timestamp"`
-	Data      interface{} `json:"data"`
+	Code int         `json:"code"`
+	Msg  string      `json:"msg"`
+	Data interface{} `json:"data"`
 }
 
 // TestCase 测试用例结构
@@ -64,11 +69,15 @@ type TestSuite struct {
 
 // NewTestFramework 创建新的测试框架
 func NewTestFramework() *TestFramework {
-	// 创建简单的HTTP处理器
-	mux := http.NewServeMux()
+	// 设置测试环境的JWT密钥，与app.conf中保持一致
+	utils.SetJWTSecret("minigame_admin_jwt_secret_key_2024")
 
-	// 创建测试服务器
-	server := httptest.NewServer(mux)
+	// 确保Beego配置正确
+	web.BConfig.CopyRequestBody = true
+	web.BConfig.MaxMemory = 1 << 26 // 64MB
+
+	// 创建测试服务器使用Beego的Handler
+	server := httptest.NewServer(web.BeeApp.Handlers)
 
 	// 创建HTTP客户端
 	client := &http.Client{
@@ -116,18 +125,36 @@ func (tf *TestFramework) ExecuteTestCase(testCase *TestCase) *TestResult {
 
 	// 准备请求数据
 	var requestBody io.Reader
-	if testCase.RequestData != nil {
-		jsonData, err := json.Marshal(testCase.RequestData)
-		if err != nil {
-			result.Error = fmt.Sprintf("Failed to marshal request data: %v", err)
-			result.Duration = time.Since(startTime)
-			return result
+	var url string
+
+	if testCase.Method == "GET" && testCase.RequestData != nil {
+		// GET请求：将参数添加到URL查询字符串
+		baseURL := tf.Server.URL + testCase.URL
+		queryParams := make([]string, 0)
+		for key, value := range testCase.RequestData {
+			queryParams = append(queryParams, fmt.Sprintf("%s=%v", key, value))
 		}
-		requestBody = bytes.NewReader(jsonData)
+		if len(queryParams) > 0 {
+			url = baseURL + "?" + strings.Join(queryParams, "&")
+		} else {
+			url = baseURL
+		}
+	} else {
+		// POST/PUT/DELETE请求：将参数放在请求体中
+		url = tf.Server.URL + testCase.URL
+		if testCase.RequestData != nil {
+			jsonData, err := json.Marshal(testCase.RequestData)
+			if err != nil {
+				result.Error = fmt.Sprintf("Failed to marshal request data: %v", err)
+				result.Duration = time.Since(startTime)
+				return result
+			}
+			fmt.Printf("DEBUG: Sending JSON data for %s: %s\n", testCase.Name, string(jsonData))
+			requestBody = bytes.NewReader(jsonData)
+		}
 	}
 
 	// 创建HTTP请求
-	url := tf.Server.URL + testCase.URL
 	req, err := http.NewRequest(testCase.Method, url, requestBody)
 	if err != nil {
 		result.Error = fmt.Sprintf("Failed to create request: %v", err)
@@ -169,7 +196,18 @@ func (tf *TestFramework) ExecuteTestCase(testCase *TestCase) *TestResult {
 	// 解析响应
 	var apiResponse APIResponse
 	if err := json.Unmarshal(responseBody, &apiResponse); err != nil {
-		result.Error = fmt.Sprintf("Failed to parse response: %v", err)
+		// 如果JSON解析失败，尝试看是否是纯文本或数字响应
+		responseText := string(responseBody)
+		if responseText != "" {
+			// 如果是纯数字，可能是错误码
+			if len(responseText) < 10 {
+				result.Error = fmt.Sprintf("API returned non-JSON response: %s", responseText)
+			} else {
+				result.Error = fmt.Sprintf("Failed to parse JSON response: %v, raw response: %s", err, responseText)
+			}
+		} else {
+			result.Error = fmt.Sprintf("Failed to parse response: %v", err)
+		}
 		result.Duration = time.Since(startTime)
 		return result
 	}
@@ -238,11 +276,24 @@ func (tf *TestFramework) ExecuteTestSuite(suite *TestSuite) []*TestResult {
 
 // GetTestToken 获取测试用的JWT token
 func (tf *TestFramework) GetTestToken(isAdmin bool) string {
-	// 简化的token生成，实际项目中应该使用真实的JWT库
+	// 生成真实的JWT token用于测试
 	if isAdmin {
-		return "test_admin_token_123456"
+		// 生成管理员token (user_id: 1, username: test_admin, role_id: 1)
+		token, err := utils.GenerateJWT(1, "test_admin", 1)
+		if err != nil {
+			fmt.Printf("Failed to generate admin token: %v\n", err)
+			return ""
+		}
+		return token
 	}
-	return "test_user_token_123456"
+
+	// 生成普通用户token (user_id: 2, username: test_user, role_id: 2)
+	token, err := utils.GenerateJWT(2, "test_user", 2)
+	if err != nil {
+		fmt.Printf("Failed to generate user token: %v\n", err)
+		return ""
+	}
+	return token
 }
 
 // CreateTestDatabase 创建测试数据库
@@ -285,8 +336,8 @@ func ValidateListResponse(data interface{}) bool {
 		return false
 	}
 
-	// 检查必要字段
-	requiredFields := []string{"list", "total", "page", "pageSize"}
+	// 检查必要字段 - 修改为实际的字段名
+	requiredFields := []string{"userList", "total", "page", "pageSize"}
 	for _, field := range requiredFields {
 		if _, exists := dataMap[field]; !exists {
 			return false

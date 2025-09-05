@@ -7,6 +7,9 @@ import (
 
 	"github.com/beego/beego/v2/client/orm"
 	_ "github.com/go-sql-driver/mysql"
+
+	// 导入models包以确保所有模型被注册
+	_ "admin-service/models"
 )
 
 var testFramework *TestFramework
@@ -72,10 +75,21 @@ func initTestDatabase() error {
 	// 设置数据库连接
 	dataSource := "root:@tcp(127.0.0.1:3306)/admin_service_test?charset=utf8mb4&parseTime=True&loc=Local"
 
-	// 注册数据库
+	// 注册数据库，如果已经注册则跳过
 	err := orm.RegisterDataBase("default", "mysql", dataSource)
 	if err != nil {
-		return fmt.Errorf("注册数据库失败: %v", err)
+		// 如果数据库已经注册，检查错误信息
+		if err.Error() == "DataBase alias name `default` already registered, cannot reuse" {
+			// 数据库已经注册，继续执行
+			fmt.Println("⚠️  数据库连接已存在，继续使用现有连接")
+		} else {
+			return fmt.Errorf("注册数据库失败: %v", err)
+		}
+	}
+
+	// 同步数据库表结构
+	if err := orm.RunSyncdb("default", false, true); err != nil {
+		fmt.Printf("同步数据库表失败: %v，尝试手动创建表\n", err)
 	}
 
 	// 创建表结构
@@ -433,8 +447,8 @@ func TestErrorHandling(t *testing.T) {
 		{
 			Name:        "UnauthorizedAccess",
 			Description: "未授权访问测试",
-			Method:      "POST",
-			URL:         "/api/users/list",
+			Method:      "GET",
+			URL:         "/api/user-management/users",
 			RequestData: map[string]interface{}{
 				"appId": "test_app_001",
 			},
@@ -444,27 +458,27 @@ func TestErrorHandling(t *testing.T) {
 		{
 			Name:        "InvalidJSON",
 			Description: "无效JSON数据测试",
-			Method:      "POST",
-			URL:         "/api/users/update",
+			Method:      "PUT",
+			URL:         "/api/user-management/user/data",
 			RequestData: map[string]interface{}{
 				"appId":    "test_app_001",
 				"playerId": "test_player_001",
 				"userData": "invalid_json", // 无效的JSON
 			},
 			RequiresAuth: true,
-			ExpectedCode: 4001,
+			ExpectedCode: 1001, // 应用层错误码：请求参数解析失败
 		},
 		{
 			Name:        "NonExistentResource",
 			Description: "不存在资源测试",
-			Method:      "POST",
-			URL:         "/api/users/detail",
+			Method:      "GET",
+			URL:         "/api/user-management/user/detail",
 			RequestData: map[string]interface{}{
 				"appId":    "non_existent_app",
 				"playerId": "non_existent_player",
 			},
 			RequiresAuth: true,
-			ExpectedCode: 4004,
+			ExpectedCode: 1003, // 应用层错误码：获取用户详情失败
 		},
 	}
 

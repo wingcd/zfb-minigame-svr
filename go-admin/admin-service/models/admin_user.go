@@ -10,19 +10,18 @@ import (
 // AdminUser 管理员用户模型
 type AdminUser struct {
 	BaseModel
-	Username    string     `orm:"size(50);unique" json:"username" valid:"Required"`
-	Password    string     `orm:"size(255)" json:"-"`
-	Email       string     `orm:"size(100)" json:"email"`
-	Phone       string     `orm:"size(20)" json:"phone"`
-	RealName    string     `orm:"size(50)" json:"real_name"`
-	Avatar      string     `orm:"size(255)" json:"avatar"`
-	Status      int        `orm:"default(1)" json:"status"` // 1:正常 0:禁用
-	LastLoginAt time.Time  `orm:"type(datetime);null" json:"last_login_at"`
-	LastLoginIP string     `orm:"size(50)" json:"last_login_ip"`
-	RoleId      int64      `orm:"default(0)" json:"role_id"`
-	Role        *AdminRole `orm:"rel(fk);column(role_id);null" json:"role,omitempty"`
-	Token       string     `orm:"size(128);null" json:"-"`      // 添加token字段
-	TokenExpire time.Time  `orm:"type(datetime);null" json:"-"` // 添加token过期时间
+	Username    string    `orm:"size(50);unique" json:"username" valid:"Required"`
+	Password    string    `orm:"size(255)" json:"-"`
+	Email       string    `orm:"size(100)" json:"email"`
+	Phone       string    `orm:"size(20)" json:"phone"`
+	RealName    string    `orm:"size(50)" json:"real_name"`
+	Avatar      string    `orm:"size(255)" json:"avatar"`
+	Status      int       `orm:"default(1)" json:"status"` // 1:正常 0:禁用
+	LastLoginAt time.Time `orm:"type(datetime);null" json:"last_login_at"`
+	LastLoginIP string    `orm:"size(50)" json:"last_login_ip"`
+	RoleId      int64     `orm:"default(0)" json:"role_id"`
+	Token       string    `orm:"size(128);null" json:"-"`      // 添加token字段
+	TokenExpire time.Time `orm:"type(datetime);null" json:"-"` // 添加token过期时间
 }
 
 // TableName 指定表名
@@ -251,4 +250,8 @@ func GetTotalAdmins() (int64, error) {
 	o := orm.NewOrm()
 	count, err := o.QueryTable("admin_users").Filter("status", 1).Count()
 	return count, err
+}
+
+func init() {
+	orm.RegisterModel(new(AdminUser))
 }

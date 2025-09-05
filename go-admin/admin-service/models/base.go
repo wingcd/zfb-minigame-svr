@@ -4,6 +4,7 @@ import (
 	"admin-service/utils"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/beego/beego/v2/client/orm"
 	"github.com/beego/beego/v2/core/config"
@@ -17,9 +18,9 @@ var (
 
 // BaseModel 基础模型
 type BaseModel struct {
-	Id        int64  `orm:"auto" json:"id"`
-	CreatedAt string `orm:"auto_now_add;type(datetime)" json:"created_at"`
-	UpdatedAt string `orm:"auto_now;type(datetime)" json:"updated_at"`
+	Id        int64     `orm:"auto" json:"id"`
+	CreatedAt time.Time `orm:"auto_now_add;type(datetime);column(create_time)" json:"created_at"`
+	UpdatedAt time.Time `orm:"auto_now;type(datetime);column(update_time)" json:"updated_at"`
 }
 
 // Response 通用响应结构

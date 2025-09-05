@@ -38,7 +38,7 @@ func (s *ApplicationService) CreateApplication(appId, appName, description strin
 		Description: description,
 		Status:      1,
 	}
-	app.CreatedAt = time.Now().Format("2006-01-02 15:04:05")
+	app.CreatedAt = time.Now()
 	app.UpdatedAt = app.CreatedAt
 
 	// 插入数据库
@@ -128,7 +128,7 @@ func (s *ApplicationService) UpdateApplication(appId, appName, description strin
 	app.AppName = appName
 	app.Description = description
 	app.Status = status
-	app.UpdatedAt = time.Now().Format("2006-01-02 15:04:05")
+	app.UpdatedAt = time.Now()
 
 	_, err = o.Update(app, "app_name", "description", "status", "updated_at")
 	if err != nil {
@@ -187,7 +187,7 @@ func (s *ApplicationService) ResetAppSecret(appId string) (string, error) {
 	// 生成新密钥
 	newSecret := utils.GenerateRandomString(32)
 	app.AppSecret = newSecret
-	app.UpdatedAt = time.Now().Format("2006-01-02 15:04:05")
+	app.UpdatedAt = time.Now()
 
 	_, err = o.Update(app, "app_secret", "updated_at")
 	if err != nil {

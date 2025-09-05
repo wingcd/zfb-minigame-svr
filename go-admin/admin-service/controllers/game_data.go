@@ -102,6 +102,50 @@ func (c *GameDataController) GetLeaderboardList() {
 	utils.SuccessResponse(&c.Controller, "获取成功", result)
 }
 
+// GetCounterList 获取计数器列表
+func (c *GameDataController) GetCounterList() {
+	// JWT验证
+	if utils.ValidateJWT(c.Ctx) == nil {
+		return
+	}
+
+	// 获取参数
+	appId := c.GetString("appId")
+	pageStr := c.GetString("page", "1")
+	pageSizeStr := c.GetString("pageSize", "10")
+
+	if appId == "" {
+		utils.ErrorResponse(&c.Controller, 1002, "应用ID不能为空", nil)
+		return
+	}
+
+	page, err := strconv.Atoi(pageStr)
+	if err != nil || page <= 0 {
+		page = 1
+	}
+
+	pageSize, err := strconv.Atoi(pageSizeStr)
+	if err != nil || pageSize <= 0 || pageSize > 100 {
+		pageSize = 10
+	}
+
+	// 获取计数器列表
+	counterList, total, err := models.GetCounterList(appId, page, pageSize)
+	if err != nil {
+		utils.ErrorResponse(&c.Controller, 1003, "获取计数器列表失败: "+err.Error(), nil)
+		return
+	}
+
+	result := map[string]interface{}{
+		"list":     counterList,
+		"total":    total,
+		"page":     page,
+		"pageSize": pageSize,
+	}
+
+	utils.SuccessResponse(&c.Controller, "获取成功", result)
+}
+
 // GetMailList 获取邮件列表
 func (c *GameDataController) GetMailList() {
 	// JWT验证

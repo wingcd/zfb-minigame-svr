@@ -4,6 +4,7 @@ import (
 	"admin-service/models"
 	"admin-service/utils"
 	"encoding/json"
+	"fmt"
 	"strconv"
 
 	"github.com/beego/beego/v2/server/web"
@@ -77,7 +78,7 @@ func (c *UserManagementController) GetUserDetail() {
 	// 获取用户详细信息
 	userDetail, err := models.GetGameUserDetail(appId, playerId)
 	if err != nil {
-		utils.ErrorResponse(&c.Controller, 1003, "获取用户详情失败: "+err.Error(), nil)
+		utils.ErrorResponse(&c.Controller, 1003, "获取用户详情失败", nil)
 		return
 	}
 
@@ -92,12 +93,14 @@ func (c *UserManagementController) UpdateUserData() {
 	}
 
 	var req struct {
-		AppId    string          `json:"appId"`
-		PlayerId string          `json:"playerId"`
-		Data     json.RawMessage `json:"data"`
+		AppId    string                 `json:"appId"`
+		PlayerId string                 `json:"playerId"`
+		UserData map[string]interface{} `json:"userData"`
 	}
 
+	fmt.Printf("DEBUG UpdateUserData: RequestBody length: %d, content: %s\n", len(c.Ctx.Input.RequestBody), string(c.Ctx.Input.RequestBody))
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
+		fmt.Printf("DEBUG UpdateUserData: JSON unmarshal error: %v\n", err)
 		utils.ErrorResponse(&c.Controller, 1001, "请求参数解析失败", nil)
 		return
 	}
@@ -107,14 +110,21 @@ func (c *UserManagementController) UpdateUserData() {
 		return
 	}
 
+	// 将UserData转换为JSON字符串
+	userDataJSON, err := json.Marshal(req.UserData)
+	if err != nil {
+		utils.ErrorResponse(&c.Controller, 1001, "用户数据格式错误", nil)
+		return
+	}
+
 	// 更新用户数据
-	err := models.UpdateGameUserData(req.AppId, req.PlayerId, string(req.Data))
+	err = models.UpdateGameUserData(req.AppId, req.PlayerId, string(userDataJSON))
 	if err != nil {
 		utils.ErrorResponse(&c.Controller, 1003, "更新用户数据失败: "+err.Error(), nil)
 		return
 	}
 
-	utils.SuccessResponse(&c.Controller, "更新成功", nil)
+	utils.SuccessResponse(&c.Controller, "设置成功", nil)
 }
 
 // BanUser 封禁用户
@@ -125,14 +135,15 @@ func (c *UserManagementController) BanUser() {
 	}
 
 	var req struct {
-		AppId     string `json:"appId"`
-		PlayerId  string `json:"playerId"`
-		BanType   string `json:"banType"` // temporary, permanent
-		BanReason string `json:"banReason"`
-		BanHours  int    `json:"banHours"` // 封禁时长（小时），永久封禁时为0
+		AppId    string `json:"appId"`
+		PlayerId string `json:"playerId"`
+		Reason   string `json:"reason"`   // 封禁原因
+		Duration int    `json:"duration"` // 封禁时长（小时），0表示永久封禁
 	}
 
+	fmt.Printf("DEBUG BanUser: RequestBody length: %d, content: %s\n", len(c.Ctx.Input.RequestBody), string(c.Ctx.Input.RequestBody))
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
+		fmt.Printf("DEBUG BanUser: JSON unmarshal error: %v\n", err)
 		utils.ErrorResponse(&c.Controller, 1001, "请求参数解析失败", nil)
 		return
 	}
@@ -142,6 +153,11 @@ func (c *UserManagementController) BanUser() {
 		return
 	}
 
+	// 设置默认封禁原因
+	if req.Reason == "" {
+		req.Reason = "违规行为"
+	}
+
 	// 获取管理员信息
 	adminInfo := utils.GetJWTUserInfo(c.Ctx)
 	if adminInfo == nil {
@@ -149,8 +165,14 @@ func (c *UserManagementController) BanUser() {
 		return
 	}
 
+	// 确定封禁类型
+	banType := "temporary"
+	if req.Duration <= 0 {
+		banType = "permanent"
+	}
+
 	// 创建封禁记录
-	err := models.BanGameUser(req.AppId, req.PlayerId, adminInfo.ID, req.BanType, req.BanReason, req.BanHours)
+	err := models.BanGameUser(req.AppId, req.PlayerId, adminInfo.ID, banType, req.Reason, req.Duration)
 	if err != nil {
 		utils.ErrorResponse(&c.Controller, 1003, "封禁用户失败: "+err.Error(), nil)
 		return
@@ -206,8 +228,18 @@ func (c *UserManagementController) DeleteUser() {
 		return
 	}
 
-	appId := c.GetString("appId")
-	playerId := c.GetString("playerId")
+	var req struct {
+		AppId    string `json:"appId"`
+		PlayerId string `json:"playerId"`
+	}
+
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
+		utils.ErrorResponse(&c.Controller, 1001, "请求参数解析失败", nil)
+		return
+	}
+
+	appId := req.AppId
+	playerId := req.PlayerId
 
 	if appId == "" || playerId == "" {
 		utils.ErrorResponse(&c.Controller, 1002, "应用ID和玩家ID不能为空", nil)

@@ -19,8 +19,8 @@ func GetUserTestSuite() *TestSuite {
 			{
 				Name:        "GetAllUsers_Success",
 				Description: "成功获取用户列表，验证分页和数据格式",
-				Method:      "POST",
-				URL:         "/api/users/list",
+				Method:      "GET",
+				URL:         "/api/user-management/users",
 				RequestData: map[string]interface{}{
 					"appId":    "test_app_001",
 					"page":     1,
@@ -38,14 +38,14 @@ func GetUserTestSuite() *TestSuite {
 			{
 				Name:        "GetAllUsers_InvalidParams",
 				Description: "测试无效参数的处理",
-				Method:      "POST",
-				URL:         "/api/users/list",
+				Method:      "GET",
+				URL:         "/api/user-management/users",
 				RequestData: map[string]interface{}{
 					"appId": "", // 空的appId
 					"page":  1,
 				},
-				ExpectedCode: 4001,
-				ExpectedMsg:  "参数错误",
+				ExpectedCode: 1002,
+				ExpectedMsg:  "应用ID不能为空",
 				RequiresAuth: true,
 				Tags:         []string{"user", "list", "error"},
 			},
@@ -53,8 +53,8 @@ func GetUserTestSuite() *TestSuite {
 			{
 				Name:        "GetAllUsers_Pagination",
 				Description: "测试分页功能",
-				Method:      "POST",
-				URL:         "/api/users/list",
+				Method:      "GET",
+				URL:         "/api/user-management/users",
 				RequestData: map[string]interface{}{
 					"appId":    "test_app_001",
 					"page":     2,
@@ -86,8 +86,8 @@ func GetUserTestSuite() *TestSuite {
 			{
 				Name:        "GetUserDetail_Success",
 				Description: "成功获取用户详情",
-				Method:      "POST",
-				URL:         "/api/users/detail",
+				Method:      "GET",
+				URL:         "/api/user-management/user/detail",
 				RequestData: map[string]interface{}{
 					"appId":    "test_app_001",
 					"playerId": "test_player_001",
@@ -106,14 +106,14 @@ func GetUserTestSuite() *TestSuite {
 			{
 				Name:        "GetUserDetail_NotFound",
 				Description: "获取不存在用户的详情",
-				Method:      "POST",
-				URL:         "/api/users/detail",
+				Method:      "GET",
+				URL:         "/api/user-management/user/detail",
 				RequestData: map[string]interface{}{
 					"appId":    "test_app_001",
 					"playerId": "non_existent_player",
 				},
-				ExpectedCode: 4004,
-				ExpectedMsg:  "用户不存在",
+				ExpectedCode: 1003,
+				ExpectedMsg:  "获取用户详情失败",
 				RequiresAuth: true,
 				Tags:         []string{"user", "detail", "error"},
 			},
@@ -121,8 +121,8 @@ func GetUserTestSuite() *TestSuite {
 			{
 				Name:        "SetUserDetail_Success",
 				Description: "成功设置用户详情",
-				Method:      "POST",
-				URL:         "/api/users/update",
+				Method:      "PUT",
+				URL:         "/api/user-management/user/data",
 				RequestData: map[string]interface{}{
 					"appId":    "test_app_001",
 					"playerId": "test_player_001",
@@ -146,14 +146,14 @@ func GetUserTestSuite() *TestSuite {
 			{
 				Name:        "SetUserDetail_InvalidData",
 				Description: "测试无效用户数据的处理",
-				Method:      "POST",
-				URL:         "/api/users/update",
+				Method:      "PUT",
+				URL:         "/api/user-management/user/data",
 				RequestData: map[string]interface{}{
 					"appId":    "test_app_001",
 					"playerId": "test_player_001",
 					"userData": "invalid_json_data", // 无效的数据格式
 				},
-				ExpectedCode: 4001,
+				ExpectedCode: 1001,
 				RequiresAuth: true,
 				Tags:         []string{"user", "update", "error"},
 			},
@@ -162,12 +162,12 @@ func GetUserTestSuite() *TestSuite {
 				Name:        "BanUser_Success",
 				Description: "成功封禁用户",
 				Method:      "POST",
-				URL:         "/api/users/ban",
+				URL:         "/api/user-management/user/ban",
 				RequestData: map[string]interface{}{
 					"appId":    "test_app_001",
 					"playerId": "test_player_ban",
 					"reason":   "违反游戏规则",
-					"duration": 24, // 24小时
+					"duration": 24,
 				},
 				ExpectedCode:  0,
 				ExpectedMsg:   "封禁成功",
@@ -187,14 +187,14 @@ func GetUserTestSuite() *TestSuite {
 				Name:        "BanUser_MissingParams",
 				Description: "测试缺少必要参数的情况",
 				Method:      "POST",
-				URL:         "/api/users/ban",
+				URL:         "/api/user-management/user/ban",
 				RequestData: map[string]interface{}{
 					"appId":  "test_app_001",
 					"reason": "违反规则",
 					// 缺少playerId
 				},
-				ExpectedCode:  4001,
-				ExpectedMsg:   "缺少必要参数",
+				ExpectedCode:  1002,
+				ExpectedMsg:   "应用ID、玩家ID不能为空",
 				RequiresAuth:  true,
 				RequiresAdmin: true,
 				Tags:          []string{"user", "ban", "error"},
@@ -204,10 +204,11 @@ func GetUserTestSuite() *TestSuite {
 				Name:        "UnbanUser_Success",
 				Description: "成功解封用户",
 				Method:      "POST",
-				URL:         "/api/users/unban",
+				URL:         "/api/user-management/user/unban",
 				RequestData: map[string]interface{}{
-					"appId":    "test_app_001",
-					"playerId": "test_player_unban",
+					"appId":       "test_app_001",
+					"playerId":    "test_player_unban",
+					"unbanReason": "申诉成功",
 				},
 				ExpectedCode:  0,
 				ExpectedMsg:   "解封成功",
@@ -230,7 +231,7 @@ func GetUserTestSuite() *TestSuite {
 				Name:        "DeleteUser_Success",
 				Description: "成功删除用户",
 				Method:      "DELETE",
-				URL:         "/api/users/delete",
+				URL:         "/api/user-management/user/delete",
 				RequestData: map[string]interface{}{
 					"appId":    "test_app_001",
 					"playerId": "test_player_delete",
@@ -248,8 +249,8 @@ func GetUserTestSuite() *TestSuite {
 			{
 				Name:        "GetUserStats_Success",
 				Description: "成功获取用户统计信息",
-				Method:      "POST",
-				URL:         "/api/users/stats",
+				Method:      "GET",
+				URL:         "/api/user-management/user/stats",
 				RequestData: map[string]interface{}{
 					"appId":    "test_app_001",
 					"playerId": "test_player_stats",
@@ -303,8 +304,8 @@ func GetSystemTestSuite() *TestSuite {
 			{
 				Name:        "UpdateSystemConfig_Success",
 				Description: "成功更新系统配置",
-				Method:      "POST",
-				URL:         "/api/system/config/update",
+				Method:      "PUT",
+				URL:         "/api/system/config",
 				RequestData: map[string]interface{}{
 					"siteName":        "测试站点",
 					"siteUrl":         "https://test.example.com",
@@ -339,8 +340,8 @@ func GetSystemTestSuite() *TestSuite {
 			{
 				Name:        "ClearCache_Success",
 				Description: "成功清理系统缓存",
-				Method:      "POST",
-				URL:         "/api/system/cache/clear",
+				Method:      "DELETE",
+				URL:         "/api/system/cache",
 				RequestData: map[string]interface{}{
 					"cacheType": "all",
 				},
@@ -367,7 +368,7 @@ func GetSystemTestSuite() *TestSuite {
 				Name:        "BackupData_Success",
 				Description: "成功创建数据备份",
 				Method:      "POST",
-				URL:         "/api/system/backup/create",
+				URL:         "/api/system/backup",
 				RequestData: map[string]interface{}{
 					"backupType": "full",
 				},
@@ -397,7 +398,7 @@ func GetSystemTestSuite() *TestSuite {
 				Name:         "GetBackupList_Success",
 				Description:  "成功获取备份列表",
 				Method:       "GET",
-				URL:          "/api/system/backup/list",
+				URL:          "/api/system/backup",
 				ExpectedCode: 0,
 				ExpectedMsg:  "获取成功",
 				ValidateData: func(data interface{}) bool {
@@ -424,7 +425,7 @@ func GetSystemTestSuite() *TestSuite {
 				Name:          "GetServerInfo_Success",
 				Description:   "成功获取服务器信息",
 				Method:        "GET",
-				URL:           "/api/system/server/info",
+				URL:           "/api/system/server",
 				ExpectedCode:  0,
 				ExpectedMsg:   "获取成功",
 				RequiresAuth:  true,
@@ -436,7 +437,7 @@ func GetSystemTestSuite() *TestSuite {
 				Name:          "GetDatabaseInfo_Success",
 				Description:   "成功获取数据库信息",
 				Method:        "GET",
-				URL:           "/api/system/database/info",
+				URL:           "/api/system/database",
 				ExpectedCode:  0,
 				ExpectedMsg:   "获取成功",
 				RequiresAuth:  true,
@@ -496,7 +497,7 @@ func GetStatisticsTestSuite() *TestSuite {
 				Name:        "GetApplicationStats_Success",
 				Description: "成功获取应用统计数据",
 				Method:      "GET",
-				URL:         "/api/statistics/app",
+				URL:         "/api/statistics/application",
 				Headers: map[string]string{
 					"appId": "test_app_001",
 				},
@@ -528,7 +529,7 @@ func GetStatisticsTestSuite() *TestSuite {
 				Name:         "GetApplicationStats_MissingAppId",
 				Description:  "测试缺少应用ID参数的情况",
 				Method:       "GET",
-				URL:          "/api/statistics/app",
+				URL:          "/api/statistics/application",
 				ExpectedCode: 1002,
 				ExpectedMsg:  "应用ID不能为空",
 				RequiresAuth: true,

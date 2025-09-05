@@ -3,6 +3,7 @@ package controllers
 import (
 	"admin-service/models"
 	"admin-service/utils"
+	"encoding/json"
 	"strconv"
 	"time"
 
@@ -38,120 +39,85 @@ func (c *SystemController) UpdateSystemConfig() {
 		return
 	}
 
+	// 解析JSON请求数据
+	var requestData struct {
+		SiteName           string `json:"siteName"`
+		SiteUrl            string `json:"siteUrl"`
+		SiteLogo           string `json:"siteLogo"`
+		SiteDescription    string `json:"siteDescription"`
+		SiteKeywords       string `json:"siteKeywords"`
+		AdminEmail         string `json:"adminEmail"`
+		EnableRegister     bool   `json:"enableRegister"`
+		EnableEmailVerify  bool   `json:"enableEmailVerify"`
+		EnableCaptcha      bool   `json:"enableCaptcha"`
+		JwtSecret          string `json:"jwtSecret"`
+		JwtExpireHours     int    `json:"jwtExpireHours"`
+		EnableCache        bool   `json:"enableCache"`
+		CacheExpireMinutes int    `json:"cacheExpireMinutes"`
+		LogLevel           string `json:"logLevel"`
+		LogRetentionDays   int    `json:"logRetentionDays"`
+	}
+
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &requestData); err != nil {
+		utils.ErrorResponse(&c.Controller, 1001, "参数解析失败: "+err.Error(), nil)
+		return
+	}
+
 	// 获取参数
-	siteName := c.GetString("siteName")
-	siteUrl := c.GetString("siteUrl")
-	siteLogo := c.GetString("siteLogo")
-	siteDescription := c.GetString("siteDescription")
-	siteKeywords := c.GetString("siteKeywords")
-	adminEmail := c.GetString("adminEmail")
-
-	// 安全配置
-	enableRegister := c.GetString("enableRegister", "false") == "true"
-	enableEmailVerify := c.GetString("enableEmailVerify", "false") == "true"
-	enableCaptcha := c.GetString("enableCaptcha", "false") == "true"
-
-	// JWT配置
-	jwtSecret := c.GetString("jwtSecret")
-	jwtExpireHours := c.GetString("jwtExpireHours", "24")
-
-	// 缓存配置
-	enableCache := c.GetString("enableCache", "true") == "true"
-	cacheExpireMinutes := c.GetString("cacheExpireMinutes", "30")
-
-	// 日志配置
-	logLevel := c.GetString("logLevel", "info")
-	logRetentionDays := c.GetString("logRetentionDays", "30")
+	siteName := requestData.SiteName
+	siteUrl := requestData.SiteUrl
+	siteLogo := requestData.SiteLogo
+	siteDescription := requestData.SiteDescription
+	siteKeywords := requestData.SiteKeywords
+	adminEmail := requestData.AdminEmail
+	enableRegister := requestData.EnableRegister
+	enableEmailVerify := requestData.EnableEmailVerify
+	enableCaptcha := requestData.EnableCaptcha
+	jwtSecret := requestData.JwtSecret
+	jwtExpireHours := requestData.JwtExpireHours
+	enableCache := requestData.EnableCache
+	cacheExpireMinutes := requestData.CacheExpireMinutes
+	logLevel := requestData.LogLevel
+	logRetentionDays := requestData.LogRetentionDays
 
 	if siteName == "" {
 		utils.ErrorResponse(&c.Controller, 1002, "站点名称不能为空", nil)
 		return
 	}
 
-	// 转换数值参数
-	jwtExpire, _ := strconv.Atoi(jwtExpireHours)
-	if jwtExpire <= 0 {
-		jwtExpire = 24
+	// 设置默认值
+	if jwtExpireHours <= 0 {
+		jwtExpireHours = 24
 	}
-
-	cacheExpire, _ := strconv.Atoi(cacheExpireMinutes)
-	if cacheExpire <= 0 {
-		cacheExpire = 30
+	if cacheExpireMinutes <= 0 {
+		cacheExpireMinutes = 30
 	}
-
-	logRetention, _ := strconv.Atoi(logRetentionDays)
-	if logRetention <= 0 {
-		logRetention = 30
+	if logRetentionDays <= 0 {
+		logRetentionDays = 30
 	}
-
-	// 更新系统配置
-	configData := map[string]interface{}{
-		"siteName":           siteName,
-		"siteUrl":            siteUrl,
-		"siteLogo":           siteLogo,
-		"siteDescription":    siteDescription,
-		"siteKeywords":       siteKeywords,
-		"adminEmail":         adminEmail,
-		"enableRegister":     enableRegister,
-		"enableEmailVerify":  enableEmailVerify,
-		"enableCaptcha":      enableCaptcha,
-		"jwtSecret":          jwtSecret,
-		"jwtExpireHours":     jwtExpire,
-		"enableCache":        enableCache,
-		"cacheExpireMinutes": cacheExpire,
-		"logLevel":           logLevel,
-		"logRetentionDays":   logRetention,
+	if logLevel == "" {
+		logLevel = "info"
 	}
 
 	// 创建SystemConfig结构
 	config := &models.SystemConfig{}
 
-	// 从configData中设置字段
-	if siteName, ok := configData["site_name"].(string); ok {
-		config.SiteName = siteName
-	}
-	if siteUrl, ok := configData["site_url"].(string); ok {
-		config.SiteUrl = siteUrl
-	}
-	if siteLogo, ok := configData["site_logo"].(string); ok {
-		config.SiteLogo = siteLogo
-	}
-	if siteDescription, ok := configData["site_description"].(string); ok {
-		config.SiteDescription = siteDescription
-	}
-	if siteKeywords, ok := configData["site_keywords"].(string); ok {
-		config.SiteKeywords = siteKeywords
-	}
-	if adminEmail, ok := configData["admin_email"].(string); ok {
-		config.AdminEmail = adminEmail
-	}
-	if enableRegister, ok := configData["enable_register"].(bool); ok {
-		config.EnableRegister = enableRegister
-	}
-	if enableEmailVerify, ok := configData["enable_email_verify"].(bool); ok {
-		config.EnableEmailVerify = enableEmailVerify
-	}
-	if enableCaptcha, ok := configData["enable_captcha"].(bool); ok {
-		config.EnableCaptcha = enableCaptcha
-	}
-	if jwtSecret, ok := configData["jwt_secret"].(string); ok {
-		config.JwtSecret = jwtSecret
-	}
-	if jwtExpireHours, ok := configData["jwt_expire_hours"].(float64); ok {
-		config.JwtExpireHours = int(jwtExpireHours)
-	}
-	if enableCache, ok := configData["enable_cache"].(bool); ok {
-		config.EnableCache = enableCache
-	}
-	if cacheExpireMinutes, ok := configData["cache_expire_minutes"].(float64); ok {
-		config.CacheExpireMinutes = int(cacheExpireMinutes)
-	}
-	if logLevel, ok := configData["log_level"].(string); ok {
-		config.LogLevel = logLevel
-	}
-	if logRetentionDays, ok := configData["log_retention_days"].(float64); ok {
-		config.LogRetentionDays = int(logRetentionDays)
-	}
+	// 直接设置字段
+	config.SiteName = siteName
+	config.SiteUrl = siteUrl
+	config.SiteLogo = siteLogo
+	config.SiteDescription = siteDescription
+	config.SiteKeywords = siteKeywords
+	config.AdminEmail = adminEmail
+	config.EnableRegister = enableRegister
+	config.EnableEmailVerify = enableEmailVerify
+	config.EnableCaptcha = enableCaptcha
+	config.JwtSecret = jwtSecret
+	config.JwtExpireHours = jwtExpireHours
+	config.EnableCache = enableCache
+	config.CacheExpireMinutes = cacheExpireMinutes
+	config.LogLevel = logLevel
+	config.LogRetentionDays = logRetentionDays
 
 	err := models.UpdateSystemConfig(config)
 	if err != nil {

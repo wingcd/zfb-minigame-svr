@@ -151,7 +151,7 @@ func (c *PermissionController) CreateRole() {
 		Permissions: permissionsStr,
 		Status:      1,
 	}
-	role.CreatedAt = time.Now().Format("2006-01-02 15:04:05")
+	role.CreatedAt = time.Now()
 	role.UpdatedAt = role.CreatedAt
 
 	err := models.CreateRole(role)
@@ -267,7 +267,7 @@ func (c *PermissionController) UpdateRole() {
 		statusInt, _ := strconv.Atoi(status)
 		role.Status = statusInt
 	}
-	role.UpdatedAt = time.Now().Format("2006-01-02 15:04:05")
+	role.UpdatedAt = time.Now()
 
 	// 更新角色
 	err = models.UpdateRole(role)

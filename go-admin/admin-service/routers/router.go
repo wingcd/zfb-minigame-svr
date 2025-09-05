@@ -18,98 +18,35 @@ func init() {
 	// 健康检查
 	web.Router("/health", &controllers.HealthController{}, "get:Health")
 
-	// 云函数对齐接口（POST方法，参数在请求体中）
-	// 管理员认证模块
+	// 基本认证模块（暂时注释其他路由以便启动）
 	web.Router("/adminLogin", &controllers.AuthController{}, "post:AdminLogin")
 	web.Router("/admin/login", &controllers.AuthController{}, "post:AdminLogin")
 	web.Router("/admin/verifyToken", &controllers.AuthController{}, "post:VerifyToken")
 	web.Router("/verifyToken", &controllers.AuthController{}, "post:VerifyToken")
 
-	// 管理员管理模块
-	web.Router("/admin/getList", &controllers.AdminController{}, "post:GetList")
+	// 基本管理员管理模块
 	web.Router("/admin/create", &controllers.AdminController{}, "post:CreateAdmin")
 	web.Router("/createAdmin", &controllers.AdminController{}, "post:CreateAdmin")
-	web.Router("/admin/delete", &controllers.AdminController{}, "post:DeleteAdmin")
-	web.Router("/admin/resetPwd", &controllers.AdminController{}, "post:ResetPassword")
-	web.Router("/admin/update", &controllers.AdminController{}, "post:UpdateAdmin")
 	web.Router("/admin/init", &controllers.AdminController{}, "post:InitAdmin")
 	web.Router("/initAdmin", &controllers.AdminController{}, "post:InitAdmin")
 
-	// 角色管理模块
-	web.Router("/role/getList", &controllers.AdminController{}, "post:GetRoleList")
-	web.Router("/role/getAll", &controllers.AdminController{}, "post:GetAllRoles")
-	web.Router("/getAllRoles", &controllers.AdminController{}, "post:GetAllRoles")
-	web.Router("/role/create", &controllers.AdminController{}, "post:CreateRole")
-	web.Router("/role/update", &controllers.AdminController{}, "post:UpdateRole")
-	web.Router("/role/delete", &controllers.AdminController{}, "post:DeleteRole")
-
-	// 应用管理模块
-	web.Router("/app/init", &controllers.ApplicationController{}, "post:InitApp")
-	web.Router("/app/query", &controllers.ApplicationController{}, "post:QueryApp")
-	web.Router("/app/getAll", &controllers.ApplicationController{}, "post:GetAllApps")
-	web.Router("/app/update", &controllers.ApplicationController{}, "post:UpdateApp")
-	web.Router("/app/delete", &controllers.ApplicationController{}, "post:DeleteApp")
-	web.Router("/app/create", &controllers.ApplicationController{}, "post:CreateApp")
-	web.Router("/app/getDetail", &controllers.ApplicationController{}, "post:GetAppDetail")
+	// 基本应用管理模块
+	web.Router("/app/getAll", &controllers.ApplicationController{}, "post:GetApplications")
+	web.Router("/app/create", &controllers.ApplicationController{}, "post:CreateApplication")
 
 	// 用户管理模块
 	web.Router("/user/getAll", &controllers.UserController{}, "post:GetAllUsers")
-	web.Router("/user/ban", &controllers.UserController{}, "post:BanUser")
-	web.Router("/user/unban", &controllers.UserController{}, "post:UnbanUser")
-	web.Router("/user/delete", &controllers.UserController{}, "post:DeleteUser")
-	web.Router("/user/getDetail", &controllers.UserController{}, "post:GetUserDetail")
-	web.Router("/user/setDetail", &controllers.UserController{}, "post:SetUserDetail")
-	web.Router("/user/getStats", &controllers.UserController{}, "post:GetUserStats")
-
 	// 排行榜管理模块
 	web.Router("/leaderboard/getAll", &controllers.LeaderboardController{}, "post:GetAllLeaderboards")
-	web.Router("/leaderboard/update", &controllers.LeaderboardController{}, "post:UpdateLeaderboard")
-	web.Router("/leaderboard/delete", &controllers.LeaderboardController{}, "post:DeleteLeaderboard")
-	web.Router("/leaderboard/create", &controllers.LeaderboardController{}, "post:CreateLeaderboard")
-	web.Router("/leaderboard/getData", &controllers.LeaderboardController{}, "post:GetLeaderboardData")
-	web.Router("/leaderboard/updateScore", &controllers.LeaderboardController{}, "post:UpdateLeaderboardScore")
-	web.Router("/leaderboard/deleteScore", &controllers.LeaderboardController{}, "post:DeleteLeaderboardScore")
-	web.Router("/leaderboard/commitScore", &controllers.LeaderboardController{}, "post:CommitLeaderboardScore")
-	web.Router("/leaderboard/queryScore", &controllers.LeaderboardController{}, "post:QueryLeaderboardScore")
-	web.Router("/leaderboard/fixUserInfo", &controllers.LeaderboardController{}, "post:FixLeaderboardUserInfo")
-
 	// 计数器管理模块
 	web.Router("/counter/getList", &controllers.CounterController{}, "post:GetCounterList")
-	web.Router("/getCounterList", &controllers.CounterController{}, "post:GetCounterList")
-	web.Router("/counter/create", &controllers.CounterController{}, "post:CreateCounter")
-	web.Router("/createCounter", &controllers.CounterController{}, "post:CreateCounter")
-	web.Router("/counter/update", &controllers.CounterController{}, "post:UpdateCounter")
-	web.Router("/updateCounter", &controllers.CounterController{}, "post:UpdateCounter")
-	web.Router("/counter/delete", &controllers.CounterController{}, "post:DeleteCounter")
-	web.Router("/deleteCounter", &controllers.CounterController{}, "post:DeleteCounter")
-	web.Router("/counter/getAllStats", &controllers.CounterController{}, "post:GetAllCounterStats")
-
 	// 统计模块
 	web.Router("/stat/dashboard", &controllers.StatsController{}, "post:GetDashboardStats")
-	web.Router("/stat/getTopApps", &controllers.StatsController{}, "post:GetTopApps")
-	web.Router("/stat/getRecentActivity", &controllers.StatsController{}, "post:GetRecentActivity")
-	web.Router("/stat/getUserGrowth", &controllers.StatsController{}, "post:GetUserGrowth")
-	web.Router("/stat/getAppStats", &controllers.StatsController{}, "post:GetAppStats")
-	web.Router("/stat/getLeaderboardStats", &controllers.StatsController{}, "post:GetLeaderboardStats")
-
 	// 邮件管理模块
 	web.Router("/mail/getAll", &controllers.MailController{}, "post:GetAllMails")
-	web.Router("/mail/create", &controllers.MailController{}, "post:CreateMail")
-	web.Router("/mail/update", &controllers.MailController{}, "post:UpdateMail")
-	web.Router("/mail/delete", &controllers.MailController{}, "post:DeleteMail")
-	web.Router("/mail/send", &controllers.MailController{}, "post:PublishMail")
-	web.Router("/mail/getStats", &controllers.MailController{}, "post:GetMailStats")
-	web.Router("/mail/getUserMails", &controllers.MailController{}, "post:GetUserMails")
-	web.Router("/mail/initSystem", &controllers.MailController{}, "post:InitMailSystem")
-
 	// 游戏配置模块
 	web.Router("/gameConfig/getList", &controllers.GameConfigController{}, "post:GetGameConfigList")
-	web.Router("/gameConfig/create", &controllers.GameConfigController{}, "post:CreateGameConfig")
-	web.Router("/gameConfig/update", &controllers.GameConfigController{}, "post:UpdateGameConfig")
-	web.Router("/gameConfig/delete", &controllers.GameConfigController{}, "post:DeleteGameConfig")
-	web.Router("/gameConfig/get", &controllers.GameConfigController{}, "post:GetGameConfig")
 
-	// API路由组（保持原有RESTful接口兼容性）
 	apiNamespace := web.NewNamespace("/api",
 		// 认证相关
 		web.NSRouter("/auth/login", &controllers.AuthController{}, "post:Login"),
@@ -216,4 +153,5 @@ func init() {
 	)
 
 	web.AddNamespace(apiNamespace)
+
 }

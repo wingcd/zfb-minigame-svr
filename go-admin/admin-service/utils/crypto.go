@@ -71,10 +71,19 @@ type AdminInfo struct {
 func GenerateJWT(userID int64, username string, roleID int64) (string, error) {
 	expireTime := time.Now().Add(24 * time.Hour)
 
+	// 根据roleID设置role字符串
+	role := "user"
+	if roleID == 1 {
+		role = "super_admin"
+	} else if roleID == 2 {
+		role = "admin"
+	}
+
 	claims := &JWTClaims{
 		UserID:   userID,
 		Username: username,
 		RoleID:   roleID,
+		Role:     role,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: expireTime.Unix(),
 			IssuedAt:  time.Now().Unix(),
@@ -231,6 +240,11 @@ func GetJWTSecret() string {
 		return "default_jwt_secret_key"
 	}
 	return jwtSecret
+}
+
+// SetJWTSecret 设置JWT密钥（用于测试）
+func SetJWTSecret(secret string) {
+	jwtSecret = secret
 }
 
 // LogOperation 记录操作日志
