@@ -220,7 +220,7 @@ exports.main = async (event, context) => {
           "test": user.test,
           "leaderboardType": leaderboardType,
           "score": currentScore,
-          "hasUserInfo": user.userInfo ? 1 : 0,
+          "hasUserInfo": user.userInfo && user.userInfo.nickName ? 1 : 0,
           "gmtCreate": now,
           "gmtModify": now,
         }

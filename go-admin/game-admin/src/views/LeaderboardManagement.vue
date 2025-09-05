@@ -84,12 +84,6 @@
             <el-option label="前50名" :value="50"></el-option>
             <el-option label="前100名" :value="100"></el-option>
           </el-select>
-          <el-tooltip content="修复排行榜中的用户信息标记，根据用户昵称重新设置hasUserInfo字段" placement="top">
-            <el-button type="warning" @click="fixUserInfoData" :loading="fixingUserInfo" :disabled="!selectedLeaderboard">
-              <el-icon><Tools /></el-icon>
-              {{ fixingUserInfo ? '修复中...' : '修复用户信息' }}
-            </el-button>
-          </el-tooltip>
           <el-button @click="loadLeaderboardData">刷新数据</el-button>
         </div>
       </div>
@@ -102,22 +96,6 @@
           </el-form-item>
           <el-form-item>
             <el-button type="primary" @click="searchPlayerScore">搜索</el-button>
-          </el-form-item>
-        </el-form>
-      </div>
-
-      <!-- 数据过滤选项 -->
-      <div class="filter-options">
-        <el-form :model="filterForm" :inline="true">
-          <el-form-item label="用户信息过滤:">
-            <el-select v-model="filterForm.hasUserInfo" @change="loadLeaderboardData" style="width: 180px;">
-              <el-option label="显示所有记录" :value="null"></el-option>
-              <el-option label="仅显示有用户信息" :value="1"></el-option>
-              <el-option label="仅显示无用户信息" :value="0"></el-option>
-            </el-select>
-          </el-form-item>
-          <el-form-item>
-            <el-button @click="resetFilter">重置过滤</el-button>
           </el-form-item>
         </el-form>
       </div>
@@ -169,7 +147,7 @@
             </div>
           </template>
         </el-table-column>
-        <el-table-column prop="playerId" label="玩家ID" width="120">
+        <el-table-column prop="openId" label="玩家ID" width="120">
         </el-table-column>
         <el-table-column label="玩家信息" width="200">
           <template #default="scope">
@@ -296,7 +274,6 @@
 <script>
 import { ref, reactive, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Tools } from '@element-plus/icons-vue'
 import { leaderboardAPI, appAPI, statsAPI } from '../services/api.js'
 import { selectedAppId, getAppName } from '../utils/appStore.js'
 
@@ -305,7 +282,6 @@ export default {
   setup() {
     const configLoading = ref(false)
     const dataLoading = ref(false)
-    const fixingUserInfo = ref(false)
     const leaderboardConfigs = ref([])
     const selectedLeaderboard = ref(null)
     const leaderboardData = ref([])
@@ -318,10 +294,6 @@ export default {
     
     const playerSearchForm = reactive({
       playerId: ''
-    })
-    
-    const filterForm = reactive({
-      hasUserInfo: null
     })
     
     const configDialog = reactive({
@@ -420,8 +392,7 @@ export default {
           leaderboardType: selectedLeaderboard.value.leaderboardType,
           offset: rankParams.startRank,
           limit: rankParams.count,
-          includeUserInfo: true,
-          hasUserInfo: filterForm.hasUserInfo
+          includeUserInfo: true
         })
         
         if (result.code === 0) {
@@ -572,7 +543,7 @@ export default {
     // 编辑分数
     const editScore = (scoreData) => {
       scoreDialog.form = {
-        playerId: scoreData.playerId,
+        playerId: scoreData.openId,
         score: scoreData.score
       }
       scoreDialog.originalData = scoreData
@@ -608,7 +579,7 @@ export default {
     const deleteScore = async (scoreData) => {
       try {
         await ElMessageBox.confirm(
-          `确定要删除玩家 ${scoreData.playerId} 的分数记录吗？`, 
+          `确定要删除玩家 ${scoreData.openId} 的分数记录吗？`, 
           '确认删除', 
           { type: 'warning' }
         )
@@ -631,63 +602,6 @@ export default {
           console.error('删除分数失败:', error)
           ElMessage.error('删除失败')
         }
-      }
-    }
-    
-    // 修复用户信息标记
-    const fixUserInfoData = async () => {
-      if (!selectedLeaderboard.value) {
-        ElMessage.warning('请先选择一个排行榜')
-        return
-      }
-      
-      try {
-        await ElMessageBox.confirm(
-          `确定要修复排行榜 "${selectedLeaderboard.value.name}" 的用户信息标记吗？<br/><br/>
-          <strong>修复说明：</strong><br/>
-          • 此操作会检查每个玩家的用户数据中是否有有效的昵称<br/>
-          • 有昵称的玩家hasUserInfo字段会被设为1<br/>
-          • 无昵称的玩家hasUserInfo字段会被设为0<br/>
-          • 修复后排行榜显示会更准确<br/><br/>
-          <span style="color: #E6A23C;">注意：此操作可能需要一些时间，请耐心等待。</span>`, 
-          '确认修复用户信息标记', 
-          { 
-            type: 'warning',
-            dangerouslyUseHTMLString: true,
-            confirmButtonText: '开始修复',
-            cancelButtonText: '取消'
-          }
-        )
-        
-        fixingUserInfo.value = true
-        
-        const result = await leaderboardAPI.fixUserInfo({
-          appId: selectedAppId.value,
-          leaderboardType: selectedLeaderboard.value.leaderboardType
-        })
-        
-        if (result.code === 0) {
-          const { totalProcessed, updatedCount, errorCount } = result.data
-          
-          if (updatedCount === 0) {
-            ElMessage.info(`修复完成！检查了 ${totalProcessed} 条记录，所有记录的用户信息标记都已正确，无需更新。`)
-          } else {
-            ElMessage.success(
-              `修复完成！处理了 ${totalProcessed} 条记录，成功更新了 ${updatedCount} 条记录${errorCount > 0 ? `，${errorCount} 条记录出错` : ''}。`
-            )
-          }
-          
-          await loadLeaderboardData()
-        } else {
-          ElMessage.error(result.msg || '修复失败')
-        }
-      } catch (error) {
-        if (error !== 'cancel') {
-          console.error('修复用户信息标记失败:', error)
-          ElMessage.error('修复失败')
-        }
-      } finally {
-        fixingUserInfo.value = false
       }
     }
     
@@ -763,11 +677,6 @@ export default {
         loadLeaderboardStats()
       }
     }
-
-    const resetFilter = () => {
-      filterForm.hasUserInfo = null
-      loadLeaderboardData()
-    }
     
     onMounted(() => {
       // 组件挂载时如果已有选择的app，则加载配置
@@ -779,14 +688,12 @@ export default {
     return {
       configLoading,
       dataLoading,
-      fixingUserInfo,
       leaderboardConfigs,
       selectedLeaderboard,
       leaderboardData,
       leaderboardStats,
       rankParams,
       playerSearchForm,
-      filterForm,
       configDialog,
       scoreDialog,
       configRules,
@@ -800,7 +707,6 @@ export default {
       editScore,
       saveScore,
       deleteScore,
-      fixUserInfoData,
       getRankClass,
       getResetTypeText,
       getResetTypeTagType,
@@ -808,9 +714,7 @@ export default {
       refreshData,
       getAppName,
       getUpdateStrategyText,
-      getUpdateStrategyTagType,
-      Tools,
-      resetFilter
+      getUpdateStrategyTagType
     }
   }
 }
@@ -869,22 +773,6 @@ export default {
   padding: 15px;
   border-radius: 8px;
   margin-bottom: 20px;
-}
-
-.filter-options {
-  background: #f5f5f5;
-  padding: 15px;
-  border-radius: 8px;
-  margin-bottom: 20px;
-}
-
-.filter-options .el-form-item {
-  margin-bottom: 0;
-}
-
-.filter-options .el-form-item__label {
-  font-weight: 500;
-  color: #606266;
 }
 
 .leaderboard-stats {
@@ -958,17 +846,5 @@ export default {
 
 .el-button.danger {
   color: #f56c6c;
-}
-
-.header-actions .el-button {
-  margin-left: 10px;
-}
-
-.header-actions .el-button:first-child {
-  margin-left: 0;
-}
-
-.header-actions .el-button .el-icon {
-  margin-right: 5px;
 }
 </style>

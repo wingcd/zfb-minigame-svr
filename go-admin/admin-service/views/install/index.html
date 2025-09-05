@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minigame Admin Service - 系统安装</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .install-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            max-width: 800px;
+            width: 100%;
+            overflow: hidden;
+        }
+        
+        .install-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+        
+        .install-header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+        
+        .install-header p {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+        
+        .install-content {
+            padding: 40px;
+        }
+        
+        .install-steps {
+            display: none;
+        }
+        
+        .install-steps.active {
+            display: block;
+        }
+        
+        .step-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .step-number {
+            width: 40px;
+            height: 40px;
+            background: #667eea;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            font-weight: bold;
+        }
+        
+        .step-title {
+            font-size: 1.5em;
+            color: #333;
+        }
+        
+        .form-group {
+            margin-bottom: 25px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 6px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #5a6fd8;
+            transform: translateY(-2px);
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #218838;
+        }
+        
+        .btn-warning {
+            background: #ffc107;
+            color: #212529;
+        }
+        
+        .btn-warning:hover {
+            background: #e0a800;
+        }
+        
+        .btn-group {
+            display: flex;
+            gap: 15px;
+            justify-content: flex-end;
+            margin-top: 30px;
+        }
+        
+        .status-card {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .status-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .status-item:last-child {
+            border-bottom: none;
+        }
+        
+        .status-label {
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        .status-value {
+            font-family: monospace;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .alert {
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 1px solid transparent;
+            border-radius: 4px;
+        }
+        
+        .alert-success {
+            color: #155724;
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+        }
+        
+        .alert-danger {
+            color: #721c24;
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+        }
+        
+        .alert-warning {
+            color: #856404;
+            background-color: #fff3cd;
+            border-color: #ffeaa7;
+        }
+        
+        .alert-info {
+            color: #0c5460;
+            background-color: #d1ecf1;
+            border-color: #bee5eb;
+        }
+        
+        .progress {
+            width: 100%;
+            height: 20px;
+            background-color: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        @media (max-width: 768px) {
+            .install-container {
+                margin: 10px;
+            }
+            
+            .install-header {
+                padding: 30px 20px;
+            }
+            
+            .install-content {
+                padding: 30px 20px;
+            }
+            
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .btn-group {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="install-container">
+        <div class="install-header">
+            <h1>🎮 Minigame Admin Service</h1>
+            <p>系统安装向导</p>
+        </div>
+        
+        <div class="install-content">
+            <!-- 步骤1: 环境检查 -->
+            <div class="install-steps active" id="step1">
+                <div class="step-header">
+                    <div class="step-number">1</div>
+                    <div class="step-title">环境检查</div>
+                </div>
+                
+                <div class="status-card">
+                    <div class="status-item">
+                        <span class="status-label">安装状态</span>
+                        <span class="status-value" id="install-status">检查中...</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">数据库状态</span>
+                        <span class="status-value" id="database-status">检查中...</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">系统版本</span>
+                        <span class="status-value status-success">v1.0.0</span>
+                    </div>
+                </div>
+                
+                <div id="status-message"></div>
+                
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="checkStatus()">
+                        <span class="loading" id="check-loading" style="display: none;"></span>
+                        重新检查
+                    </button>
+                    <button class="btn btn-success" id="auto-install-btn" onclick="autoInstall()" style="display: none;">
+                        自动安装
+                    </button>
+                    <button class="btn btn-warning" id="manual-install-btn" onclick="showStep(2)" style="display: none;">
+                        手动配置
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 步骤2: 数据库配置 -->
+            <div class="install-steps" id="step2">
+                <div class="step-header">
+                    <div class="step-number">2</div>
+                    <div class="step-title">数据库配置</div>
+                </div>
+                
+                <form id="database-form">
+                    <div class="form-group">
+                        <label for="database-type">数据库类型</label>
+                        <select id="database-type" name="database_type" onchange="toggleDatabaseConfig()">
+                            <option value="sqlite">SQLite (推荐，无需配置)</option>
+                            <option value="mysql">MySQL</option>
+                        </select>
+                    </div>
+                    
+                    <div id="mysql-config" style="display: none;">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="mysql-host">主机地址</label>
+                                <input type="text" id="mysql-host" name="mysql_host" value="127.0.0.1">
+                            </div>
+                            <div class="form-group">
+                                <label for="mysql-port">端口</label>
+                                <input type="number" id="mysql-port" name="mysql_port" value="3306">
+                            </div>
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="mysql-user">用户名</label>
+                                <input type="text" id="mysql-user" name="mysql_user" value="root">
+                            </div>
+                            <div class="form-group">
+                                <label for="mysql-password">密码</label>
+                                <input type="password" id="mysql-password" name="mysql_password">
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="mysql-database">数据库名</label>
+                            <input type="text" id="mysql-database" name="mysql_database" value="minigame_admin">
+                        </div>
+                        
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-secondary" onclick="testConnection()">
+                                测试连接
+                            </button>
+                        </div>
+                        
+                        <div id="connection-result"></div>
+                    </div>
+                </form>
+                
+                <div class="btn-group">
+                    <button class="btn btn-secondary" onclick="showStep(1)">上一步</button>
+                    <button class="btn btn-primary" onclick="showStep(3)">下一步</button>
+                </div>
+            </div>
+            
+            <!-- 步骤3: 管理员配置 -->
+            <div class="install-steps" id="step3">
+                <div class="step-header">
+                    <div class="step-number">3</div>
+                    <div class="step-title">管理员配置</div>
+                </div>
+                
+                <form id="admin-form">
+                    <div class="form-group">
+                        <label for="admin-username">管理员用户名</label>
+                        <input type="text" id="admin-username" name="admin_username" value="admin" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="admin-password">管理员密码</label>
+                        <input type="password" id="admin-password" name="admin_password" required>
+                        <small style="color: #666; font-size: 0.9em;">密码长度至少6位</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="admin-email">邮箱地址</label>
+                        <input type="email" id="admin-email" name="admin_email" value="admin@example.com">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="create-sample-data" name="create_sample_data">
+                            创建示例数据
+                        </label>
+                    </div>
+                </form>
+                
+                <div class="btn-group">
+                    <button class="btn btn-secondary" onclick="showStep(2)">上一步</button>
+                    <button class="btn btn-primary" onclick="showStep(4)">下一步</button>
+                </div>
+            </div>
+            
+            <!-- 步骤4: 安装确认 -->
+            <div class="install-steps" id="step4">
+                <div class="step-header">
+                    <div class="step-number">4</div>
+                    <div class="step-title">安装确认</div>
+                </div>
+                
+                <div class="status-card">
+                    <h4>安装配置摘要</h4>
+                    <div id="install-summary"></div>
+                </div>
+                
+                <div class="alert alert-info">
+                    <strong>注意：</strong>安装过程将创建数据库表结构和默认管理员账号。请确认配置无误后继续。
+                </div>
+                
+                <div class="progress" id="install-progress" style="display: none;">
+                    <div class="progress-bar" id="progress-bar"></div>
+                </div>
+                
+                <div id="install-result"></div>
+                
+                <div class="btn-group">
+                    <button class="btn btn-secondary" onclick="showStep(3)" id="back-btn">上一步</button>
+                    <button class="btn btn-success" onclick="startInstall()" id="install-btn">
+                        开始安装
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentStep = 1;
+        let installConfig = {};
+        
+        // 页面加载时检查状态
+        document.addEventListener('DOMContentLoaded', function() {
+            checkStatus();
+        });
+        
+        // 显示指定步骤
+        function showStep(step) {
+            // 隐藏所有步骤
+            document.querySelectorAll('.install-steps').forEach(el => {
+                el.classList.remove('active');
+            });
+            
+            // 显示指定步骤
+            document.getElementById('step' + step).classList.add('active');
+            currentStep = step;
+            
+            // 更新安装摘要
+            if (step === 4) {
+                updateInstallSummary();
+            }
+        }
+        
+        // 检查安装状态
+        function checkStatus() {
+            const loading = document.getElementById('check-loading');
+            loading.style.display = 'inline-block';
+            
+            fetch('/install/status')
+                .then(response => response.json())
+                .then(data => {
+                    loading.style.display = 'none';
+                    
+                    if (data.code === 200) {
+                        updateStatusDisplay(data.data);
+                    } else {
+                        showMessage('error', '状态检查失败: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    loading.style.display = 'none';
+                    showMessage('error', '网络错误: ' + error.message);
+                });
+        }
+        
+        // 更新状态显示
+        function updateStatusDisplay(status) {
+            const installStatus = document.getElementById('install-status');
+            const databaseStatus = document.getElementById('database-status');
+            const autoInstallBtn = document.getElementById('auto-install-btn');
+            const manualInstallBtn = document.getElementById('manual-install-btn');
+            
+            if (status.is_installed) {
+                installStatus.className = 'status-value status-success';
+                installStatus.textContent = '已安装';
+                showMessage('info', '系统已安装，即将跳转到登录页面...');
+                setTimeout(() => {
+                    window.location.href = '/admin/login';
+                }, 2000);
+                return;
+            } else {
+                installStatus.className = 'status-value status-warning';
+                installStatus.textContent = '未安装';
+            }
+            
+            // 数据库状态
+            switch (status.database_status) {
+                case 'mysql_connected':
+                    databaseStatus.className = 'status-value status-success';
+                    databaseStatus.textContent = 'MySQL 已连接';
+                    break;
+                case 'sqlite_available':
+                    databaseStatus.className = 'status-value status-success';
+                    databaseStatus.textContent = 'SQLite 可用';
+                    break;
+                default:
+                    databaseStatus.className = 'status-value status-warning';
+                    databaseStatus.textContent = '未配置';
+            }
+            
+            // 显示安装按钮
+            autoInstallBtn.style.display = 'inline-block';
+            manualInstallBtn.style.display = 'inline-block';
+        }
+        
+        // 自动安装
+        function autoInstall() {
+            if (!confirm('确定要自动安装吗？这将使用默认配置创建数据库和管理员账号。')) {
+                return;
+            }
+            
+            showMessage('info', '正在自动安装，请稍候...');
+            
+            fetch('/install/auto', {
+                method: 'POST'
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.code === 200) {
+                        showMessage('success', '安装成功！即将跳转到登录页面...');
+                        setTimeout(() => {
+                            window.location.href = data.data.redirect;
+                        }, 2000);
+                    } else {
+                        showMessage('error', '安装失败: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    showMessage('error', '网络错误: ' + error.message);
+                });
+        }
+        
+        // 切换数据库配置显示
+        function toggleDatabaseConfig() {
+            const dbType = document.getElementById('database-type').value;
+            const mysqlConfig = document.getElementById('mysql-config');
+            
+            if (dbType === 'mysql') {
+                mysqlConfig.style.display = 'block';
+            } else {
+                mysqlConfig.style.display = 'none';
+            }
+        }
+        
+        // 测试数据库连接
+        function testConnection() {
+            const config = getInstallConfig();
+            
+            fetch('/install/test', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(config)
+            })
+                .then(response => response.json())
+                .then(data => {
+                    const result = document.getElementById('connection-result');
+                    if (data.code === 200 && data.data.success) {
+                        result.innerHTML = '<div class="alert alert-success">✅ ' + data.data.message + '</div>';
+                    } else {
+                        result.innerHTML = '<div class="alert alert-danger">❌ ' + data.data.message + '</div>';
+                    }
+                })
+                .catch(error => {
+                    const result = document.getElementById('connection-result');
+                    result.innerHTML = '<div class="alert alert-danger">❌ 网络错误: ' + error.message + '</div>';
+                });
+        }
+        
+        // 获取安装配置
+        function getInstallConfig() {
+            return {
+                database_type: document.getElementById('database-type').value,
+                mysql_host: document.getElementById('mysql-host').value,
+                mysql_port: document.getElementById('mysql-port').value,
+                mysql_user: document.getElementById('mysql-user').value,
+                mysql_password: document.getElementById('mysql-password').value,
+                mysql_database: document.getElementById('mysql-database').value,
+                admin_username: document.getElementById('admin-username').value,
+                admin_password: document.getElementById('admin-password').value,
+                admin_email: document.getElementById('admin-email').value,
+                create_sample_data: document.getElementById('create-sample-data').checked
+            };
+        }
+        
+        // 更新安装摘要
+        function updateInstallSummary() {
+            const config = getInstallConfig();
+            const summary = document.getElementById('install-summary');
+            
+            let html = '<div class="status-item"><span class="status-label">数据库类型</span><span class="status-value">' + config.database_type.toUpperCase() + '</span></div>';
+            
+            if (config.database_type === 'mysql') {
+                html += '<div class="status-item"><span class="status-label">MySQL地址</span><span class="status-value">' + config.mysql_host + ':' + config.mysql_port + '</span></div>';
+                html += '<div class="status-item"><span class="status-label">数据库名</span><span class="status-value">' + config.mysql_database + '</span></div>';
+            }
+            
+            html += '<div class="status-item"><span class="status-label">管理员用户名</span><span class="status-value">' + config.admin_username + '</span></div>';
+            html += '<div class="status-item"><span class="status-label">示例数据</span><span class="status-value">' + (config.create_sample_data ? '是' : '否') + '</span></div>';
+            
+            summary.innerHTML = html;
+        }
+        
+        // 开始安装
+        function startInstall() {
+            const config = getInstallConfig();
+            
+            // 显示进度条
+            document.getElementById('install-progress').style.display = 'block';
+            document.getElementById('install-btn').disabled = true;
+            document.getElementById('back-btn').disabled = true;
+            
+            updateProgress(20, '正在验证配置...');
+            
+            fetch('/install/manual', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(config)
+            })
+                .then(response => response.json())
+                .then(data => {
+                    updateProgress(100, '安装完成');
+                    
+                    const result = document.getElementById('install-result');
+                    if (data.code === 200) {
+                        result.innerHTML = '<div class="alert alert-success">🎉 安装成功！即将跳转到登录页面...</div>';
+                        setTimeout(() => {
+                            window.location.href = data.data.redirect;
+                        }, 2000);
+                    } else {
+                        result.innerHTML = '<div class="alert alert-danger">❌ 安装失败: ' + data.message + '</div>';
+                        document.getElementById('install-btn').disabled = false;
+                        document.getElementById('back-btn').disabled = false;
+                    }
+                })
+                .catch(error => {
+                    updateProgress(100, '安装失败');
+                    const result = document.getElementById('install-result');
+                    result.innerHTML = '<div class="alert alert-danger">❌ 网络错误: ' + error.message + '</div>';
+                    document.getElementById('install-btn').disabled = false;
+                    document.getElementById('back-btn').disabled = false;
+                });
+        }
+        
+        // 更新进度条
+        function updateProgress(percent, message) {
+            const progressBar = document.getElementById('progress-bar');
+            progressBar.style.width = percent + '%';
+            
+            if (message) {
+                console.log(message);
+            }
+        }
+        
+        // 显示消息
+        function showMessage(type, message) {
+            const messageDiv = document.getElementById('status-message');
+            const alertClass = 'alert-' + (type === 'error' ? 'danger' : type);
+            messageDiv.innerHTML = '<div class="alert ' + alertClass + '">' + message + '</div>';
+        }
+    </script>
+</body>
+</html>

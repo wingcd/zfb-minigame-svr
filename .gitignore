@@ -5,3 +5,8 @@
 /alipay-admin-sever/node_modules
 /admin-server/AdminServer/miniprogram/node_modules
 /game-web-admin/dist
+/go-admin/bin
+/go-admin/game-admin/dist
+/go-admin/game-admin/node_modules
+/go-admin/admin-service/tests/__debug_bin
+/go-admin/admin-service/test_binary.exe

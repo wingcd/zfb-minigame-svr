@@ -1,0 +1,126 @@
+# 数据迁移配置文件
+
+# 源数据库配置 (MongoDB)
+source:
+  type: mongodb
+  connection: "mongodb://username:password@localhost:27017/gamedb"
+  
+# 目标数据库配置 (MySQL)
+target:
+  type: mysql
+  connection: "root:password@tcp(localhost:3306)/minigame_server?charset=utf8mb4&parseTime=True&loc=Local"
+  
+# 迁移设置
+settings:
+  batch_size: 1000        # 批处理大小
+  worker_count: 4         # 并发工作线程数
+  retry_count: 3          # 失败重试次数
+  verify_data: true       # 是否验证数据一致性
+  timeout: 300            # 操作超时时间（秒）
+  
+# 集合映射配置
+collections:
+  # 系统表迁移配置
+  - source: "admin_users"
+    target: "admin_users"
+    primary_key: "_id"
+    type: "system"
+    
+  - source: "admin_roles"
+    target: "admin_roles"
+    primary_key: "_id"
+    type: "system"
+    
+  - source: "admin_operation_logs"
+    target: "admin_operation_logs"
+    primary_key: "_id"
+    type: "system"
+    
+  - source: "applications"
+    target: "applications"
+    primary_key: "_id"
+    type: "system"
+    
+  # 动态表迁移配置  
+  - source_pattern: "user_*"
+    target_pattern: "user_data_*"
+    primary_key: "_id"
+    type: "dynamic"
+    
+  - source_pattern: "leaderboard_*"
+    target_pattern: "leaderboard_*"
+    primary_key: "_id"
+    type: "dynamic"
+    
+  - source_pattern: "counter_*"
+    target_pattern: "counter_*"
+    primary_key: "_id"
+    type: "dynamic"
+    
+  - source_pattern: "mail_*"
+    target_pattern: "mail_*"
+    primary_key: "_id"
+    type: "dynamic"
+    
+  - source_pattern: "game_config_*"
+    target_pattern: "game_config_*"
+    primary_key: "_id"
+    type: "dynamic"
+
+# 字段映射配置
+field_mappings:
+  # MongoDB字段名 -> MySQL字段名
+  "_id": "id"
+  "gmtCreate": "created_at"
+  "gmtModify": "updated_at"
+  "playerId": "user_id"
+  "playerData": "data"
+  
+# 数据转换规则
+transformations:
+  # ObjectId转换为字符串
+  - field: "_id"
+    from_type: "objectid"
+    to_type: "string"
+    
+  # 时间格式转换
+  - field: "gmtCreate"
+    from_type: "date"
+    to_type: "datetime"
+    
+  - field: "gmtModify"
+    from_type: "date"
+    to_type: "datetime"
+    
+  # JSON字段处理
+  - field: "data"
+    from_type: "object"
+    to_type: "json_string"
+
+# 验证规则
+validation:
+  # 记录数验证
+  count_check: true
+  
+  # 抽样验证比例
+  sample_rate: 0.05  # 5%
+  
+  # 关键字段验证
+  key_fields: ["user_id", "created_at"]
+  
+  # 数据完整性检查
+  integrity_check: true
+
+# 报告配置
+reporting:
+  # 报告输出目录
+  output_dir: "reports"
+  
+  # 报告格式
+  formats: ["html", "json", "csv"]
+  
+  # 包含详细错误信息
+  include_errors: true
+  
+  # 包含性能统计
+  include_stats: true

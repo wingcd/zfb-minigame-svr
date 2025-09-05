@@ -1,0 +1,123 @@
+{
+  "database": {
+    "driver": "mysql",
+    "host": "127.0.0.1",
+    "port": 3306,
+    "user": "root",
+    "password": "",
+    "database": "admin_service_test",
+    "charset": "utf8mb4",
+    "maxIdleConns": 10,
+    "maxOpenConns": 100
+  },
+  "server": {
+    "host": "127.0.0.1",
+    "port": 8081,
+    "timeout": 30
+  },
+  "jwt": {
+    "secret": "test_jwt_secret_key_2023",
+    "expireHours": 24
+  },
+  "test": {
+    "parallel": true,
+    "verbose": true,
+    "cleanup": true,
+    "timeout": "5m",
+    "retries": 3
+  },
+  "testData": {
+    "apps": [
+      {
+        "appId": "test_app_001",
+        "appName": "测试应用1",
+        "description": "第一个测试应用",
+        "userCount": 100
+      },
+      {
+        "appId": "test_app_002", 
+        "appName": "测试应用2",
+        "description": "第二个测试应用",
+        "userCount": 50
+      },
+      {
+        "appId": "test_app_performance",
+        "appName": "性能测试应用",
+        "description": "用于性能测试的应用",
+        "userCount": 1000
+      }
+    ],
+    "users": [
+      {
+        "playerId": "test_player_001",
+        "data": {
+          "level": 5,
+          "score": 1500,
+          "coins": 300,
+          "nickname": "测试玩家1"
+        }
+      },
+      {
+        "playerId": "test_player_002",
+        "data": {
+          "level": 3,
+          "score": 800,
+          "coins": 150,
+          "nickname": "测试玩家2"
+        }
+      },
+      {
+        "playerId": "test_player_ban",
+        "data": {
+          "level": 1,
+          "score": 100,
+          "coins": 50,
+          "nickname": "待封禁玩家"
+        }
+      }
+    ],
+    "admins": [
+      {
+        "username": "test_admin",
+        "password": "test123456",
+        "nickname": "测试管理员",
+        "email": "test_admin@example.com",
+        "role": "admin"
+      },
+      {
+        "username": "test_super_admin", 
+        "password": "test123456",
+        "nickname": "测试超级管理员",
+        "email": "test_super_admin@example.com",
+        "role": "super_admin"
+      }
+    ]
+  },
+  "expectedResponses": {
+    "successCodes": [0],
+    "errorCodes": {
+      "paramError": 4001,
+      "authError": 4001,
+      "permissionError": 4003,
+      "notFoundError": 4004,
+      "serverError": 5001
+    },
+    "standardFields": {
+      "listResponse": ["list", "total", "page", "pageSize"],
+      "userResponse": ["id", "playerId", "data", "createTime"],
+      "appResponse": ["id", "appId", "appName", "status"]
+    }
+  },
+  "performance": {
+    "thresholds": {
+      "responseTime": 1000,
+      "throughput": 100,
+      "errorRate": 0.01
+    },
+    "loadTest": {
+      "concurrent": 10,
+      "duration": "30s",
+      "rampUp": "10s"
+    }
+  }
+}
