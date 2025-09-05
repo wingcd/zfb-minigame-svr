@@ -199,18 +199,18 @@
       </el-table-column>
       <el-table-column label="操作" width="320" fixed="right">
         <template #default="scope">
-          <el-button type="text" @click="viewMailDetail(scope.row)">详情</el-button>
-          <el-button type="text" @click="viewMailStats(scope.row)" v-if="scope.row.status === 'active'">统计</el-button>
-          <el-button type="text" @click="copyMail(scope.row)" v-if="hasPermission(PERMISSIONS.MAIL_MANAGE)">复制</el-button>
+          <el-button link @click="viewMailDetail(scope.row)">详情</el-button>
+          <el-button link @click="viewMailStats(scope.row)" v-if="scope.row.status === 'active'">统计</el-button>
+          <el-button link @click="copyMail(scope.row)" v-if="hasPermission(PERMISSIONS.MAIL_MANAGE)">复制</el-button>
           <el-button 
-            type="text" 
+            link 
             @click="editMail(scope.row)" 
             v-if="(scope.row.status === 'pending' || scope.row.status === 'scheduled') && hasPermission(PERMISSIONS.MAIL_MANAGE)"
           >
             编辑
           </el-button>
           <el-button 
-            type="text" 
+            link 
             class="success"
             @click="publishMail(scope.row)" 
             v-if="(scope.row.status === 'pending' || scope.row.status === 'scheduled') && hasPermission(PERMISSIONS.MAIL_MANAGE)"
@@ -218,7 +218,7 @@
             发布
           </el-button>
           <el-button 
-            type="text" 
+            link 
             class="warning"
             @click="expireMail(scope.row)" 
             v-if="scope.row.status === 'active' && hasPermission(PERMISSIONS.MAIL_MANAGE)"
@@ -226,7 +226,7 @@
             下线
           </el-button>
           <el-button 
-            type="text" 
+            link 
             class="primary"
             @click="republishMail(scope.row)" 
             v-if="scope.row.status === 'expired' && hasPermission(PERMISSIONS.MAIL_MANAGE)"
@@ -234,7 +234,7 @@
             重新发布
           </el-button>
           <el-button 
-            type="text" 
+            link 
             class="danger" 
             @click="deleteMail(scope.row)" 
             v-if="hasPermission(PERMISSIONS.MAIL_MANAGE)"
@@ -313,9 +313,9 @@
               <el-input v-model="reward.type" placeholder="奖励类型" style="width: 120px"></el-input>
               <el-input-number v-model="reward.amount" :min="1" placeholder="数量" style="width: 100px; margin: 0 10px"></el-input-number>
               <el-input v-model="reward.name" placeholder="奖励名称" style="width: 150px"></el-input>
-              <el-button type="text" class="danger" @click="removeReward(index)">删除</el-button>
+              <el-button link class="danger" @click="removeReward(index)">删除</el-button>
             </div>
-            <el-button type="text" @click="addReward">添加奖励</el-button>
+            <el-button link @click="addReward">添加奖励</el-button>
           </div>
         </el-form-item>
         <el-form-item label="发布时间">

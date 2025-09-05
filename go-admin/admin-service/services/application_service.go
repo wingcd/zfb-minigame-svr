@@ -217,21 +217,7 @@ func (s *ApplicationService) CreateAppTables(appId string) error {
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户数据表'
 	`, cleanAppId)
 
-	// 创建排行榜表
-	leaderboardSQL := fmt.Sprintf(`
-		CREATE TABLE IF NOT EXISTS leaderboard_%s (
-			id BIGINT AUTO_INCREMENT PRIMARY KEY,
-			leaderboard_name VARCHAR(100) NOT NULL,
-			user_id VARCHAR(100) NOT NULL,
-			score BIGINT DEFAULT 0,
-			extra_data TEXT,
-			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-			UNIQUE KEY uk_leaderboard_user (leaderboard_name, user_id),
-			KEY idx_leaderboard_score (leaderboard_name, score DESC),
-			KEY idx_updated_at (updated_at)
-		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='排行榜数据表'
-	`, cleanAppId)
+	// 排行榜表现在按需创建，不在应用创建时预先创建
 
 	// 创建计数器表
 	counterSQL := fmt.Sprintf(`
@@ -285,7 +271,7 @@ func (s *ApplicationService) CreateAppTables(appId string) error {
 	`, cleanAppId)
 
 	// 执行SQL语句
-	sqls := []string{userDataSQL, leaderboardSQL, counterSQL, mailSQL, configSQL}
+	sqls := []string{userDataSQL, counterSQL, mailSQL, configSQL}
 	for _, sql := range sqls {
 		_, err := o.Raw(sql).Exec()
 		if err != nil {
@@ -306,7 +292,7 @@ func (s *ApplicationService) DropAppTables(appId string) error {
 	// 删除表的SQL语句
 	tables := []string{
 		fmt.Sprintf("user_data_%s", cleanAppId),
-		fmt.Sprintf("leaderboard_%s", cleanAppId),
+		fmt.Sprintf("leaderboard_%s", cleanAppId), // 仍需删除可能存在的排行榜表
 		fmt.Sprintf("counter_%s", cleanAppId),
 		fmt.Sprintf("mail_%s", cleanAppId),
 		fmt.Sprintf("game_config_%s", cleanAppId),

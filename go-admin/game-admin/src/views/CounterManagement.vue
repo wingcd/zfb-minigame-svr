@@ -115,7 +115,7 @@
                 </el-table-column>
                 <el-table-column label="操作" width="120" align="center">
                   <template #default="scope">
-                    <el-button type="text" size="small" @click="editLocationCounter(props.row, scope.row)">
+                    <el-button link size="small" @click="editLocationCounter(props.row, scope.row)">
                       编辑
                     </el-button>
                   </template>
@@ -153,8 +153,8 @@
         </el-table-column>
                         <el-table-column label="操作" width="200" align="center" fixed="right">
           <template #default="scope">
-            <el-button type="text" @click="editCounterConfig(scope.row)">编辑配置</el-button>
-            <el-button type="text" class="danger" @click="deleteCounterAllLocations(scope.row)">删除全部</el-button>
+            <el-button link @click="editCounterConfig(scope.row)">编辑配置</el-button>
+            <el-button link class="danger" @click="deleteCounterAllLocations(scope.row)">删除全部</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -204,8 +204,8 @@
         </el-table-column>
         <el-table-column label="操作" width="200" align="center" fixed="right">
           <template #default="scope">
-            <el-button type="text" @click="editCounter(scope.row)">编辑</el-button>
-            <el-button type="text" class="danger" @click="deleteCounter(scope.row)">删除</el-button>
+            <el-button link @click="editCounter(scope.row)">编辑</el-button>
+            <el-button link class="danger" @click="deleteCounter(scope.row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>

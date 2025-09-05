@@ -70,20 +70,20 @@
           <el-table-column label="操作" width="250">
             <template #default="scope">
               <el-button 
-                type="text" 
+                link 
                 @click="readMail(scope.row)" 
                 v-if="!scope.row.isRead">
                 阅读
               </el-button>
               <el-button 
-                type="text" 
+                link 
                 class="success"
                 @click="receiveMail(scope.row)" 
                 v-if="scope.row.isRead && !scope.row.isReceived && scope.row.rewards && scope.row.rewards.length > 0">
                 领取奖励
               </el-button>
               <el-button 
-                type="text" 
+                link 
                 class="danger"
                 @click="deleteMail(scope.row)" 
                 v-if="!scope.row.isDeleted">

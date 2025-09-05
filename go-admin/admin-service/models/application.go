@@ -73,21 +73,7 @@ CREATE TABLE IF NOT EXISTS user_%s (
   KEY idx_update_time (update_time)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户数据表_%s'`, cleanAppId, cleanAppId)
 
-	// 创建排行榜表
-	leaderboardSQL := fmt.Sprintf(`
-CREATE TABLE IF NOT EXISTS leaderboard_%s (
-  id bigint(20) NOT NULL AUTO_INCREMENT,
-  leaderboard_name varchar(100) NOT NULL COMMENT '排行榜名称',
-  user_id varchar(100) NOT NULL COMMENT '用户ID',
-  score bigint(20) NOT NULL DEFAULT 0 COMMENT '分数',
-  extra_data text COMMENT '额外数据（JSON格式）',
-  created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (id),
-  UNIQUE KEY uk_leaderboard_user (leaderboard_name, user_id),
-  KEY idx_leaderboard_score (leaderboard_name, score DESC),
-  KEY idx_updated_at (updated_at)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='排行榜数据表_%s'`, cleanAppId, cleanAppId)
+	// 排行榜表现在按需创建，不在应用创建时预先创建
 
 	// 创建计数器表
 	counterSQL := fmt.Sprintf(`
@@ -141,7 +127,7 @@ CREATE TABLE IF NOT EXISTS game_config_%s (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='游戏配置表_%s'`, cleanAppId, cleanAppId)
 
 	// 执行创建表的SQL
-	sqls := []string{userDataSQL, leaderboardSQL, counterSQL, mailSQL, gameConfigSQL}
+	sqls := []string{userDataSQL, counterSQL, mailSQL, gameConfigSQL}
 	for _, sql := range sqls {
 		_, err := o.Raw(sql).Exec()
 		if err != nil {

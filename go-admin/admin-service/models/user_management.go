@@ -342,40 +342,7 @@ func GetUserDataList(appId string, page, pageSize int, keyword string) ([]*GameU
 	return users, total, err
 }
 
-// GetLeaderboardList 获取排行榜列表
-func GetLeaderboardList(appId string, page, pageSize int, leaderboardName string) ([]map[string]interface{}, int64, error) {
-	o := orm.NewOrm()
-	tableName := fmt.Sprintf("leaderboard_%s", appId)
-
-	sql := fmt.Sprintf("SELECT * FROM %s ORDER BY score DESC LIMIT ? OFFSET ?", tableName)
-	params := []interface{}{pageSize, (page - 1) * pageSize}
-
-	var results []orm.Params
-	_, err := o.Raw(sql, params...).Values(&results)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	// 计算总数
-	countSql := fmt.Sprintf("SELECT COUNT(*) FROM %s", tableName)
-	var total int64
-	err = o.Raw(countSql).QueryRow(&total)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	// 转换结果
-	var list []map[string]interface{}
-	for _, result := range results {
-		item := make(map[string]interface{})
-		for k, v := range result {
-			item[k] = v
-		}
-		list = append(list, item)
-	}
-
-	return list, total, err
-}
+// GetLeaderboardList 函数已移至 leaderboard.go 模块
 
 // GetCounterList 获取计数器列表
 func GetCounterList(appId string, page, pageSize int) ([]map[string]interface{}, int64, error) {

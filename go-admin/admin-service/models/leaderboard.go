@@ -4,11 +4,26 @@ import (
 	"fmt"
 	"time"
 
+	"admin-service/utils"
+
 	"github.com/beego/beego/v2/client/orm"
 	"github.com/beego/beego/v2/core/logs"
 )
 
-// Leaderboard 排行榜配置结构
+// LeaderboardConfig 排行榜配置结构（管理表）
+type LeaderboardConfig struct {
+	BaseModel
+	AppId       string `orm:"size(100)" json:"appId"`
+	Type        string `orm:"size(100)" json:"type"`
+	Name        string `orm:"size(200)" json:"name"`
+	Description string `orm:"type(text)" json:"description"`
+	ResetType   string `orm:"size(50);default(never)" json:"resetType"` // never, daily, weekly, monthly
+	MaxEntries  int    `orm:"default(1000)" json:"maxEntries"`
+	ScoreType   string `orm:"size(20);default(higher_better)" json:"scoreType"` // higher_better, lower_better
+	Status      int    `orm:"default(1)" json:"status"`                         // 1=启用, 0=禁用
+}
+
+// Leaderboard 排行榜配置结构（兼容性保持）
 type Leaderboard struct {
 	ID          int64     `orm:"pk;auto" json:"id"`
 	AppId       string    `orm:"size(100)" json:"appId"`
@@ -23,7 +38,18 @@ type Leaderboard struct {
 	UpdateTime  time.Time `orm:"auto_now;type(datetime)" json:"updateTime"`
 }
 
-// LeaderboardScore 排行榜分数记录
+// LeaderboardData 排行榜数据模型（动态表）
+type LeaderboardData struct {
+	Id              int64  `orm:"auto" json:"id"`
+	LeaderboardName string `orm:"size(100)" json:"leaderboard_name"`
+	UserId          string `orm:"size(100)" json:"user_id"`
+	Score           int64  `orm:"default(0)" json:"score"`
+	ExtraData       string `orm:"type(text)" json:"extra_data"`
+	CreatedAt       string `orm:"auto_now_add;type(datetime)" json:"created_at"`
+	UpdatedAt       string `orm:"auto_now;type(datetime)" json:"updated_at"`
+}
+
+// LeaderboardScore 排行榜分数记录（兼容性保持）
 type LeaderboardScore struct {
 	ID            int64     `orm:"pk;auto" json:"id"`
 	AppId         string    `orm:"size(100)" json:"appId"`
@@ -44,7 +70,38 @@ func GetLeaderboardCount(appId string) (int64, error) {
 	return count, err
 }
 
+// GetLeaderboardList 获取排行榜配置列表
+func GetLeaderboardList(appId string, page, pageSize int, leaderboardName string) ([]*Leaderboard, int64, error) {
+	o := orm.NewOrm()
+	qs := o.QueryTable("leaderboard_config").Filter("app_id", appId)
+
+	// 添加名称筛选
+	if leaderboardName != "" {
+		qs = qs.Filter("name__icontains", leaderboardName)
+	}
+
+	total, _ := qs.Count()
+
+	var leaderboards []*Leaderboard
+	offset := (page - 1) * pageSize
+	_, err := qs.OrderBy("-id").Limit(pageSize, offset).All(&leaderboards)
+
+	return leaderboards, total, err
+}
+
+// GetTableName 获取动态表名
+func (l *LeaderboardData) GetTableName(appId string) string {
+	cleanAppId := utils.CleanAppId(appId)
+	return fmt.Sprintf("leaderboard_%s", cleanAppId)
+}
+
+// TableName 获取配置表名
+func (l *LeaderboardConfig) TableName() string {
+	return "leaderboard_config"
+}
+
 func init() {
+	orm.RegisterModel(new(LeaderboardConfig))
 	orm.RegisterModel(new(Leaderboard))
 	orm.RegisterModel(new(LeaderboardScore))
 }
@@ -59,7 +116,30 @@ func (ls *LeaderboardScore) TableName() string {
 	return "leaderboard_score"
 }
 
-// CreateLeaderboard 创建排行榜
+// CreateLeaderboardConfig 创建排行榜配置
+func CreateLeaderboardConfig(config *LeaderboardConfig) error {
+	o := orm.NewOrm()
+
+	// 检查是否已存在
+	exist := o.QueryTable("leaderboard_config").
+		Filter("app_id", config.AppId).
+		Filter("type", config.Type).
+		Exist()
+
+	if exist {
+		return fmt.Errorf("排行榜已存在")
+	}
+
+	_, err := o.Insert(config)
+	if err != nil {
+		return err
+	}
+
+	// 创建动态排行榜表（如果不存在）
+	return createLeaderboardTable(config.AppId)
+}
+
+// CreateLeaderboard 创建排行榜（兼容性保持）
 func CreateLeaderboard(leaderboard *Leaderboard) error {
 	o := orm.NewOrm()
 
@@ -74,12 +154,20 @@ func CreateLeaderboard(leaderboard *Leaderboard) error {
 	}
 
 	_, err := o.Insert(leaderboard)
-	return err
+	if err != nil {
+		return err
+	}
+
+	// 创建动态排行榜表（如果不存在）
+	return createLeaderboardTable(leaderboard.AppId)
 }
 
 // UpdateLeaderboard 更新排行榜配置
 func UpdateLeaderboard(appId, leaderboardType string, fields map[string]interface{}) error {
 	o := orm.NewOrm()
+
+	// 添加更新时间
+	fields["updated_at"] = time.Now()
 
 	qs := o.QueryTable("leaderboard_config").
 		Filter("app_id", appId).
@@ -103,11 +191,12 @@ func DeleteLeaderboard(appId, leaderboardType string) error {
 		return err
 	}
 
-	// 删除排行榜分数记录
-	_, err = o.QueryTable("leaderboard_score").
-		Filter("app_id", appId).
-		Filter("leaderboard_id", leaderboardType).
-		Delete()
+	// 删除动态表中的排行榜数据
+	leaderboardData := &LeaderboardData{}
+	tableName := leaderboardData.GetTableName(appId)
+
+	deleteSQL := fmt.Sprintf("DELETE FROM %s WHERE leaderboard_name = ?", tableName)
+	_, err = o.Raw(deleteSQL, leaderboardType).Exec()
 
 	return err
 }
@@ -116,41 +205,44 @@ func DeleteLeaderboard(appId, leaderboardType string) error {
 func GetLeaderboardData(appId, leaderboardType string, page, pageSize int) ([]map[string]interface{}, int64, error) {
 	o := orm.NewOrm()
 
+	// 使用动态表
+	leaderboardData := &LeaderboardData{}
+	tableName := leaderboardData.GetTableName(appId)
+
 	// 获取总数
-	total, err := o.QueryTable("leaderboard_score").
-		Filter("app_id", appId).
-		Filter("leaderboard_id", leaderboardType).
-		Count()
+	countSQL := fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE leaderboard_name = ?", tableName)
+	var total int64
+	err := o.Raw(countSQL, leaderboardType).QueryRow(&total)
 	if err != nil {
 		return nil, 0, err
 	}
 
 	// 获取分页数据
-	var scores []LeaderboardScore
 	offset := (page - 1) * pageSize
-	_, err = o.QueryTable("leaderboard_score").
-		Filter("app_id", appId).
-		Filter("leaderboard_id", leaderboardType).
-		OrderBy("-score", "create_time").
-		Limit(pageSize, offset).
-		All(&scores)
+	querySQL := fmt.Sprintf(`
+		SELECT id, leaderboard_name, user_id, score, extra_data, created_at, updated_at 
+		FROM %s 
+		WHERE leaderboard_name = ? 
+		ORDER BY score DESC, created_at ASC 
+		LIMIT ? OFFSET ?
+	`, tableName)
 
+	var results []orm.Params
+	_, err = o.Raw(querySQL, leaderboardType, pageSize, offset).Values(&results)
 	if err != nil {
 		return nil, 0, err
 	}
 
 	// 转换为map格式并添加排名
 	var result []map[string]interface{}
-	for i, score := range scores {
+	for i, row := range results {
 		item := map[string]interface{}{
-			"rank":        offset + i + 1,
-			"playerId":    score.PlayerId,
-			"openId":      score.OpenId,
-			"score":       score.Score,
-			"extraData":   score.ExtraData,
-			"hasUserInfo": score.HasUserInfo,
-			"createTime":  score.CreateTime,
-			"updateTime":  score.UpdateTime,
+			"rank":       offset + i + 1,
+			"playerId":   row["user_id"],
+			"score":      row["score"],
+			"extraData":  row["extra_data"],
+			"createTime": row["created_at"],
+			"updateTime": row["updated_at"],
 		}
 		result = append(result, item)
 	}
@@ -162,32 +254,31 @@ func GetLeaderboardData(appId, leaderboardType string, page, pageSize int) ([]ma
 func UpdateLeaderboardScore(appId, leaderboardType, playerId string, score int64) error {
 	o := orm.NewOrm()
 
-	// 查找现有记录
-	var existing LeaderboardScore
-	err := o.QueryTable("leaderboard_score").
-		Filter("app_id", appId).
-		Filter("leaderboard_id", leaderboardType).
-		Filter("player_id", playerId).
-		One(&existing)
+	// 使用动态表
+	leaderboardData := &LeaderboardData{}
+	tableName := leaderboardData.GetTableName(appId)
+
+	// 检查记录是否存在
+	var existingId int64
+	checkSQL := fmt.Sprintf("SELECT id FROM %s WHERE leaderboard_name = ? AND user_id = ?", tableName)
+	err := o.Raw(checkSQL, leaderboardType, playerId).QueryRow(&existingId)
 
 	if err == orm.ErrNoRows {
-		// 创建新记录
-		newScore := &LeaderboardScore{
-			AppId:         appId,
-			LeaderboardId: leaderboardType,
-			PlayerId:      playerId,
-			Score:         score,
-		}
-		_, err = o.Insert(newScore)
-		return err
-	} else if err != nil {
-		return err
+		// 插入新记录
+		insertSQL := fmt.Sprintf(`
+			INSERT INTO %s (leaderboard_name, user_id, score, created_at, updated_at) 
+			VALUES (?, ?, ?, NOW(), NOW())
+		`, tableName)
+		_, err = o.Raw(insertSQL, leaderboardType, playerId, score).Exec()
+	} else if err == nil {
+		// 更新现有记录
+		updateSQL := fmt.Sprintf(`
+			UPDATE %s SET score = ?, updated_at = NOW() 
+			WHERE leaderboard_name = ? AND user_id = ?
+		`, tableName)
+		_, err = o.Raw(updateSQL, score, leaderboardType, playerId).Exec()
 	}
 
-	// 更新现有记录
-	existing.Score = score
-	existing.UpdateTime = time.Now()
-	_, err = o.Update(&existing, "Score", "UpdateTime")
 	return err
 }
 
@@ -195,11 +286,12 @@ func UpdateLeaderboardScore(appId, leaderboardType, playerId string, score int64
 func DeleteLeaderboardScore(appId, leaderboardType, playerId string) error {
 	o := orm.NewOrm()
 
-	_, err := o.QueryTable("leaderboard_score").
-		Filter("app_id", appId).
-		Filter("leaderboard_id", leaderboardType).
-		Filter("player_id", playerId).
-		Delete()
+	// 使用动态表
+	leaderboardData := &LeaderboardData{}
+	tableName := leaderboardData.GetTableName(appId)
+
+	deleteSQL := fmt.Sprintf("DELETE FROM %s WHERE leaderboard_name = ? AND user_id = ?", tableName)
+	_, err := o.Raw(deleteSQL, leaderboardType, playerId).Exec()
 
 	return err
 }
@@ -223,33 +315,31 @@ func CommitLeaderboardScore(appId, leaderboardType, playerId string, score int64
 		return err
 	}
 
+	// 使用动态表
+	leaderboardData := &LeaderboardData{}
+	tableName := leaderboardData.GetTableName(appId)
+
 	// 查找现有记录
-	var existing LeaderboardScore
-	err = o.QueryTable("leaderboard_score").
-		Filter("app_id", appId).
-		Filter("leaderboard_id", leaderboardType).
-		Filter("player_id", playerId).
-		One(&existing)
+	var existingScore int64
+	checkSQL := fmt.Sprintf("SELECT score FROM %s WHERE leaderboard_name = ? AND user_id = ?", tableName)
+	err = o.Raw(checkSQL, leaderboardType, playerId).QueryRow(&existingScore)
 
 	if err == orm.ErrNoRows {
 		// 检查是否超过最大条目数
 		if leaderboard.MaxEntries > 0 {
-			count, _ := o.QueryTable("leaderboard_score").
-				Filter("app_id", appId).
-				Filter("leaderboard_id", leaderboardType).
-				Count()
+			countSQL := fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE leaderboard_name = ?", tableName)
+			var count int64
+			o.Raw(countSQL, leaderboardType).QueryRow(&count)
 
 			if count >= int64(leaderboard.MaxEntries) {
 				// 删除最低分记录
-				var lowest LeaderboardScore
-				err = o.QueryTable("leaderboard_score").
-					Filter("app_id", appId).
-					Filter("leaderboard_id", leaderboardType).
-					OrderBy("score", "-create_time").
-					One(&lowest)
+				lowestSQL := fmt.Sprintf("SELECT score FROM %s WHERE leaderboard_name = ? ORDER BY score ASC, created_at DESC LIMIT 1", tableName)
+				var lowestScore int64
+				err = o.Raw(lowestSQL, leaderboardType).QueryRow(&lowestScore)
 
-				if err == nil && score > lowest.Score {
-					o.Delete(&lowest)
+				if err == nil && score > lowestScore {
+					deleteLowestSQL := fmt.Sprintf("DELETE FROM %s WHERE leaderboard_name = ? ORDER BY score ASC, created_at DESC LIMIT 1", tableName)
+					o.Raw(deleteLowestSQL, leaderboardType).Exec()
 				} else if err == nil {
 					return fmt.Errorf("分数太低，无法进入排行榜")
 				}
@@ -257,13 +347,11 @@ func CommitLeaderboardScore(appId, leaderboardType, playerId string, score int64
 		}
 
 		// 创建新记录
-		newScore := &LeaderboardScore{
-			AppId:         appId,
-			LeaderboardId: leaderboardType,
-			PlayerId:      playerId,
-			Score:         score,
-		}
-		_, err = o.Insert(newScore)
+		insertSQL := fmt.Sprintf(`
+			INSERT INTO %s (leaderboard_name, user_id, score, created_at, updated_at) 
+			VALUES (?, ?, ?, NOW(), NOW())
+		`, tableName)
+		_, err = o.Raw(insertSQL, leaderboardType, playerId, score).Exec()
 		return err
 	} else if err != nil {
 		return err
@@ -271,16 +359,18 @@ func CommitLeaderboardScore(appId, leaderboardType, playerId string, score int64
 
 	// 检查分数类型决定是否更新
 	shouldUpdate := false
-	if leaderboard.ScoreType == "higher_better" && score > existing.Score {
+	if leaderboard.ScoreType == "higher_better" && score > existingScore {
 		shouldUpdate = true
-	} else if leaderboard.ScoreType == "lower_better" && score < existing.Score {
+	} else if leaderboard.ScoreType == "lower_better" && score < existingScore {
 		shouldUpdate = true
 	}
 
 	if shouldUpdate {
-		existing.Score = score
-		existing.UpdateTime = time.Now()
-		_, err = o.Update(&existing, "Score", "UpdateTime")
+		updateSQL := fmt.Sprintf(`
+			UPDATE %s SET score = ?, updated_at = NOW() 
+			WHERE leaderboard_name = ? AND user_id = ?
+		`, tableName)
+		_, err = o.Raw(updateSQL, score, leaderboardType, playerId).Exec()
 	}
 
 	return err
@@ -290,13 +380,14 @@ func CommitLeaderboardScore(appId, leaderboardType, playerId string, score int64
 func QueryLeaderboardScore(appId, leaderboardType, playerId string) (int64, int, error) {
 	o := orm.NewOrm()
 
+	// 使用动态表
+	leaderboardData := &LeaderboardData{}
+	tableName := leaderboardData.GetTableName(appId)
+
 	// 获取用户分数
-	var userScore LeaderboardScore
-	err := o.QueryTable("leaderboard_score").
-		Filter("app_id", appId).
-		Filter("leaderboard_id", leaderboardType).
-		Filter("player_id", playerId).
-		One(&userScore)
+	var userScore int64
+	scoreSQL := fmt.Sprintf("SELECT score FROM %s WHERE leaderboard_name = ? AND user_id = ?", tableName)
+	err := o.Raw(scoreSQL, leaderboardType, playerId).QueryRow(&userScore)
 
 	if err != nil {
 		if err == orm.ErrNoRows {
@@ -306,47 +397,55 @@ func QueryLeaderboardScore(appId, leaderboardType, playerId string) (int64, int,
 	}
 
 	// 计算排名
-	rank, err := o.QueryTable("leaderboard_score").
-		Filter("app_id", appId).
-		Filter("leaderboard_id", leaderboardType).
-		Filter("score__gt", userScore.Score).
-		Count()
+	rankSQL := fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE leaderboard_name = ? AND score > ?", tableName)
+	var rank int64
+	err = o.Raw(rankSQL, leaderboardType, userScore).QueryRow(&rank)
 
 	if err != nil {
-		return userScore.Score, 0, err
+		return userScore, 0, err
 	}
 
-	return userScore.Score, int(rank) + 1, nil
+	return userScore, int(rank) + 1, nil
 }
 
-// FixLeaderboardUserInfo 修复排行榜用户信息
+// FixLeaderboardUserInfo 修复排行榜用户信息（暂时保留兼容性）
 func FixLeaderboardUserInfo(appId, leaderboardType string) (int64, error) {
+	logs.Info("排行榜已迁移到动态表，用户信息修复功能已不需要")
+	return 0, nil
+}
+
+// createLeaderboardTable 创建排行榜数据表
+func createLeaderboardTable(appId string) error {
 	o := orm.NewOrm()
 
-	// 获取用户表名
-	userTableName := fmt.Sprintf("user_%s", appId)
+	leaderboardData := &LeaderboardData{}
+	tableName := leaderboardData.GetTableName(appId)
 
-	// 执行修复SQL
-	sql := fmt.Sprintf(`
-		UPDATE leaderboard_score ls 
-		SET has_user_info = CASE 
-			WHEN EXISTS (
-				SELECT 1 FROM %s u 
-				WHERE u.player_id = ls.player_id 
-				AND u.data IS NOT NULL 
-				AND u.data != ''
-			) THEN 1 
-			ELSE 0 
-		END 
-		WHERE ls.app_id = ? AND ls.leaderboard_id = ?
-	`, userTableName)
+	// 检查表是否存在
+	checkSQL := fmt.Sprintf("SHOW TABLES LIKE '%s'", tableName)
+	var exists string
+	err := o.Raw(checkSQL).QueryRow(&exists)
 
-	result, err := o.Raw(sql, appId, leaderboardType).Exec()
-	if err != nil {
-		logs.Error("修复排行榜用户信息失败:", err)
-		return 0, err
+	if err == orm.ErrNoRows {
+		// 表不存在，创建表
+		createSQL := fmt.Sprintf(`
+			CREATE TABLE %s (
+				id BIGINT AUTO_INCREMENT PRIMARY KEY,
+				leaderboard_name VARCHAR(100) NOT NULL,
+				user_id VARCHAR(100) NOT NULL,
+				score BIGINT DEFAULT 0,
+				extra_data TEXT,
+				created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+				updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+				UNIQUE KEY uk_leaderboard_user (leaderboard_name, user_id),
+				KEY idx_leaderboard_score (leaderboard_name, score DESC),
+				KEY idx_updated_at (updated_at)
+			) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+		`, tableName)
+
+		_, err = o.Raw(createSQL).Exec()
+		return err
 	}
 
-	affected, _ := result.RowsAffected()
-	return affected, nil
+	return nil
 }

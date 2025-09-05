@@ -65,9 +65,9 @@
         </el-table-column>
         <el-table-column label="操作" width="200" fixed="right">
           <template #default="scope">
-            <el-button type="text" @click="editConfig(scope.row)">编辑</el-button>
-            <el-button type="text" @click="viewLeaderboard(scope.row)">查看排行</el-button>
-            <el-button type="text" class="danger" @click="deleteConfig(scope.row)">删除</el-button>
+            <el-button link @click="editConfig(scope.row)">编辑</el-button>
+            <el-button link @click="viewLeaderboard(scope.row)">查看排行</el-button>
+            <el-button link class="danger" @click="deleteConfig(scope.row)">删除</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -171,8 +171,8 @@
         </el-table-column>
         <el-table-column label="操作" width="180" fixed="right">
           <template #default="scope">
-            <el-button type="text" @click="editScore(scope.row)">编辑分数</el-button>
-            <el-button type="text" class="danger" @click="deleteScore(scope.row)">删除记录</el-button>
+            <el-button link @click="editScore(scope.row)">编辑分数</el-button>
+            <el-button link class="danger" @click="deleteScore(scope.row)">删除记录</el-button>
           </template>
         </el-table-column>
       </el-table>
