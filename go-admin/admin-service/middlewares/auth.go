@@ -1,7 +1,7 @@
 package middlewares
 
 import (
-	"admin-service/services"
+	"admin-service/utils"
 	"encoding/json"
 	"strings"
 
@@ -13,9 +13,11 @@ import (
 func AuthMiddleware(ctx *context.Context) {
 	// 跳过登录和健康检查等公开接口
 	skipPaths := []string{
-		"/auth/login",
+		"/admin/login",
+		"/admin/verifyToken",
 		"/health",
 		"/ping",
+		"/install",
 	}
 
 	requestPath := ctx.Request.URL.Path
@@ -29,12 +31,14 @@ func AuthMiddleware(ctx *context.Context) {
 	authHeader := ctx.Input.Header("Authorization")
 	if authHeader == "" {
 		responseError(ctx, 401, "缺少认证信息")
+		ctx.Abort(401, "")
 		return
 	}
 
 	// 检查Bearer格式
 	if !strings.HasPrefix(authHeader, "Bearer ") {
 		responseError(ctx, 401, "认证格式错误")
+		ctx.Abort(401, "")
 		return
 	}
 
@@ -42,25 +46,24 @@ func AuthMiddleware(ctx *context.Context) {
 	token := strings.TrimPrefix(authHeader, "Bearer ")
 	if token == "" {
 		responseError(ctx, 401, "Token不能为空")
+		ctx.Abort(401, "")
 		return
 	}
 
-	// 验证token
-	authService := services.NewAuthService()
-	claims, err := authService.ValidateToken(token)
+	// 验证token (统一使用utils.ParseJWT)
+	claims, err := utils.ParseJWT(token)
 	if err != nil {
 		responseError(ctx, 401, "Token验证失败: "+err.Error())
+		ctx.Abort(401, "")
 		return
 	}
 
 	// 将用户信息存储到上下文中
 	if claims != nil {
-		if userId, ok := (*claims)["user_id"].(float64); ok {
-			ctx.Input.SetData("user_id", int64(userId))
-		}
-		if username, ok := (*claims)["username"].(string); ok {
-			ctx.Input.SetData("username", username)
-		}
+		ctx.Input.SetData("user_id", claims.UserID)
+		ctx.Input.SetData("username", claims.Username)
+		ctx.Input.SetData("role_id", claims.RoleID)
+		ctx.Input.SetData("role", claims.Role)
 	}
 }
 
@@ -91,14 +94,22 @@ func RateLimitMiddleware(ctx *context.Context) {
 
 // responseError 返回错误响应
 func responseError(ctx *context.Context, code int, message string) {
+	// 统一使用4001错误码表示认证失败
+	errorCode := 4001
+	if code == 401 {
+		errorCode = 4001
+	} else {
+		errorCode = code
+	}
+
 	response := map[string]interface{}{
-		"code":    code,
-		"message": message,
-		"data":    nil,
+		"code": errorCode,
+		"msg":  message,
+		"data": nil,
 	}
 
 	ctx.Output.Header("Content-Type", "application/json")
-	ctx.Output.SetStatus(code)
+	ctx.Output.SetStatus(401) // HTTP状态码保持401
 
 	jsonData, _ := json.Marshal(response)
 	ctx.Output.Body(jsonData)

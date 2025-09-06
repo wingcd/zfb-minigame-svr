@@ -14,8 +14,8 @@ type Leaderboard struct {
 	UserId          string `orm:"size(100)" json:"user_id"`
 	Score           int64  `orm:"default(0)" json:"score"`
 	ExtraData       string `orm:"type(text)" json:"extra_data"`
-	CreatedAt       string `orm:"auto_now_add;type(datetime)" json:"created_at"`
-	UpdatedAt       string `orm:"auto_now;type(datetime)" json:"updated_at"`
+	CreatedAt       string `orm:"auto_now_add;type(datetime)" json:"create_time"`
+	UpdatedAt       string `orm:"auto_now;type(datetime)" json:"update_time"`
 }
 
 // GetTableName 获取动态表名
@@ -49,7 +49,7 @@ func SubmitScore(appId, userId, leaderboardName string, score int64, extraData s
 	case nil:
 		leaderboard.Score = score
 		leaderboard.ExtraData = extraData
-		_, err = o.Update(leaderboard, "score", "extra_data", "updated_at")
+		_, err = o.Update(leaderboard, "score", "extra_data", "update_time")
 	}
 
 	return err
@@ -72,7 +72,7 @@ func UpdateScore(appId, userId, leaderboardName string, score int64, extraData s
 	case nil:
 		leaderboard.Score = score
 		leaderboard.ExtraData = extraData
-		_, err = o.Update(leaderboard, "score", "extra_data", "updated_at")
+		_, err = o.Update(leaderboard, "score", "extra_data", "update_time")
 	}
 
 	return err
@@ -88,7 +88,7 @@ func GetLeaderboard(appId, leaderboardName string, limit int) ([]Leaderboard, er
 	var results []Leaderboard
 	_, err := o.QueryTable(tableName).
 		Filter("leaderboard_name", leaderboardName).
-		OrderBy("-score", "created_at").
+		OrderBy("-score", "create_time").
 		Limit(limit).
 		All(&results)
 
@@ -158,7 +158,7 @@ func GetLeaderboardList(appId string, page, pageSize int, leaderboardName string
 
 	var results []Leaderboard
 	offset := (page - 1) * pageSize
-	_, err := qs.OrderBy("-score", "created_at").Limit(pageSize, offset).All(&results)
+	_, err := qs.OrderBy("-score", "create_time").Limit(pageSize, offset).All(&results)
 
 	return results, total, err
 }

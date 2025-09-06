@@ -12,8 +12,8 @@ type UserData struct {
 	Id        int64  `orm:"auto" json:"id"`
 	UserId    string `orm:"size(100);unique" json:"user_id"`
 	Data      string `orm:"type(longtext)" json:"data"`
-	CreatedAt string `orm:"auto_now_add;type(datetime)" json:"created_at"`
-	UpdatedAt string `orm:"auto_now;type(datetime)" json:"updated_at"`
+	CreatedAt string `orm:"auto_now_add;type(datetime)" json:"create_time"`
+	UpdatedAt string `orm:"auto_now;type(datetime)" json:"update_time"`
 }
 
 // GetTableName 获取动态表名
@@ -40,7 +40,7 @@ func SaveUserData(appId, userId, data string) error {
 	} else if err == nil {
 		// 更新用户数据
 		userData.Data = data
-		_, err = o.Update(userData, "data", "updated_at")
+		_, err = o.Update(userData, "data", "update_time")
 	}
 
 	return err

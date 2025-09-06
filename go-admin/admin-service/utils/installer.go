@@ -343,8 +343,8 @@ func getMySQLTables() []string {
 			description TEXT,
 			status TINYINT DEFAULT 1,
 			user_count INT DEFAULT 0,
-			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+			create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+			update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 			INDEX idx_app_id (app_id),
 			INDEX idx_status (status)
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
@@ -355,8 +355,8 @@ func getMySQLTables() []string {
 			app_id VARCHAR(50) NOT NULL,
 			player_id VARCHAR(50) NOT NULL,
 			data JSON,
-			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+			create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+			update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 			UNIQUE KEY uk_app_player (app_id, player_id),
 			INDEX idx_app_id (app_id),
 			INDEX idx_player_id (player_id)
@@ -372,8 +372,8 @@ func getMySQLTables() []string {
 			sort_order ENUM('asc', 'desc') DEFAULT 'desc',
 			max_entries INT DEFAULT 100,
 			status TINYINT DEFAULT 1,
-			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+			create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+			update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 			UNIQUE KEY uk_app_leaderboard (app_id, leaderboard_id),
 			INDEX idx_app_id (app_id)
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
@@ -384,8 +384,8 @@ func getMySQLTables() []string {
 			config_key VARCHAR(100) NOT NULL UNIQUE,
 			config_value TEXT,
 			description VARCHAR(255),
-			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+			create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+			update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 			INDEX idx_key (config_key)
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
 	}
@@ -403,8 +403,8 @@ func getSQLiteTables() []string {
 			role TEXT DEFAULT 'admin',
 			status INTEGER DEFAULT 1,
 			last_login DATETIME,
-			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+			update_time DATETIME DEFAULT CURRENT_TIMESTAMP
 		)`,
 
 		// 应用表
@@ -415,8 +415,8 @@ func getSQLiteTables() []string {
 			description TEXT,
 			status INTEGER DEFAULT 1,
 			user_count INTEGER DEFAULT 0,
-			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+			update_time DATETIME DEFAULT CURRENT_TIMESTAMP
 		)`,
 
 		// 用户数据表
@@ -425,8 +425,8 @@ func getSQLiteTables() []string {
 			app_id TEXT NOT NULL,
 			player_id TEXT NOT NULL,
 			data TEXT,
-			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+			update_time DATETIME DEFAULT CURRENT_TIMESTAMP,
 			UNIQUE(app_id, player_id)
 		)`,
 
@@ -440,8 +440,8 @@ func getSQLiteTables() []string {
 			sort_order TEXT DEFAULT 'desc',
 			max_entries INTEGER DEFAULT 100,
 			status INTEGER DEFAULT 1,
-			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+			update_time DATETIME DEFAULT CURRENT_TIMESTAMP,
 			UNIQUE(app_id, leaderboard_id)
 		)`,
 
@@ -451,8 +451,8 @@ func getSQLiteTables() []string {
 			config_key TEXT NOT NULL UNIQUE,
 			config_value TEXT,
 			description TEXT,
-			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+			update_time DATETIME DEFAULT CURRENT_TIMESTAMP
 		)`,
 
 		// 创建索引

@@ -45,8 +45,8 @@ type LeaderboardData struct {
 	UserId          string `orm:"size(100)" json:"user_id"`
 	Score           int64  `orm:"default(0)" json:"score"`
 	ExtraData       string `orm:"type(text)" json:"extra_data"`
-	CreatedAt       string `orm:"auto_now_add;type(datetime)" json:"created_at"`
-	UpdatedAt       string `orm:"auto_now;type(datetime)" json:"updated_at"`
+	CreatedAt       string `orm:"auto_now_add;type(datetime)" json:"create_time"`
+	UpdatedAt       string `orm:"auto_now;type(datetime)" json:"update_time"`
 }
 
 // LeaderboardScore 排行榜分数记录（兼容性保持）
@@ -71,7 +71,7 @@ func GetLeaderboardCount(appId string) (int64, error) {
 }
 
 // GetLeaderboardList 获取排行榜配置列表
-func GetLeaderboardList(appId string, page, pageSize int, leaderboardName string) ([]*Leaderboard, int64, error) {
+func GetLeaderboardList(appId string, page, pageSize int, leaderboardName string) ([]*LeaderboardConfig, int64, error) {
 	o := orm.NewOrm()
 	qs := o.QueryTable("leaderboard_config").Filter("app_id", appId)
 
@@ -82,7 +82,7 @@ func GetLeaderboardList(appId string, page, pageSize int, leaderboardName string
 
 	total, _ := qs.Count()
 
-	var leaderboards []*Leaderboard
+	var leaderboards []*LeaderboardConfig
 	offset := (page - 1) * pageSize
 	_, err := qs.OrderBy("-id").Limit(pageSize, offset).All(&leaderboards)
 
@@ -167,7 +167,7 @@ func UpdateLeaderboard(appId, leaderboardType string, fields map[string]interfac
 	o := orm.NewOrm()
 
 	// 添加更新时间
-	fields["updated_at"] = time.Now()
+	fields["update_time"] = time.Now()
 
 	qs := o.QueryTable("leaderboard_config").
 		Filter("app_id", appId).
@@ -220,10 +220,10 @@ func GetLeaderboardData(appId, leaderboardType string, page, pageSize int) ([]ma
 	// 获取分页数据
 	offset := (page - 1) * pageSize
 	querySQL := fmt.Sprintf(`
-		SELECT id, leaderboard_name, user_id, score, extra_data, created_at, updated_at 
+		SELECT id, leaderboard_name, user_id, score, extra_data, create_time, update_time 
 		FROM %s 
 		WHERE leaderboard_name = ? 
-		ORDER BY score DESC, created_at ASC 
+		ORDER BY score DESC, create_time ASC 
 		LIMIT ? OFFSET ?
 	`, tableName)
 
@@ -241,8 +241,8 @@ func GetLeaderboardData(appId, leaderboardType string, page, pageSize int) ([]ma
 			"playerId":   row["user_id"],
 			"score":      row["score"],
 			"extraData":  row["extra_data"],
-			"createTime": row["created_at"],
-			"updateTime": row["updated_at"],
+			"createTime": row["create_time"],
+			"updateTime": row["update_time"],
 		}
 		result = append(result, item)
 	}
@@ -266,14 +266,14 @@ func UpdateLeaderboardScore(appId, leaderboardType, playerId string, score int64
 	if err == orm.ErrNoRows {
 		// 插入新记录
 		insertSQL := fmt.Sprintf(`
-			INSERT INTO %s (leaderboard_name, user_id, score, created_at, updated_at) 
+			INSERT INTO %s (leaderboard_name, user_id, score, create_time, update_time) 
 			VALUES (?, ?, ?, NOW(), NOW())
 		`, tableName)
 		_, err = o.Raw(insertSQL, leaderboardType, playerId, score).Exec()
 	} else if err == nil {
 		// 更新现有记录
 		updateSQL := fmt.Sprintf(`
-			UPDATE %s SET score = ?, updated_at = NOW() 
+			UPDATE %s SET score = ?, update_time = NOW() 
 			WHERE leaderboard_name = ? AND user_id = ?
 		`, tableName)
 		_, err = o.Raw(updateSQL, score, leaderboardType, playerId).Exec()
@@ -333,12 +333,12 @@ func CommitLeaderboardScore(appId, leaderboardType, playerId string, score int64
 
 			if count >= int64(leaderboard.MaxEntries) {
 				// 删除最低分记录
-				lowestSQL := fmt.Sprintf("SELECT score FROM %s WHERE leaderboard_name = ? ORDER BY score ASC, created_at DESC LIMIT 1", tableName)
+				lowestSQL := fmt.Sprintf("SELECT score FROM %s WHERE leaderboard_name = ? ORDER BY score ASC, create_time DESC LIMIT 1", tableName)
 				var lowestScore int64
 				err = o.Raw(lowestSQL, leaderboardType).QueryRow(&lowestScore)
 
 				if err == nil && score > lowestScore {
-					deleteLowestSQL := fmt.Sprintf("DELETE FROM %s WHERE leaderboard_name = ? ORDER BY score ASC, created_at DESC LIMIT 1", tableName)
+					deleteLowestSQL := fmt.Sprintf("DELETE FROM %s WHERE leaderboard_name = ? ORDER BY score ASC, create_time DESC LIMIT 1", tableName)
 					o.Raw(deleteLowestSQL, leaderboardType).Exec()
 				} else if err == nil {
 					return fmt.Errorf("分数太低，无法进入排行榜")
@@ -348,7 +348,7 @@ func CommitLeaderboardScore(appId, leaderboardType, playerId string, score int64
 
 		// 创建新记录
 		insertSQL := fmt.Sprintf(`
-			INSERT INTO %s (leaderboard_name, user_id, score, created_at, updated_at) 
+			INSERT INTO %s (leaderboard_name, user_id, score, create_time, update_time) 
 			VALUES (?, ?, ?, NOW(), NOW())
 		`, tableName)
 		_, err = o.Raw(insertSQL, leaderboardType, playerId, score).Exec()
@@ -367,7 +367,7 @@ func CommitLeaderboardScore(appId, leaderboardType, playerId string, score int64
 
 	if shouldUpdate {
 		updateSQL := fmt.Sprintf(`
-			UPDATE %s SET score = ?, updated_at = NOW() 
+			UPDATE %s SET score = ?, update_time = NOW() 
 			WHERE leaderboard_name = ? AND user_id = ?
 		`, tableName)
 		_, err = o.Raw(updateSQL, score, leaderboardType, playerId).Exec()
@@ -435,11 +435,11 @@ func createLeaderboardTable(appId string) error {
 				user_id VARCHAR(100) NOT NULL,
 				score BIGINT DEFAULT 0,
 				extra_data TEXT,
-				created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-				updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+				create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+				update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 				UNIQUE KEY uk_leaderboard_user (leaderboard_name, user_id),
 				KEY idx_leaderboard_score (leaderboard_name, score DESC),
-				KEY idx_updated_at (updated_at)
+				KEY idx_update_time (update_time)
 			) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
 		`, tableName)
 

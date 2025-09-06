@@ -154,7 +154,7 @@
 </template>
 
 <script setup>
-import { ref, computed, reactive, onMounted } from 'vue'
+import { ref, computed, reactive, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { 
@@ -167,7 +167,7 @@ import {
   UserFilled,
   Key
 } from '@element-plus/icons-vue'
-import { getAdminInfo, hasAnyPermission, logout, verifyToken } from './utils/auth.js'
+import { getAdminInfo, hasAnyPermission, logout, verifyToken, startTokenValidation } from './utils/auth.js'
 import { adminAPI } from './services/api.js'
 import { appList, selectedAppId, loading, getAppList, setSelectedAppId } from './utils/appStore.js'
 
@@ -364,6 +364,9 @@ const handleLogout = async () => {
   }
 }
 
+// 存储定时验证的清理函数
+let tokenValidationCleanup = null
+
 // 初始化用户信息
 const initUserInfo = async () => {
   try {
@@ -371,6 +374,13 @@ const initUserInfo = async () => {
     const isValid = await verifyToken()
     if (isValid) {
       adminInfo.value = getAdminInfo()
+      
+      // 启动定期token验证（每30分钟检查一次）
+      if (tokenValidationCleanup) {
+        tokenValidationCleanup()
+      }
+      tokenValidationCleanup = startTokenValidation(30)
+      
     } else if (route.path !== '/login') {
       router.push('/login')
     }
@@ -385,6 +395,13 @@ const initUserInfo = async () => {
 onMounted(() => {
   initUserInfo()
   getAppList()
+})
+
+// 组件卸载时清理定时器
+onUnmounted(() => {
+  if (tokenValidationCleanup) {
+    tokenValidationCleanup()
+  }
 })
 </script>
 

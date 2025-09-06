@@ -2,214 +2,266 @@ package utils
 
 import (
 	"encoding/json"
+	"strconv"
+	"time"
 
 	"github.com/beego/beego/v2/server/web"
-	"github.com/beego/beego/v2/server/web/context"
 )
 
-// ResponseCode 响应码定义
-const (
-	CodeSuccess         = 200 // 成功
-	CodeError           = 500 // 服务器错误
-	CodeInvalidParam    = 400 // 参数错误
-	CodeUnauthorized    = 401 // 未授权
-	CodeForbidden       = 403 // 禁止访问
-	CodeNotFound        = 404 // 未找到
-	CodeConflict        = 409 // 数据冲突
-	CodeTooManyRequests = 429 // 请求过多
-)
-
-// ResponseMessage 响应消息定义
-var ResponseMessage = map[int]string{
-	CodeSuccess:         "操作成功",
-	CodeError:           "服务器内部错误",
-	CodeInvalidParam:    "参数错误",
-	CodeUnauthorized:    "未授权访问",
-	CodeForbidden:       "禁止访问",
-	CodeNotFound:        "资源未找到",
-	CodeConflict:        "数据冲突",
-	CodeTooManyRequests: "请求过于频繁",
-}
-
-// APIResponse API响应结构
+// APIResponse 统一API响应结构
 type APIResponse struct {
-	Code int         `json:"code"`
-	Msg  string      `json:"msg"`
-	Data interface{} `json:"data,omitempty"`
+	Code      int         `json:"code"`
+	Msg       string      `json:"msg"`
+	Timestamp int64       `json:"timestamp"`
+	Data      interface{} `json:"data"`
 }
 
-// PageResponse 分页响应结构
-type PageResponse struct {
-	List     interface{} `json:"list"`
-	Total    int64       `json:"total"`
-	Page     int         `json:"page"`
-	PageSize int         `json:"page_size"`
-	Pages    int         `json:"pages"`
+// ResponseCode 响应码常量
+const (
+	// 成功
+	CodeSuccess = 0
+
+	// 客户端错误 4xxx
+	CodeBadRequest      = 4001 // 参数错误
+	CodeResourceExists  = 4002 // 资源已存在
+	CodeUnauthorized    = 4003 // 未授权
+	CodeNotFound        = 4004 // 资源不存在
+	CodeForbidden       = 4005 // 权限不足
+	CodeValidationError = 4006 // 数据验证错误
+
+	// 服务器错误 5xxx
+	CodeServerError   = 5001 // 服务器内部错误
+	CodeDatabaseError = 5002 // 数据库错误
+	CodeCacheError    = 5003 // 缓存错误
+)
+
+// ResponseMessage 响应消息映射
+var ResponseMessage = map[int]string{
+	CodeSuccess:         "success",
+	CodeBadRequest:      "参数错误",
+	CodeResourceExists:  "资源已存在",
+	CodeUnauthorized:    "未授权",
+	CodeNotFound:        "资源不存在",
+	CodeForbidden:       "权限不足",
+	CodeValidationError: "数据验证错误",
+	CodeServerError:     "服务器内部错误",
+	CodeDatabaseError:   "数据库错误",
+	CodeCacheError:      "缓存错误",
 }
 
-// Success 成功响应
-func Success(ctx *web.Controller, data interface{}) {
-	response := APIResponse{
-		Code: CodeSuccess,
-		Msg:  ResponseMessage[CodeSuccess],
-		Data: data,
-	}
-	ctx.Data["json"] = response
-	ctx.ServeJSON()
-}
-
-// Error 错误响应
-func Error(ctx *web.Controller, code int, message ...string) {
+// NewResponse 创建新的响应
+func NewResponse(code int, data interface{}) *APIResponse {
 	msg := ResponseMessage[code]
-	if len(message) > 0 && message[0] != "" {
-		msg = message[0]
+	if msg == "" {
+		msg = "未知错误"
 	}
 
-	response := APIResponse{
-		Code: code,
-		Msg:  msg,
+	return &APIResponse{
+		Code:      code,
+		Msg:       msg,
+		Timestamp: time.Now().UnixNano() / 1e6, // 毫秒时间戳
+		Data:      data,
 	}
-	ctx.Data["json"] = response
-	ctx.ServeJSON()
 }
 
-// ErrorResponse 错误响应（用于web.Controller，对齐云函数格式）
-func ErrorResponse(ctx *web.Controller, code int, message string, data interface{}) {
-	response := APIResponse{
-		Code: code,
-		Msg:  message,
-		Data: data,
+// NewSuccessResponse 创建成功响应
+func NewSuccessResponse(data interface{}) *APIResponse {
+	return &APIResponse{
+		Code:      CodeSuccess,
+		Msg:       "success",
+		Timestamp: time.Now().UnixNano() / 1e6,
+		Data:      data,
 	}
-	ctx.Data["json"] = response
-	ctx.ServeJSON()
 }
 
-// SuccessResponse 成功响应（用于web.Controller，对齐云函数格式）
-func SuccessResponse(ctx *web.Controller, message string, data interface{}) {
-	response := APIResponse{
-		Code: CodeSuccess,
-		Msg:  message,
-		Data: data,
+// NewErrorResponse 创建错误响应
+func NewErrorResponse(code int, customMsg ...string) *APIResponse {
+	msg := ResponseMessage[code]
+	if len(customMsg) > 0 && customMsg[0] != "" {
+		msg = customMsg[0]
 	}
-	ctx.Data["json"] = response
-	ctx.ServeJSON()
+	if msg == "" {
+		msg = "未知错误"
+	}
+
+	return &APIResponse{
+		Code:      code,
+		Msg:       msg,
+		Timestamp: time.Now().UnixNano() / 1e6,
+		Data:      nil,
+	}
 }
 
-// ErrorResponseContext 错误响应（用于context.Context）
-func ErrorResponseContext(ctx *context.Context, code int, message string, data interface{}) {
-	response := APIResponse{
-		Code: code,
-		Msg:  message,
-		Data: data,
+// NewListResponse 创建列表响应
+func NewListResponse(list interface{}, total int64, page, pageSize int) *APIResponse {
+	totalPages := (total + int64(pageSize) - 1) / int64(pageSize)
+
+	data := map[string]interface{}{
+		"list":       list,
+		"total":      total,
+		"page":       page,
+		"pageSize":   pageSize,
+		"totalPages": totalPages,
 	}
-	ctx.Output.JSON(response, false, false)
+
+	return NewSuccessResponse(data)
 }
 
-// SuccessResponseContext 成功响应（用于context.Context）
-func SuccessResponseContext(ctx *context.Context, message string, data interface{}) {
-	response := APIResponse{
-		Code: CodeSuccess,
-		Msg:  message,
-		Data: data,
-	}
-	ctx.Output.JSON(response, false, false)
+// SendResponse 发送响应
+func SendResponse(c *web.Controller, response *APIResponse) {
+	c.Data["json"] = response
+	c.ServeJSON()
 }
 
-// PageSuccess 分页成功响应
-func PageSuccess(ctx *web.Controller, list interface{}, total int64, page, pageSize int) {
-	pages := int(total) / pageSize
-	if int(total)%pageSize > 0 {
-		pages++
-	}
-
-	pageData := PageResponse{
-		List:     list,
-		Total:    total,
-		Page:     page,
-		PageSize: pageSize,
-		Pages:    pages,
-	}
-
-	Success(ctx, pageData)
+// SendSuccess 发送成功响应
+func SendSuccess(c *web.Controller, data interface{}) {
+	SendResponse(c, NewSuccessResponse(data))
 }
 
-// GetClientIP 获取客户端IP
-func GetClientIP(ctx *web.Controller) string {
-	// 首先检查 X-Forwarded-For 头
-	ip := ctx.Ctx.Request.Header.Get("X-Forwarded-For")
-	if ip != "" {
-		return ip
-	}
-
-	// 检查 X-Real-IP 头
-	ip = ctx.Ctx.Request.Header.Get("X-Real-IP")
-	if ip != "" {
-		return ip
-	}
-
-	// 返回远程地址
-	return ctx.Ctx.Request.RemoteAddr
+// SendError 发送错误响应
+func SendError(c *web.Controller, code int, customMsg ...string) {
+	SendResponse(c, NewErrorResponse(code, customMsg...))
 }
 
-// ParseJSON 解析JSON参数
-func ParseJSON(ctx *web.Controller, v interface{}) error {
-	return json.Unmarshal(ctx.Ctx.Input.RequestBody, v)
+// SendList 发送列表响应
+func SendList(c *web.Controller, list interface{}, total int64, page, pageSize int) {
+	SendResponse(c, NewListResponse(list, total, page, pageSize))
 }
 
-// GetStringParam 获取字符串参数
-func GetStringParam(ctx *web.Controller, key string, defaultValue ...string) string {
-	value := ctx.GetString(key)
-	if value == "" && len(defaultValue) > 0 {
-		return defaultValue[0]
+// ParseJSONRequest 解析JSON请求
+func ParseJSONRequest(c *web.Controller, v interface{}) error {
+	return json.Unmarshal(c.Ctx.Input.RequestBody, v)
+}
+
+// ValidateAndSendError 验证参数并发送错误响应
+func ValidateAndSendError(c *web.Controller, condition bool, msg string) bool {
+	if condition {
+		SendError(c, CodeBadRequest, msg)
+		return true
 	}
-	return value
+	return false
 }
 
-// GetIntParam 获取整型参数
-func GetIntParam(ctx *web.Controller, key string, defaultValue ...int) int {
-	value, err := ctx.GetInt(key)
-	if err != nil && len(defaultValue) > 0 {
-		return defaultValue[0]
+// SuccessResponse 兼容性成功响应方法
+func SuccessResponse(c *web.Controller, message string, data interface{}) {
+	response := &APIResponse{
+		Code:      CodeSuccess,
+		Msg:       "success", // 云函数兼容格式
+		Timestamp: time.Now().UnixNano() / 1e6,
+		Data:      data,
 	}
-	return value
+	c.Data["json"] = response
+	c.ServeJSON()
 }
 
-// GetInt64Param 获取长整型参数
-func GetInt64Param(ctx *web.Controller, key string, defaultValue ...int64) int64 {
-	value, err := ctx.GetInt64(key)
-	if err != nil && len(defaultValue) > 0 {
-		return defaultValue[0]
+// ErrorResponse 兼容性错误响应方法
+func ErrorResponse(c *web.Controller, code int, message string, data interface{}) {
+	response := &APIResponse{
+		Code:      code,
+		Msg:       message,
+		Timestamp: time.Now().UnixNano() / 1e6,
+		Data:      data,
 	}
-	return value
+	c.Data["json"] = response
+	c.ServeJSON()
 }
 
-// ValidateRequired 验证必填参数
-func ValidateRequired(ctx *web.Controller, params map[string]interface{}) bool {
-	for key, value := range params {
+// 兼容性常量和函数
+const (
+	CodeInvalidParam = CodeBadRequest
+	CodeError        = CodeServerError
+	CodeConflict     = CodeResourceExists
+)
+
+// ParseJSON 解析JSON请求 - 兼容性函数
+func ParseJSON(c *web.Controller, v interface{}) error {
+	return ParseJSONRequest(c, v)
+}
+
+// Error 发送错误响应 - 兼容性函数
+func Error(c *web.Controller, code int, message string) {
+	SendError(c, code, message)
+}
+
+// Success 发送成功响应 - 兼容性函数
+func Success(c *web.Controller, data interface{}) {
+	SendSuccess(c, data)
+}
+
+// PageSuccess 发送分页成功响应 - 兼容性函数
+func PageSuccess(c *web.Controller, list interface{}, total int64, page, pageSize int) {
+	SendList(c, list, total, page, pageSize)
+}
+
+// ValidateRequired 验证必填参数 - 兼容性函数
+func ValidateRequired(c *web.Controller, fields map[string]interface{}) bool {
+	for name, value := range fields {
 		if value == nil || value == "" {
-			Error(ctx, CodeInvalidParam, "参数 "+key+" 不能为空")
+			SendError(c, CodeBadRequest, "参数"+name+"不能为空")
 			return false
 		}
 	}
 	return true
 }
 
-// InSlice 检查值是否在切片中
-func InSlice(item string, slice []string) bool {
-	for _, s := range slice {
-		if s == item {
-			return true
+// GetIntParam 获取整型参数 - 兼容性函数
+func GetIntParam(c *web.Controller, key string, defaultValue ...int) int {
+	str := c.GetString(key)
+	if str == "" {
+		if len(defaultValue) > 0 {
+			return defaultValue[0]
 		}
+		return 0
 	}
-	return false
+	val, err := strconv.Atoi(str)
+	if err != nil {
+		if len(defaultValue) > 0 {
+			return defaultValue[0]
+		}
+		return 0
+	}
+	return val
 }
 
-// InIntSlice 检查整数值是否在切片中
-func InIntSlice(item int, slice []int) bool {
-	for _, s := range slice {
-		if item == s {
-			return true
-		}
+// GetStringParam 获取字符串参数 - 兼容性函数
+func GetStringParam(c *web.Controller, key string, defaultValue ...string) string {
+	str := c.GetString(key)
+	if str == "" && len(defaultValue) > 0 {
+		return defaultValue[0]
 	}
-	return false
+	return str
+}
+
+// GetClientIP 获取客户端IP - 兼容性函数
+func GetClientIP(c *web.Controller) string {
+	ip := c.Ctx.Input.Header("X-Forwarded-For")
+	if ip == "" {
+		ip = c.Ctx.Input.Header("X-Real-Ip")
+	}
+	if ip == "" {
+		ip = c.Ctx.Request.RemoteAddr
+	}
+	return ip
+}
+
+// CloudResponse 云函数兼容响应格式
+func CloudResponse(c *web.Controller, code int, message string, data interface{}) {
+	response := &APIResponse{
+		Code:      code,
+		Msg:       message,
+		Timestamp: time.Now().UnixNano() / 1e6,
+		Data:      data,
+	}
+	c.Data["json"] = response
+	c.ServeJSON()
+}
+
+// CloudSuccess 云函数兼容成功响应
+func CloudSuccess(c *web.Controller, data interface{}) {
+	CloudResponse(c, 0, "success", data)
+}
+
+// CloudError 云函数兼容错误响应
+func CloudError(c *web.Controller, code int, message string) {
+	CloudResponse(c, code, message, nil)
 }

@@ -153,6 +153,12 @@ func GenerateAppSecret() string {
 	return GenerateRandomString(32)
 }
 
+// GenerateAppId 生成应用ID
+func GenerateAppId() string {
+	// 生成格式为 app_xxxxxxxx 的应用ID
+	return "app_" + GenerateRandomString(8)
+}
+
 // ValidateAPISign 验证API签名
 func ValidateAPISign(params map[string]string, timestamp, sign string) bool {
 	// 构建签名字符串
@@ -191,13 +197,19 @@ func ValidateJWT(ctx *context.Context) *JWTClaims {
 	// 从Header中获取Token
 	authHeader := ctx.Input.Header("Authorization")
 	if authHeader == "" {
-		ErrorResponseContext(ctx, 4001, "未登录", nil)
+		ctx.Output.Header("Content-Type", "application/json")
+		ctx.Output.SetStatus(200)
+		response := NewErrorResponse(CodeUnauthorized, "未登录")
+		ctx.Output.JSON(response, false, false)
 		return nil
 	}
 
 	// 检查Bearer前缀
 	if !strings.HasPrefix(authHeader, "Bearer ") {
-		ErrorResponseContext(ctx, 4001, "Token格式错误", nil)
+		ctx.Output.Header("Content-Type", "application/json")
+		ctx.Output.SetStatus(200)
+		response := NewErrorResponse(CodeUnauthorized, "Token格式错误")
+		ctx.Output.JSON(response, false, false)
 		return nil
 	}
 
@@ -206,13 +218,19 @@ func ValidateJWT(ctx *context.Context) *JWTClaims {
 	// 解析Token
 	claims, err := ParseJWT(tokenString)
 	if err != nil {
-		ErrorResponseContext(ctx, 4001, "Token无效: "+err.Error(), nil)
+		ctx.Output.Header("Content-Type", "application/json")
+		ctx.Output.SetStatus(200)
+		response := NewErrorResponse(CodeUnauthorized, "Token无效: "+err.Error())
+		ctx.Output.JSON(response, false, false)
 		return nil
 	}
 
 	// 检查Token是否过期
 	if claims.ExpiresAt < time.Now().Unix() {
-		ErrorResponseContext(ctx, 4001, "Token已过期", nil)
+		ctx.Output.Header("Content-Type", "application/json")
+		ctx.Output.SetStatus(200)
+		response := NewErrorResponse(CodeUnauthorized, "Token已过期")
+		ctx.Output.JSON(response, false, false)
 		return nil
 	}
 

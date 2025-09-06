@@ -19,15 +19,16 @@ var (
 // BaseModel 基础模型
 type BaseModel struct {
 	Id        int64     `orm:"auto" json:"id"`
-	CreatedAt time.Time `orm:"auto_now_add;type(datetime);column(create_time)" json:"created_at"`
-	UpdatedAt time.Time `orm:"auto_now;type(datetime);column(update_time)" json:"updated_at"`
+	CreatedAt time.Time `orm:"auto_now_add;type(datetime);column(create_time)" json:"create_time"`
+	UpdatedAt time.Time `orm:"auto_now;type(datetime);column(update_time)" json:"update_time"`
 }
 
-// Response 通用响应结构
+// Response 通用响应结构 - 兼容云函数格式
 type Response struct {
-	Code    int         `json:"code"`
-	Message string      `json:"message"`
-	Data    interface{} `json:"data,omitempty"`
+	Code      int         `json:"code"`
+	Msg       string      `json:"msg"`
+	Timestamp int64       `json:"timestamp"`
+	Data      interface{} `json:"data"`
 }
 
 // PageData 分页数据结构
@@ -133,30 +134,37 @@ func init() {
 // SuccessResponse 成功响应
 func SuccessResponse(data interface{}) Response {
 	return Response{
-		Code:    200,
-		Message: "success",
-		Data:    data,
+		Code:      0,
+		Msg:       "success",
+		Timestamp: time.Now().UnixNano() / 1e6,
+		Data:      data,
 	}
 }
 
 // ErrorResponse 错误响应
 func ErrorResponse(code int, message string) Response {
 	return Response{
-		Code:    code,
-		Message: message,
+		Code:      code,
+		Msg:       message,
+		Timestamp: time.Now().UnixNano() / 1e6,
+		Data:      nil,
 	}
 }
 
 // PageResponse 分页响应
 func PageResponse(list interface{}, total int64, page, pageSize int) Response {
+	totalPages := (total + int64(pageSize) - 1) / int64(pageSize)
+
 	return Response{
-		Code:    200,
-		Message: "success",
-		Data: PageData{
-			List:     list,
-			Total:    total,
-			Page:     page,
-			PageSize: pageSize,
+		Code:      0,
+		Msg:       "success",
+		Timestamp: time.Now().UnixNano() / 1e6,
+		Data: map[string]interface{}{
+			"list":       list,
+			"total":      total,
+			"page":       page,
+			"pageSize":   pageSize,
+			"totalPages": totalPages,
 		},
 	}
 }

@@ -407,6 +407,98 @@ func TestStatisticsAPIs(t *testing.T) {
 	t.Logf("统计API测试完成: %d 通过, %d 失败", passed, failed)
 }
 
+// TestApplicationAPIs 应用管理API测试
+func TestApplicationAPIs(t *testing.T) {
+	if testFramework == nil {
+		t.Fatal("测试框架未初始化")
+	}
+
+	suite := GetApplicationTestSuite()
+	results := testFramework.ExecuteTestSuite(suite)
+
+	// 统计结果
+	var passed, failed int
+	for _, result := range results {
+		if result.Success {
+			passed++
+		} else {
+			failed++
+			t.Errorf("Test %s failed: %s", result.TestCase.Name, result.Error)
+		}
+	}
+
+	t.Logf("应用管理API测试完成: %d 通过, %d 失败", passed, failed)
+}
+
+// TestPermissionAPIs 权限管理API测试
+func TestPermissionAPIs(t *testing.T) {
+	if testFramework == nil {
+		t.Fatal("测试框架未初始化")
+	}
+
+	suite := GetPermissionTestSuite()
+	results := testFramework.ExecuteTestSuite(suite)
+
+	// 统计结果
+	var passed, failed int
+	for _, result := range results {
+		if result.Success {
+			passed++
+		} else {
+			failed++
+			t.Errorf("Test %s failed: %s", result.TestCase.Name, result.Error)
+		}
+	}
+
+	t.Logf("权限管理API测试完成: %d 通过, %d 失败", passed, failed)
+}
+
+// TestGameDataAPIs 游戏数据管理API测试
+func TestGameDataAPIs(t *testing.T) {
+	if testFramework == nil {
+		t.Fatal("测试框架未初始化")
+	}
+
+	suite := GetGameDataTestSuite()
+	results := testFramework.ExecuteTestSuite(suite)
+
+	// 统计结果
+	var passed, failed int
+	for _, result := range results {
+		if result.Success {
+			passed++
+		} else {
+			failed++
+			t.Errorf("Test %s failed: %s", result.TestCase.Name, result.Error)
+		}
+	}
+
+	t.Logf("游戏数据管理API测试完成: %d 通过, %d 失败", passed, failed)
+}
+
+// TestFileAPIs 文件管理API测试
+func TestFileAPIs(t *testing.T) {
+	if testFramework == nil {
+		t.Fatal("测试框架未初始化")
+	}
+
+	suite := GetFileTestSuite()
+	results := testFramework.ExecuteTestSuite(suite)
+
+	// 统计结果
+	var passed, failed int
+	for _, result := range results {
+		if result.Success {
+			passed++
+		} else {
+			failed++
+			t.Errorf("Test %s failed: %s", result.TestCase.Name, result.Error)
+		}
+	}
+
+	t.Logf("文件管理API测试完成: %d 通过, %d 失败", passed, failed)
+}
+
 // BenchmarkUserAPIs 用户API性能测试
 func BenchmarkUserAPIs(b *testing.B) {
 	if testFramework == nil {
@@ -418,7 +510,7 @@ func BenchmarkUserAPIs(b *testing.B) {
 		Name:        "GetAllUsers_Performance",
 		Description: "用户列表接口性能测试",
 		Method:      "POST",
-		URL:         "/api/users/list",
+		URL:         "/api/user-management/users",
 		RequestData: map[string]interface{}{
 			"appId":    "test_app_performance",
 			"page":     1,
@@ -447,18 +539,18 @@ func TestErrorHandling(t *testing.T) {
 		{
 			Name:        "UnauthorizedAccess",
 			Description: "未授权访问测试",
-			Method:      "GET",
+			Method:      "POST",
 			URL:         "/api/user-management/users",
 			RequestData: map[string]interface{}{
 				"appId": "test_app_001",
 			},
 			RequiresAuth: false, // 不提供认证
-			ExpectedCode: 4001,
+			ExpectedCode: 4003,  // ValidateJWT返回CodeUnauthorized (4003)
 		},
 		{
 			Name:        "InvalidJSON",
 			Description: "无效JSON数据测试",
-			Method:      "PUT",
+			Method:      "POST",
 			URL:         "/api/user-management/user/data",
 			RequestData: map[string]interface{}{
 				"appId":    "test_app_001",
@@ -466,19 +558,19 @@ func TestErrorHandling(t *testing.T) {
 				"userData": "invalid_json", // 无效的JSON
 			},
 			RequiresAuth: true,
-			ExpectedCode: 1001, // 应用层错误码：请求参数解析失败
+			ExpectedCode: 4005, // 数据验证错误
 		},
 		{
 			Name:        "NonExistentResource",
 			Description: "不存在资源测试",
-			Method:      "GET",
+			Method:      "POST",
 			URL:         "/api/user-management/user/detail",
 			RequestData: map[string]interface{}{
 				"appId":    "non_existent_app",
 				"playerId": "non_existent_player",
 			},
 			RequiresAuth: true,
-			ExpectedCode: 1003, // 应用层错误码：获取用户详情失败
+			ExpectedCode: 4004, // 资源不存在
 		},
 	}
 

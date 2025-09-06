@@ -1,6 +1,7 @@
 package models
 
 import (
+	"admin-service/utils"
 	"fmt"
 	"strings"
 
@@ -10,11 +11,14 @@ import (
 // Application 应用模型
 type Application struct {
 	BaseModel
-	AppId       string `orm:"unique;size(50)" json:"app_id"`
-	AppName     string `orm:"size(100)" json:"app_name"`
-	AppSecret   string `orm:"size(100)" json:"app_secret"`
-	Description string `orm:"type(text)" json:"description"`
-	Status      int    `orm:"default(1)" json:"status"`
+	AppId         string `orm:"unique;size(50)" json:"app_id"`
+	AppName       string `orm:"size(100)" json:"app_name"`
+	AppSecret     string `orm:"size(100)" json:"app_secret"`
+	Platform      string `orm:"size(50)" json:"platform"`
+	ChannelAppId  string `orm:"size(100)" json:"channel_app_id"`
+	ChannelAppKey string `orm:"size(100)" json:"channel_app_key"`
+	Description   string `orm:"type(text)" json:"description"`
+	Status        int    `orm:"default(1)" json:"status"`
 }
 
 func (a *Application) TableName() string {
@@ -24,6 +28,14 @@ func (a *Application) TableName() string {
 // Insert 插入应用并创建相关数据表
 func (a *Application) Insert() error {
 	o := orm.NewOrm()
+
+	// 生成AppId和AppSecret（如果没有设置）
+	if a.AppId == "" {
+		a.AppId = utils.GenerateAppId()
+	}
+	if a.AppSecret == "" {
+		a.AppSecret = utils.GenerateAppSecret()
+	}
 
 	// 开始事务
 	tx, err := o.Begin()
@@ -84,8 +96,8 @@ CREATE TABLE IF NOT EXISTS counter_%s (
   count bigint(20) NOT NULL DEFAULT 0 COMMENT '计数值',
   reset_time datetime DEFAULT NULL COMMENT '重置时间',
   reset_interval int(11) DEFAULT NULL COMMENT '重置间隔（秒）',
-  created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  create_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  update_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   UNIQUE KEY uk_counter_user (counter_name, user_id),
   KEY idx_counter_name (counter_name),
@@ -102,13 +114,13 @@ CREATE TABLE IF NOT EXISTS mail_%s (
   rewards text COMMENT '奖励物品（JSON格式）',
   status tinyint(1) NOT NULL DEFAULT 0 COMMENT '状态 0:未读 1:已读 2:已领取',
   expire_at datetime DEFAULT NULL COMMENT '过期时间',
-  created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  create_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  update_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   KEY idx_user_id (user_id),
   KEY idx_status (status),
   KEY idx_expire_at (expire_at),
-  KEY idx_created_at (created_at)
+  KEY idx_create_time (create_time)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='邮件数据表_%s'`, cleanAppId, cleanAppId)
 
 	// 创建游戏配置表
@@ -119,8 +131,8 @@ CREATE TABLE IF NOT EXISTS game_config_%s (
   config_value longtext COMMENT '配置值（JSON格式）',
   version varchar(50) DEFAULT NULL COMMENT '版本号',
   description varchar(255) DEFAULT NULL COMMENT '配置描述',
-  created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  create_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  update_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   UNIQUE KEY uk_config_key (config_key),
   KEY idx_version (version)
@@ -192,7 +204,7 @@ func DeleteApplication(id int64) error {
 	// 这里可以选择是否删除相关数据表
 	// 为了安全起见，我们只是标记应用为禁用状态
 	app.Status = 0
-	_, err = o.Update(app, "status", "updated_at")
+	_, err = o.Update(app, "status", "update_time")
 	return err
 }
 

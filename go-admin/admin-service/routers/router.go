@@ -10,6 +10,58 @@ import (
 func init() {
 	// 注册CORS中间件 - 在所有路由之前处理
 	web.InsertFilter("/*", web.BeforeRouter, middlewares.CORSMiddleware)
+
+	// 注册认证中间件 - 对需要认证的路由进行验证
+	web.InsertFilter("/app/*", web.BeforeRouter, middlewares.AuthMiddleware)
+	// 对于admin路径，需要排除登录相关接口
+	web.InsertFilter("/admin/create", web.BeforeRouter, middlewares.AuthMiddleware)
+	web.InsertFilter("/admin/getList", web.BeforeRouter, middlewares.AuthMiddleware)
+	web.InsertFilter("/admin/update", web.BeforeRouter, middlewares.AuthMiddleware)
+	web.InsertFilter("/admin/delete", web.BeforeRouter, middlewares.AuthMiddleware)
+	web.InsertFilter("/admin/resetPwd", web.BeforeRouter, middlewares.AuthMiddleware)
+	web.InsertFilter("/user/*", web.BeforeRouter, middlewares.AuthMiddleware)
+	web.InsertFilter("/leaderboard/*", web.BeforeRouter, middlewares.AuthMiddleware)
+	web.InsertFilter("/counter/*", web.BeforeRouter, middlewares.AuthMiddleware)
+	web.InsertFilter("/stat/*", web.BeforeRouter, middlewares.AuthMiddleware)
+	web.InsertFilter("/mail/*", web.BeforeRouter, middlewares.AuthMiddleware)
+	web.InsertFilter("/gameConfig/*", web.BeforeRouter, middlewares.AuthMiddleware)
+	// 新API路径的认证中间件（具体指定需要认证的路径）
+	web.InsertFilter("/api/applications*", web.BeforeRouter, middlewares.AuthMiddleware)
+	web.InsertFilter("/api/admins*", web.BeforeRouter, middlewares.AuthMiddleware)
+	web.InsertFilter("/api/game-data*", web.BeforeRouter, middlewares.AuthMiddleware)
+	web.InsertFilter("/api/user-management*", web.BeforeRouter, middlewares.AuthMiddleware)
+	web.InsertFilter("/api/statistics*", web.BeforeRouter, middlewares.AuthMiddleware)
+	web.InsertFilter("/api/permissions*", web.BeforeRouter, middlewares.AuthMiddleware)
+	web.InsertFilter("/api/system*", web.BeforeRouter, middlewares.AuthMiddleware)
+	web.InsertFilter("/api/files*", web.BeforeRouter, middlewares.AuthMiddleware)
+	web.InsertFilter("/api/notifications*", web.BeforeRouter, middlewares.AuthMiddleware)
+	// 排除认证相关接口：/api/auth/login 不需要认证
+	web.InsertFilter("/api/auth/logout", web.BeforeRouter, middlewares.AuthMiddleware)
+	web.InsertFilter("/api/auth/profile", web.BeforeRouter, middlewares.AuthMiddleware)
+	web.InsertFilter("/api/auth/password", web.BeforeRouter, middlewares.AuthMiddleware)
+
+	// 注册权限检查中间件 - 在认证中间件之后执行
+	web.InsertFilter("/app/*", web.BeforeExec, middlewares.PermissionMiddleware)
+	// admin路径权限检查（中间件内部会排除登录相关接口）
+	web.InsertFilter("/admin/*", web.BeforeExec, middlewares.PermissionMiddleware)
+	web.InsertFilter("/user/*", web.BeforeExec, middlewares.PermissionMiddleware)
+	web.InsertFilter("/leaderboard/*", web.BeforeExec, middlewares.PermissionMiddleware)
+	web.InsertFilter("/counter/*", web.BeforeExec, middlewares.PermissionMiddleware)
+	web.InsertFilter("/stat/*", web.BeforeExec, middlewares.PermissionMiddleware)
+	web.InsertFilter("/mail/*", web.BeforeExec, middlewares.PermissionMiddleware)
+	web.InsertFilter("/gameConfig/*", web.BeforeExec, middlewares.PermissionMiddleware)
+	// 新API路径的权限检查中间件（具体指定需要权限检查的路径）
+	web.InsertFilter("/api/applications*", web.BeforeExec, middlewares.PermissionMiddleware)
+	web.InsertFilter("/api/admins*", web.BeforeExec, middlewares.PermissionMiddleware)
+	web.InsertFilter("/api/game-data*", web.BeforeExec, middlewares.PermissionMiddleware)
+	web.InsertFilter("/api/user-management*", web.BeforeExec, middlewares.PermissionMiddleware)
+	web.InsertFilter("/api/statistics*", web.BeforeExec, middlewares.PermissionMiddleware)
+	web.InsertFilter("/api/permissions*", web.BeforeExec, middlewares.PermissionMiddleware)
+	web.InsertFilter("/api/system*", web.BeforeExec, middlewares.PermissionMiddleware)
+	web.InsertFilter("/api/files*", web.BeforeExec, middlewares.PermissionMiddleware)
+	web.InsertFilter("/api/notifications*", web.BeforeExec, middlewares.PermissionMiddleware)
+	// 对认证相关的其他接口也要进行权限检查（但中间件内部会正确处理）
+	web.InsertFilter("/api/auth/*", web.BeforeExec, middlewares.PermissionMiddleware)
 	// 安装相关路由
 	web.Router("/install", &controllers.InstallController{}, "get:ShowInstallPage")
 	web.Router("/install/status", &controllers.InstallController{}, "get:CheckStatus")
@@ -43,7 +95,7 @@ func init() {
 	web.Router("/app/query", &controllers.ApplicationController{}, "post:GetApplication")
 	web.Router("/app/getDetail", &controllers.ApplicationController{}, "post:GetApplication")
 
-	// 用户管理模块
+	// 用户管理模块（旧路由）
 	web.Router("/user/getAll", &controllers.UserController{}, "post:GetAllUsers")
 	web.Router("/user/ban", &controllers.UserController{}, "post:BanUser")
 	web.Router("/user/unban", &controllers.UserController{}, "post:UnbanUser")
@@ -51,6 +103,15 @@ func init() {
 	web.Router("/user/getDetail", &controllers.UserController{}, "post:GetUserDetail")
 	web.Router("/user/setDetail", &controllers.UserController{}, "post:SetUserDetail")
 	web.Router("/user/getStats", &controllers.UserController{}, "post:GetUserStats")
+
+	// 用户管理模块（新路由 - 对齐云函数格式）
+	web.Router("/api/user-management/users", &controllers.UserController{}, "post:GetAllUsers")
+	web.Router("/api/user-management/user/detail", &controllers.UserController{}, "post:GetUserDetail")
+	web.Router("/api/user-management/user/data", &controllers.UserController{}, "post:SetUserDetail")
+	web.Router("/api/user-management/user/ban", &controllers.UserController{}, "post:BanUser")
+	web.Router("/api/user-management/user/unban", &controllers.UserController{}, "post:UnbanUser")
+	web.Router("/api/user-management/user/delete", &controllers.UserController{}, "post:DeleteUser")
+	web.Router("/api/user-management/user/stats", &controllers.UserController{}, "post:GetUserStats")
 	// 排行榜管理模块
 	web.Router("/leaderboard/getAll", &controllers.LeaderboardController{}, "post:GetAllLeaderboards")
 	web.Router("/leaderboard/create", &controllers.LeaderboardController{}, "post:CreateLeaderboard")
@@ -87,6 +148,11 @@ func init() {
 	web.Router("/gameConfig/update", &controllers.GameConfigController{}, "post:UpdateGameConfig")
 	web.Router("/gameConfig/delete", &controllers.GameConfigController{}, "post:DeleteGameConfig")
 	web.Router("/gameConfig/get", &controllers.GameConfigController{}, "post:GetGameConfig")
+
+	// 游戏数据管理模块（新路由 - 对齐云函数格式）
+	web.Router("/api/game-data/leaderboard", &controllers.GameDataController{}, "post:GetUserDataList")
+	web.Router("/api/game-data/mail", &controllers.GameDataController{}, "post:GetUserDataList")
+	web.Router("/api/game-data/mail/send", &controllers.GameDataController{}, "post:SendMail")
 
 	apiNamespace := web.NewNamespace("/api",
 		// 认证相关

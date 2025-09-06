@@ -126,7 +126,7 @@ func BatchUpdateGameConfigs(appId string, configs map[string]string) error {
 		} else if err == nil {
 			// 存在则更新
 			config.ConfigValue = value
-			_, err = tx.Update(config, "config_value", "updated_at")
+			_, err = tx.Update(config, "config_value", "update_time")
 		}
 
 		if err != nil {

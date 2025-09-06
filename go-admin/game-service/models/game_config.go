@@ -14,8 +14,8 @@ type GameConfig struct {
 	ConfigValue string `orm:"type(longtext)" json:"config_value"`
 	Version     string `orm:"size(50)" json:"version"`
 	Description string `orm:"size(255)" json:"description"`
-	CreatedAt   string `orm:"auto_now_add;type(datetime)" json:"created_at"`
-	UpdatedAt   string `orm:"auto_now;type(datetime)" json:"updated_at"`
+	CreatedAt   string `orm:"auto_now_add;type(datetime)" json:"create_time"`
+	UpdatedAt   string `orm:"auto_now;type(datetime)" json:"update_time"`
 }
 
 // GetTableName 获取动态表名
@@ -67,7 +67,7 @@ func SetConfig(appId, configKey, configValue, version, description string) error
 		if description != "" {
 			config.Description = description
 		}
-		_, err = o.Update(config, "config_value", "version", "description", "updated_at")
+		_, err = o.Update(config, "config_value", "version", "description", "update_time")
 	}
 
 	return err
@@ -161,7 +161,7 @@ func UpdateConfigDescription(appId, configKey, description string) error {
 	}
 
 	config.Description = description
-	_, err = o.Update(config, "description", "updated_at")
+	_, err = o.Update(config, "description", "update_time")
 	return err
 }
 

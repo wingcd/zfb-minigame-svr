@@ -3,10 +3,7 @@ package controllers
 import (
 	"admin-service/models"
 	"admin-service/utils"
-	"crypto/md5"
-	"encoding/hex"
 	"encoding/json"
-	"time"
 
 	"github.com/beego/beego/v2/server/web"
 )
@@ -75,32 +72,21 @@ func (c *AuthController) AdminLogin() {
 		return
 	}
 
-	// 生成token（简单实现，对齐云函数）
-	tokenData := req.Username + time.Now().String()
-	tokenHash := md5.Sum([]byte(tokenData))
-	token := hex.EncodeToString(tokenHash[:])
-
-	// 设置token过期时间
-	var tokenExpire time.Time
-	if req.RememberMe {
-		tokenExpire = time.Now().Add(30 * 24 * time.Hour) // 30天
-	} else {
-		tokenExpire = time.Now().Add(7 * 24 * time.Hour) // 7天
-	}
-
-	// 更新管理员token信息
-	clientIP := c.Ctx.Input.IP()
-	err = models.UpdateAdminToken(admin.Id, token, tokenExpire, clientIP)
+	// 生成JWT token
+	token, err := utils.GenerateJWT(admin.Id, admin.Username, admin.RoleId)
 	if err != nil {
 		c.Data["json"] = map[string]interface{}{
 			"code":      5001,
-			"msg":       "更新token失败",
+			"msg":       "生成token失败: " + err.Error(),
 			"timestamp": utils.UnixMilli(),
 			"data":      nil,
 		}
 		c.ServeJSON()
 		return
 	}
+
+	// JWT token不需要存储在数据库中，过期时间已在token中编码
+	clientIP := c.Ctx.Input.IP()
 
 	// 获取角色权限
 	role, permissions, err := models.GetAdminRolePermissions(admin.RoleId)
@@ -112,9 +98,8 @@ func (c *AuthController) AdminLogin() {
 
 	// 记录登录日志
 	models.LogAdminOperation(admin.Id, admin.Username, "LOGIN_SUCCESS", "AUTH", map[string]interface{}{
-		"ip":          clientIP,
-		"rememberMe":  req.RememberMe,
-		"tokenExpire": tokenExpire.Format("2006-01-02 15:04:05"),
+		"ip":         clientIP,
+		"rememberMe": req.RememberMe,
 	})
 
 	// 返回成功结果（对齐云函数格式）
@@ -123,8 +108,7 @@ func (c *AuthController) AdminLogin() {
 		"msg":       "登录成功",
 		"timestamp": utils.UnixMilli(),
 		"data": map[string]interface{}{
-			"token":       token,
-			"tokenExpire": tokenExpire.Format("2006-01-02 15:04:05"),
+			"token": token,
 			"adminInfo": map[string]interface{}{
 				"id":            admin.Id,
 				"username":      admin.Username,
@@ -320,12 +304,25 @@ func (c *AuthController) VerifyToken() {
 		return
 	}
 
-	// 验证Token
-	admin, err := models.GetAdminByToken(req.Token)
+	// 验证JWT Token
+	claims, err := utils.ParseJWT(req.Token)
 	if err != nil {
 		c.Data["json"] = map[string]interface{}{
 			"code":      4003,
-			"msg":       "Token无效或已过期",
+			"msg":       "Token无效或已过期: " + err.Error(),
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	// 获取管理员信息
+	admin, err := models.GetAdminUserById(claims.UserID)
+	if err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4003,
+			"msg":       "用户不存在",
 			"timestamp": utils.UnixMilli(),
 			"data":      nil,
 		}

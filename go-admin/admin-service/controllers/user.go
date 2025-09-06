@@ -23,13 +23,7 @@ func (c *UserController) GetAllUsers() {
 	}
 
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &requestData); err != nil {
-		c.Data["json"] = map[string]interface{}{
-			"code":      4001,
-			"msg":       "参数错误",
-			"timestamp": utils.UnixMilli(),
-			"data":      nil,
-		}
-		c.ServeJSON()
+		utils.ErrorResponse(&c.Controller, utils.CodeBadRequest, "参数错误", nil)
 		return
 	}
 
@@ -43,29 +37,19 @@ func (c *UserController) GetAllUsers() {
 
 	users, total, err := models.GetUserList(requestData.Page, requestData.PageSize, requestData.Keyword, requestData.Status, requestData.AppId)
 	if err != nil {
-		c.Data["json"] = map[string]interface{}{
-			"code":      5001,
-			"msg":       "获取用户列表失败",
-			"timestamp": utils.UnixMilli(),
-			"data":      nil,
-		}
-		c.ServeJSON()
+		utils.ErrorResponse(&c.Controller, utils.CodeServerError, "获取用户列表失败", nil)
 		return
 	}
 
-	c.Data["json"] = map[string]interface{}{
-		"code":      0,
-		"msg":       "获取成功",
-		"timestamp": utils.UnixMilli(),
-		"data": map[string]interface{}{
-			"list":       users,
-			"total":      total,
-			"page":       requestData.Page,
-			"pageSize":   requestData.PageSize,
-			"totalPages": (total + int64(requestData.PageSize) - 1) / int64(requestData.PageSize),
-		},
+	data := map[string]interface{}{
+		"list":       users,
+		"total":      total,
+		"page":       requestData.Page,
+		"pageSize":   requestData.PageSize,
+		"totalPages": (total + int64(requestData.PageSize) - 1) / int64(requestData.PageSize),
 	}
-	c.ServeJSON()
+
+	utils.SuccessResponse(&c.Controller, "success", data)
 }
 
 // BanUser 封禁用户
@@ -78,24 +62,12 @@ func (c *UserController) BanUser() {
 	}
 
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &requestData); err != nil {
-		c.Data["json"] = map[string]interface{}{
-			"code":      4001,
-			"msg":       "参数错误",
-			"timestamp": utils.UnixMilli(),
-			"data":      nil,
-		}
-		c.ServeJSON()
+		utils.ErrorResponse(&c.Controller, utils.CodeBadRequest, "参数错误", nil)
 		return
 	}
 
 	if requestData.AppId == "" || requestData.PlayerId == "" {
-		c.Data["json"] = map[string]interface{}{
-			"code":      4001,
-			"msg":       "缺少必要参数",
-			"timestamp": utils.UnixMilli(),
-			"data":      nil,
-		}
-		c.ServeJSON()
+		utils.ErrorResponse(&c.Controller, utils.CodeBadRequest, "缺少必要参数", nil)
 		return
 	}
 
@@ -106,23 +78,11 @@ func (c *UserController) BanUser() {
 	}
 
 	if err := models.BanUser(requestData.AppId, requestData.PlayerId, claims.UserID, "temporary", requestData.Reason, requestData.Duration); err != nil {
-		c.Data["json"] = map[string]interface{}{
-			"code":      5001,
-			"msg":       "封禁用户失败",
-			"timestamp": utils.UnixMilli(),
-			"data":      nil,
-		}
-		c.ServeJSON()
+		utils.ErrorResponse(&c.Controller, utils.CodeServerError, "封禁用户失败", nil)
 		return
 	}
 
-	c.Data["json"] = map[string]interface{}{
-		"code":      0,
-		"msg":       "封禁成功",
-		"timestamp": utils.UnixMilli(),
-		"data":      nil,
-	}
-	c.ServeJSON()
+	utils.SuccessResponse(&c.Controller, "success", nil)
 }
 
 // UnbanUser 解封用户
@@ -133,13 +93,7 @@ func (c *UserController) UnbanUser() {
 	}
 
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &requestData); err != nil {
-		c.Data["json"] = map[string]interface{}{
-			"code":      4001,
-			"msg":       "参数错误",
-			"timestamp": utils.UnixMilli(),
-			"data":      nil,
-		}
-		c.ServeJSON()
+		utils.ErrorResponse(&c.Controller, utils.CodeBadRequest, "参数错误", nil)
 		return
 	}
 
@@ -150,23 +104,11 @@ func (c *UserController) UnbanUser() {
 	}
 
 	if err := models.UnbanUser(requestData.AppId, requestData.PlayerId, claims.UserID, "管理员解封"); err != nil {
-		c.Data["json"] = map[string]interface{}{
-			"code":      5001,
-			"msg":       "解封用户失败",
-			"timestamp": utils.UnixMilli(),
-			"data":      nil,
-		}
-		c.ServeJSON()
+		utils.ErrorResponse(&c.Controller, utils.CodeServerError, "解封用户失败", nil)
 		return
 	}
 
-	c.Data["json"] = map[string]interface{}{
-		"code":      0,
-		"msg":       "解封成功",
-		"timestamp": utils.UnixMilli(),
-		"data":      nil,
-	}
-	c.ServeJSON()
+	utils.SuccessResponse(&c.Controller, "success", nil)
 }
 
 // DeleteUser 删除用户
@@ -177,34 +119,16 @@ func (c *UserController) DeleteUser() {
 	}
 
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &requestData); err != nil {
-		c.Data["json"] = map[string]interface{}{
-			"code":      4001,
-			"msg":       "参数错误",
-			"timestamp": utils.UnixMilli(),
-			"data":      nil,
-		}
-		c.ServeJSON()
+		utils.ErrorResponse(&c.Controller, utils.CodeBadRequest, "参数错误", nil)
 		return
 	}
 
 	if err := models.DeleteUser(requestData.AppId, requestData.PlayerId); err != nil {
-		c.Data["json"] = map[string]interface{}{
-			"code":      5001,
-			"msg":       "删除用户失败",
-			"timestamp": utils.UnixMilli(),
-			"data":      nil,
-		}
-		c.ServeJSON()
+		utils.ErrorResponse(&c.Controller, utils.CodeServerError, "删除用户失败", nil)
 		return
 	}
 
-	c.Data["json"] = map[string]interface{}{
-		"code":      0,
-		"msg":       "删除成功",
-		"timestamp": utils.UnixMilli(),
-		"data":      nil,
-	}
-	c.ServeJSON()
+	utils.SuccessResponse(&c.Controller, "success", nil)
 }
 
 // GetUserDetail 获取用户详情
@@ -215,35 +139,17 @@ func (c *UserController) GetUserDetail() {
 	}
 
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &requestData); err != nil {
-		c.Data["json"] = map[string]interface{}{
-			"code":      4001,
-			"msg":       "参数错误",
-			"timestamp": utils.UnixMilli(),
-			"data":      nil,
-		}
-		c.ServeJSON()
+		utils.ErrorResponse(&c.Controller, utils.CodeBadRequest, "参数错误", nil)
 		return
 	}
 
 	user, err := models.GetUserDetail(requestData.AppId, requestData.PlayerId)
 	if err != nil {
-		c.Data["json"] = map[string]interface{}{
-			"code":      4004,
-			"msg":       "用户不存在",
-			"timestamp": utils.UnixMilli(),
-			"data":      nil,
-		}
-		c.ServeJSON()
+		utils.ErrorResponse(&c.Controller, utils.CodeNotFound, "用户不存在", nil)
 		return
 	}
 
-	c.Data["json"] = map[string]interface{}{
-		"code":      0,
-		"msg":       "获取成功",
-		"timestamp": utils.UnixMilli(),
-		"data":      user,
-	}
-	c.ServeJSON()
+	utils.SuccessResponse(&c.Controller, "success", user)
 }
 
 // SetUserDetail 设置用户详情
@@ -255,47 +161,23 @@ func (c *UserController) SetUserDetail() {
 	}
 
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &requestData); err != nil {
-		c.Data["json"] = map[string]interface{}{
-			"code":      4001,
-			"msg":       "参数错误",
-			"timestamp": utils.UnixMilli(),
-			"data":      nil,
-		}
-		c.ServeJSON()
+		utils.ErrorResponse(&c.Controller, utils.CodeBadRequest, "参数错误", nil)
 		return
 	}
 
 	// 将UserData转换为JSON字符串
 	userDataJSON, err := json.Marshal(requestData.UserData)
 	if err != nil {
-		c.Data["json"] = map[string]interface{}{
-			"code":      4001,
-			"msg":       "用户数据格式错误",
-			"timestamp": utils.UnixMilli(),
-			"data":      nil,
-		}
-		c.ServeJSON()
+		utils.ErrorResponse(&c.Controller, utils.CodeBadRequest, "用户数据格式错误", nil)
 		return
 	}
 
 	if err := models.SetUserDetail(requestData.AppId, requestData.PlayerId, string(userDataJSON)); err != nil {
-		c.Data["json"] = map[string]interface{}{
-			"code":      5001,
-			"msg":       "设置用户详情失败",
-			"timestamp": utils.UnixMilli(),
-			"data":      nil,
-		}
-		c.ServeJSON()
+		utils.ErrorResponse(&c.Controller, utils.CodeServerError, "设置用户详情失败", nil)
 		return
 	}
 
-	c.Data["json"] = map[string]interface{}{
-		"code":      0,
-		"msg":       "设置成功",
-		"timestamp": utils.UnixMilli(),
-		"data":      nil,
-	}
-	c.ServeJSON()
+	utils.SuccessResponse(&c.Controller, "success", nil)
 }
 
 // GetUserStats 获取用户统计
@@ -306,33 +188,15 @@ func (c *UserController) GetUserStats() {
 	}
 
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &requestData); err != nil {
-		c.Data["json"] = map[string]interface{}{
-			"code":      4001,
-			"msg":       "参数错误",
-			"timestamp": utils.UnixMilli(),
-			"data":      nil,
-		}
-		c.ServeJSON()
+		utils.ErrorResponse(&c.Controller, utils.CodeBadRequest, "参数错误", nil)
 		return
 	}
 
 	stats, err := models.GetUserStats(requestData.AppId, requestData.PlayerId)
 	if err != nil {
-		c.Data["json"] = map[string]interface{}{
-			"code":      5001,
-			"msg":       "获取用户统计失败",
-			"timestamp": utils.UnixMilli(),
-			"data":      nil,
-		}
-		c.ServeJSON()
+		utils.ErrorResponse(&c.Controller, utils.CodeServerError, "获取用户统计失败", nil)
 		return
 	}
 
-	c.Data["json"] = map[string]interface{}{
-		"code":      0,
-		"msg":       "获取成功",
-		"timestamp": utils.UnixMilli(),
-		"data":      stats,
-	}
-	c.ServeJSON()
+	utils.SuccessResponse(&c.Controller, "success", stats)
 }

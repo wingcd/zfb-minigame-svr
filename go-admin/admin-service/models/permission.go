@@ -3,6 +3,7 @@ package models
 import (
 	"encoding/json"
 	"errors"
+	"strconv"
 
 	"github.com/beego/beego/v2/client/orm"
 )
@@ -74,7 +75,7 @@ func IsPermissionInUse(permissionId int64) bool {
 			var permissions []string
 			if err := json.Unmarshal([]byte(role.Permissions), &permissions); err == nil {
 				for _, perm := range permissions {
-					if perm == string(permissionId) {
+					if perm == strconv.FormatInt(permissionId, 10) {
 						return true
 					}
 				}

@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/beego/beego/v2/client/orm"
-	"github.com/dgrijalva/jwt-go"
 )
 
 // AuthService 认证服务
@@ -39,8 +38,8 @@ func (s *AuthService) Login(username, password string) (*models.AdminUser, strin
 		return nil, "", fmt.Errorf("用户名或密码错误")
 	}
 
-	// 生成JWT Token
-	token, err := s.GenerateToken(user.Id, user.Username)
+	// 生成JWT Token (统一使用utils.GenerateJWT)
+	token, err := utils.GenerateJWT(user.Id, user.Username, user.RoleId)
 	if err != nil {
 		return nil, "", fmt.Errorf("生成token失败: %v", err)
 	}
@@ -54,55 +53,6 @@ func (s *AuthService) Login(username, password string) (*models.AdminUser, strin
 	}
 
 	return user, token, nil
-}
-
-// GenerateToken 生成JWT Token
-func (s *AuthService) GenerateToken(userId int64, username string) (string, error) {
-	// 创建token
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"user_id":  userId,
-		"username": username,
-		"exp":      time.Now().Add(time.Hour * 24).Unix(), // 24小时过期
-		"iat":      time.Now().Unix(),
-	})
-
-	// 签名token
-	jwtSecret := utils.GetJWTSecret()
-	tokenString, err := token.SignedString([]byte(jwtSecret))
-	if err != nil {
-		return "", err
-	}
-
-	return tokenString, nil
-}
-
-// ValidateToken 验证JWT Token
-func (s *AuthService) ValidateToken(tokenString string) (*jwt.MapClaims, error) {
-	// 解析token
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		// 验证签名方法
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-		}
-		return []byte(utils.GetJWTSecret()), nil
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	// 检查token是否有效
-	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-		// 检查是否过期
-		if exp, ok := claims["exp"].(float64); ok {
-			if int64(exp) < time.Now().Unix() {
-				return nil, fmt.Errorf("token已过期")
-			}
-		}
-		return &claims, nil
-	}
-
-	return nil, fmt.Errorf("无效的token")
 }
 
 // GetUserInfo 获取用户信息
@@ -142,7 +92,7 @@ func (s *AuthService) ChangePassword(userId int64, oldPassword, newPassword stri
 	user.Password = utils.HashPassword(newPassword)
 	user.UpdatedAt = time.Now()
 
-	_, err = o.Update(user, "password", "updated_at")
+	_, err = o.Update(user, "password", "update_time")
 	if err != nil {
 		return fmt.Errorf("修改密码失败: %v", err)
 	}

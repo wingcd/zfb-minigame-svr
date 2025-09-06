@@ -17,8 +17,8 @@ type Mail struct {
 	Rewards   string    `orm:"type(text)" json:"rewards"`
 	Status    int       `orm:"default(0)" json:"status"` // 0:未读 1:已读 2:已领取
 	ExpireAt  time.Time `orm:"null" json:"expire_at"`
-	CreatedAt string    `orm:"auto_now_add;type(datetime)" json:"created_at"`
-	UpdatedAt string    `orm:"auto_now;type(datetime)" json:"updated_at"`
+	CreatedAt string    `orm:"auto_now_add;type(datetime)" json:"create_time"`
+	UpdatedAt string    `orm:"auto_now;type(datetime)" json:"update_time"`
 }
 
 // GetTableName 获取动态表名
@@ -45,7 +45,7 @@ func GetMailList(appId, userId string, page, pageSize int) ([]Mail, int64, error
 
 	var mails []Mail
 	offset := (page - 1) * pageSize
-	_, err := qs.OrderBy("-created_at").Limit(pageSize, offset).All(&mails)
+	_, err := qs.OrderBy("-create_time").Limit(pageSize, offset).All(&mails)
 
 	return mails, total, err
 }
@@ -71,7 +71,7 @@ func ReadMail(appId, userId string, mailId int64) error {
 	// 标记为已读
 	if mail.Status == 0 {
 		mail.Status = 1
-		_, err = o.Update(mail, "status", "updated_at")
+		_, err = o.Update(mail, "status", "update_time")
 	}
 
 	return err
@@ -102,7 +102,7 @@ func ClaimRewards(appId, userId string, mailId int64) (string, error) {
 
 	// 标记为已领取
 	mail.Status = 2
-	_, err = o.Update(mail, "status", "updated_at")
+	_, err = o.Update(mail, "status", "update_time")
 	if err != nil {
 		return "", err
 	}
@@ -200,7 +200,7 @@ func GetAllMailList(appId string, page, pageSize int, userId string) ([]Mail, in
 
 	var mails []Mail
 	offset := (page - 1) * pageSize
-	_, err := qs.OrderBy("-created_at").Limit(pageSize, offset).All(&mails)
+	_, err := qs.OrderBy("-create_time").Limit(pageSize, offset).All(&mails)
 
 	return mails, total, err
 }

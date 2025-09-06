@@ -159,7 +159,7 @@ func GetUserMails(appId, userId string, page, pageSize int) ([]map[string]interf
 	tableName := fmt.Sprintf("mail_%s", cleanAppId)
 
 	// 获取用户邮件
-	sql := fmt.Sprintf("SELECT * FROM %s WHERE user_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?", tableName)
+	sql := fmt.Sprintf("SELECT * FROM %s WHERE user_id = ? ORDER BY create_time DESC LIMIT ? OFFSET ?", tableName)
 	params := []interface{}{userId, pageSize, (page - 1) * pageSize}
 
 	var results []orm.Params

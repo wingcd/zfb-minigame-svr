@@ -41,17 +41,75 @@ export async function verifyToken() {
 
   try {
     const response = await authAPI.verifyToken({ token })
-    if (response.code === 0 && response.data.valid) {
-      setAdminInfo(response.data.adminInfo)
+    if (response.code === 0 && response.data?.valid) {
+      // 更新管理员信息
+      if (response.data.adminInfo) {
+        setAdminInfo(response.data.adminInfo)
+      }
       return true
     } else {
+      // token无效，清除本地存储
       removeToken()
       return false
     }
   } catch (error) {
+    console.warn('Token verification failed:', error)
+    // 验证失败，清除本地存储
     removeToken()
     return false
   }
+}
+
+// 定期检查token有效性（可选）
+export function startTokenValidation(intervalMinutes = 30) {
+  const interval = intervalMinutes * 60 * 1000 // 转换为毫秒
+  
+  const validateToken = async () => {
+    if (!isLoggedIn()) {
+      return
+    }
+    
+    const isValid = await verifyToken()
+    if (!isValid) {
+      console.warn('Token validation failed, redirecting to login')
+      logout()
+    }
+  }
+  
+  // 立即执行一次
+  validateToken()
+  
+  // 设置定时器
+  const timerId = setInterval(validateToken, interval)
+  
+  // 返回清理函数
+  return () => clearInterval(timerId)
+}
+
+// 检查token是否即将过期（基于JWT payload，如果有的话）
+export function isTokenExpiringSoon(minutesThreshold = 10) {
+  const token = getToken()
+  if (!token) {
+    return true
+  }
+  
+  try {
+    // 简单解析JWT payload（不验证签名）
+    const payload = JSON.parse(atob(token.split('.')[1]))
+    if (payload.exp) {
+      const expirationTime = payload.exp * 1000 // JWT exp是秒，转换为毫秒
+      const currentTime = Date.now()
+      const timeUntilExpiration = expirationTime - currentTime
+      const thresholdMs = minutesThreshold * 60 * 1000
+      
+      return timeUntilExpiration <= thresholdMs
+    }
+  } catch (error) {
+    console.warn('Failed to parse token expiration:', error)
+    return true // 解析失败时认为即将过期
+  }
+  
+  return false
 }
 
 // 检查权限

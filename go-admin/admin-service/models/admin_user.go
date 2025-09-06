@@ -3,6 +3,7 @@ package models
 import (
 	"admin-service/utils"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/beego/beego/v2/client/orm"
@@ -171,11 +172,10 @@ func AdminLoginWithMD5(username, passwordHash string) (*AdminUser, error) {
 	return admin, err
 }
 
-// UpdateAdminToken 更新管理员token信息
+// UpdateAdminToken 更新管理员token信息 (已废弃，JWT不需要存储在数据库中)
 func UpdateAdminToken(id int64, token string, tokenExpire time.Time, loginIP string) error {
+	// JWT token不需要存储在数据库中，只更新登录信息
 	return UpdateAdminUserFields(id, map[string]interface{}{
-		"token":         token,
-		"token_expire":  tokenExpire,
 		"last_login_at": time.Now(),
 		"last_login_ip": loginIP,
 		"update_time":   time.Now(),
@@ -204,28 +204,16 @@ func GetAdminRolePermissions(roleId int64) (*AdminRole, []string, error) {
 	return role, permissions, nil
 }
 
-// GetAdminByToken 根据Token获取管理员信息
+// GetAdminByToken 根据Token获取管理员信息 (已废弃，使用JWT验证替代)
 func GetAdminByToken(token string) (*AdminUser, error) {
-	o := orm.NewOrm()
-	admin := &AdminUser{}
-	err := o.QueryTable("admin_users").
-		Filter("token", token).
-		Filter("status", 1). // 只允许活跃用户
-		One(admin)
-
-	if err == orm.ErrNoRows {
-		return nil, orm.ErrNoRows
-	}
+	// 使用JWT验证替代数据库token查询
+	claims, err := utils.ParseJWT(token)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("JWT验证失败: %v", err)
 	}
 
-	// 检查Token是否过期
-	if !admin.TokenExpire.IsZero() && time.Now().After(admin.TokenExpire) {
-		return nil, orm.ErrNoRows // Token已过期
-	}
-
-	return admin, nil
+	// 根据JWT中的用户ID获取用户信息
+	return GetAdminUserById(claims.UserID)
 }
 
 // LogAdminOperation 记录管理员操作日志

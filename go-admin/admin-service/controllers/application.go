@@ -3,6 +3,7 @@ package controllers
 import (
 	"admin-service/models"
 	"admin-service/utils"
+	"encoding/json"
 	"strconv"
 
 	"github.com/beego/beego/v2/server/web"
@@ -59,20 +60,40 @@ func (c *ApplicationController) CreateApplication() {
 		return
 	}
 
-	// 获取参数
-	appName := c.GetString("appName")
-	description := c.GetString("description")
+	// 解析JSON请求体
+	var request struct {
+		AppName       string `json:"appName"`
+		Platform      string `json:"platform"`
+		ChannelAppId  string `json:"channelAppId"`
+		ChannelAppKey string `json:"channelAppKey"`
+		Description   string `json:"description"`
+		Status        string `json:"status"`
+	}
 
-	if appName == "" {
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &request); err != nil {
+		utils.ErrorResponse(&c.Controller, 1001, "请求参数格式错误", nil)
+		return
+	}
+
+	if request.AppName == "" {
 		utils.ErrorResponse(&c.Controller, 1002, "应用名称不能为空", nil)
 		return
 	}
 
+	// 设置状态
+	status := 1
+	if request.Status == "inactive" {
+		status = 0
+	}
+
 	// 创建应用
 	application := &models.Application{
-		AppName:     appName,
-		Description: description,
-		Status:      1,
+		AppName:       request.AppName,
+		Platform:      request.Platform,
+		ChannelAppId:  request.ChannelAppId,
+		ChannelAppKey: request.ChannelAppKey,
+		Description:   request.Description,
+		Status:        status,
 	}
 
 	err := application.Insert()
@@ -82,7 +103,7 @@ func (c *ApplicationController) CreateApplication() {
 	}
 
 	// 记录操作日志
-	utils.LogOperation(claims.UserID, "创建应用", "创建应用: "+appName)
+	utils.LogOperation(claims.UserID, "创建应用", "创建应用: "+request.AppName)
 
 	result := map[string]interface{}{
 		"id":        application.Id,

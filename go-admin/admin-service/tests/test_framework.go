@@ -7,7 +7,6 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 	"time"
 
@@ -25,9 +24,10 @@ type TestFramework struct {
 
 // APIResponse 标准API响应结构（参考云函数格式）
 type APIResponse struct {
-	Code int         `json:"code"`
-	Msg  string      `json:"msg"`
-	Data interface{} `json:"data"`
+	Code      int         `json:"code"`
+	Msg       string      `json:"msg"`
+	Data      interface{} `json:"data"`
+	Timestamp int64       `json:"timestamp"`
 }
 
 // TestCase 测试用例结构
@@ -127,31 +127,17 @@ func (tf *TestFramework) ExecuteTestCase(testCase *TestCase) *TestResult {
 	var requestBody io.Reader
 	var url string
 
-	if testCase.Method == "GET" && testCase.RequestData != nil {
-		// GET请求：将参数添加到URL查询字符串
-		baseURL := tf.Server.URL + testCase.URL
-		queryParams := make([]string, 0)
-		for key, value := range testCase.RequestData {
-			queryParams = append(queryParams, fmt.Sprintf("%s=%v", key, value))
+	// 所有请求都使用POST JSON格式（除了特殊的健康检查等）
+	url = tf.Server.URL + testCase.URL
+	if testCase.RequestData != nil {
+		jsonData, err := json.Marshal(testCase.RequestData)
+		if err != nil {
+			result.Error = fmt.Sprintf("Failed to marshal request data: %v", err)
+			result.Duration = time.Since(startTime)
+			return result
 		}
-		if len(queryParams) > 0 {
-			url = baseURL + "?" + strings.Join(queryParams, "&")
-		} else {
-			url = baseURL
-		}
-	} else {
-		// POST/PUT/DELETE请求：将参数放在请求体中
-		url = tf.Server.URL + testCase.URL
-		if testCase.RequestData != nil {
-			jsonData, err := json.Marshal(testCase.RequestData)
-			if err != nil {
-				result.Error = fmt.Sprintf("Failed to marshal request data: %v", err)
-				result.Duration = time.Since(startTime)
-				return result
-			}
-			fmt.Printf("DEBUG: Sending JSON data for %s: %s\n", testCase.Name, string(jsonData))
-			requestBody = bytes.NewReader(jsonData)
-		}
+		fmt.Printf("DEBUG: Sending JSON data for %s: %s\n", testCase.Name, string(jsonData))
+		requestBody = bytes.NewReader(jsonData)
 	}
 
 	// 创建HTTP请求
@@ -325,7 +311,7 @@ func ValidateStandardResponse(data interface{}) bool {
 	return true
 }
 
-// ValidateListResponse 验证列表响应格式
+// ValidateListResponse 验证列表响应格式（云函数格式）
 func ValidateListResponse(data interface{}) bool {
 	if data == nil {
 		return false
@@ -336,8 +322,8 @@ func ValidateListResponse(data interface{}) bool {
 		return false
 	}
 
-	// 检查必要字段 - 修改为实际的字段名
-	requiredFields := []string{"userList", "total", "page", "pageSize"}
+	// 检查必要字段 - 云函数格式
+	requiredFields := []string{"list", "total", "page", "pageSize"}
 	for _, field := range requiredFields {
 		if _, exists := dataMap[field]; !exists {
 			return false

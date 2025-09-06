@@ -6,6 +6,10 @@ func GetAllTestSuites() []*TestSuite {
 		GetUserTestSuite(),
 		GetSystemTestSuite(),
 		GetStatisticsTestSuite(),
+		GetApplicationTestSuite(),
+		GetPermissionTestSuite(),
+		GetGameDataTestSuite(),
+		GetFileTestSuite(),
 	}
 }
 
@@ -19,7 +23,7 @@ func GetUserTestSuite() *TestSuite {
 			{
 				Name:        "GetAllUsers_Success",
 				Description: "成功获取用户列表，验证分页和数据格式",
-				Method:      "GET",
+				Method:      "POST",
 				URL:         "/api/user-management/users",
 				RequestData: map[string]interface{}{
 					"appId":    "test_app_001",
@@ -29,7 +33,7 @@ func GetUserTestSuite() *TestSuite {
 					"status":   "",
 				},
 				ExpectedCode: 0,
-				ExpectedMsg:  "获取成功",
+				ExpectedMsg:  "success",
 				ValidateData: ValidateListResponse,
 				RequiresAuth: true,
 				Tags:         []string{"user", "list", "success"},
@@ -38,14 +42,14 @@ func GetUserTestSuite() *TestSuite {
 			{
 				Name:        "GetAllUsers_InvalidParams",
 				Description: "测试无效参数的处理",
-				Method:      "GET",
+				Method:      "POST",
 				URL:         "/api/user-management/users",
 				RequestData: map[string]interface{}{
 					"appId": "", // 空的appId
 					"page":  1,
 				},
-				ExpectedCode: 1002,
-				ExpectedMsg:  "应用ID不能为空",
+				ExpectedCode: 4001,
+				ExpectedMsg:  "参数错误",
 				RequiresAuth: true,
 				Tags:         []string{"user", "list", "error"},
 			},
@@ -53,7 +57,7 @@ func GetUserTestSuite() *TestSuite {
 			{
 				Name:        "GetAllUsers_Pagination",
 				Description: "测试分页功能",
-				Method:      "GET",
+				Method:      "POST",
 				URL:         "/api/user-management/users",
 				RequestData: map[string]interface{}{
 					"appId":    "test_app_001",
@@ -86,14 +90,14 @@ func GetUserTestSuite() *TestSuite {
 			{
 				Name:        "GetUserDetail_Success",
 				Description: "成功获取用户详情",
-				Method:      "GET",
+				Method:      "POST",
 				URL:         "/api/user-management/user/detail",
 				RequestData: map[string]interface{}{
 					"appId":    "test_app_001",
 					"playerId": "test_player_001",
 				},
 				ExpectedCode: 0,
-				ExpectedMsg:  "获取成功",
+				ExpectedMsg:  "success",
 				ValidateData: ValidateUserData,
 				RequiresAuth: true,
 				SetupFunc: func() error {
@@ -106,14 +110,14 @@ func GetUserTestSuite() *TestSuite {
 			{
 				Name:        "GetUserDetail_NotFound",
 				Description: "获取不存在用户的详情",
-				Method:      "GET",
+				Method:      "POST",
 				URL:         "/api/user-management/user/detail",
 				RequestData: map[string]interface{}{
 					"appId":    "test_app_001",
 					"playerId": "non_existent_player",
 				},
-				ExpectedCode: 1003,
-				ExpectedMsg:  "获取用户详情失败",
+				ExpectedCode: 4004,
+				ExpectedMsg:  "资源不存在",
 				RequiresAuth: true,
 				Tags:         []string{"user", "detail", "error"},
 			},
@@ -121,7 +125,7 @@ func GetUserTestSuite() *TestSuite {
 			{
 				Name:        "SetUserDetail_Success",
 				Description: "成功设置用户详情",
-				Method:      "PUT",
+				Method:      "POST",
 				URL:         "/api/user-management/user/data",
 				RequestData: map[string]interface{}{
 					"appId":    "test_app_001",
@@ -135,7 +139,7 @@ func GetUserTestSuite() *TestSuite {
 					},
 				},
 				ExpectedCode: 0,
-				ExpectedMsg:  "设置成功",
+				ExpectedMsg:  "success",
 				RequiresAuth: true,
 				SetupFunc: func() error {
 					return CreateTestUser("test_app_001", "test_player_001")
@@ -146,14 +150,14 @@ func GetUserTestSuite() *TestSuite {
 			{
 				Name:        "SetUserDetail_InvalidData",
 				Description: "测试无效用户数据的处理",
-				Method:      "PUT",
+				Method:      "POST",
 				URL:         "/api/user-management/user/data",
 				RequestData: map[string]interface{}{
 					"appId":    "test_app_001",
 					"playerId": "test_player_001",
 					"userData": "invalid_json_data", // 无效的数据格式
 				},
-				ExpectedCode: 1001,
+				ExpectedCode: 4005,
 				RequiresAuth: true,
 				Tags:         []string{"user", "update", "error"},
 			},
@@ -170,7 +174,7 @@ func GetUserTestSuite() *TestSuite {
 					"duration": 24,
 				},
 				ExpectedCode:  0,
-				ExpectedMsg:   "封禁成功",
+				ExpectedMsg:   "success",
 				RequiresAuth:  true,
 				RequiresAdmin: true,
 				SetupFunc: func() error {
@@ -193,8 +197,8 @@ func GetUserTestSuite() *TestSuite {
 					"reason": "违反规则",
 					// 缺少playerId
 				},
-				ExpectedCode:  1002,
-				ExpectedMsg:   "应用ID、玩家ID不能为空",
+				ExpectedCode:  4001,
+				ExpectedMsg:   "参数错误",
 				RequiresAuth:  true,
 				RequiresAdmin: true,
 				Tags:          []string{"user", "ban", "error"},
@@ -211,7 +215,7 @@ func GetUserTestSuite() *TestSuite {
 					"unbanReason": "申诉成功",
 				},
 				ExpectedCode:  0,
-				ExpectedMsg:   "解封成功",
+				ExpectedMsg:   "success",
 				RequiresAuth:  true,
 				RequiresAdmin: true,
 				SetupFunc: func() error {
@@ -230,14 +234,14 @@ func GetUserTestSuite() *TestSuite {
 			{
 				Name:        "DeleteUser_Success",
 				Description: "成功删除用户",
-				Method:      "DELETE",
+				Method:      "POST",
 				URL:         "/api/user-management/user/delete",
 				RequestData: map[string]interface{}{
 					"appId":    "test_app_001",
 					"playerId": "test_player_delete",
 				},
 				ExpectedCode:  0,
-				ExpectedMsg:   "删除成功",
+				ExpectedMsg:   "success",
 				RequiresAuth:  true,
 				RequiresAdmin: true,
 				SetupFunc: func() error {
@@ -249,14 +253,14 @@ func GetUserTestSuite() *TestSuite {
 			{
 				Name:        "GetUserStats_Success",
 				Description: "成功获取用户统计信息",
-				Method:      "GET",
+				Method:      "POST",
 				URL:         "/api/user-management/user/stats",
 				RequestData: map[string]interface{}{
 					"appId":    "test_app_001",
 					"playerId": "test_player_stats",
 				},
 				ExpectedCode: 0,
-				ExpectedMsg:  "获取成功",
+				ExpectedMsg:  "success",
 				ValidateData: func(data interface{}) bool {
 					dataMap, ok := data.(map[string]interface{})
 					if !ok {
@@ -295,7 +299,7 @@ func GetSystemTestSuite() *TestSuite {
 				Method:        "GET",
 				URL:           "/api/system/config",
 				ExpectedCode:  0,
-				ExpectedMsg:   "获取成功",
+				ExpectedMsg:   "success",
 				RequiresAuth:  true,
 				RequiresAdmin: true,
 				Tags:          []string{"system", "config", "success"},
@@ -315,7 +319,7 @@ func GetSystemTestSuite() *TestSuite {
 					"jwtExpireHours":  24,
 				},
 				ExpectedCode:  0,
-				ExpectedMsg:   "更新成功",
+				ExpectedMsg:   "success",
 				RequiresAuth:  true,
 				RequiresAdmin: true,
 				Tags:          []string{"system", "config", "update", "success"},
@@ -327,7 +331,7 @@ func GetSystemTestSuite() *TestSuite {
 				Method:       "GET",
 				URL:          "/api/system/status",
 				ExpectedCode: 0,
-				ExpectedMsg:  "获取成功",
+				ExpectedMsg:  "success",
 				ValidateData: func(data interface{}) bool {
 					// 验证系统状态数据结构
 					return data != nil
@@ -346,7 +350,7 @@ func GetSystemTestSuite() *TestSuite {
 					"cacheType": "all",
 				},
 				ExpectedCode:  0,
-				ExpectedMsg:   "清理成功",
+				ExpectedMsg:   "success",
 				RequiresAuth:  true,
 				RequiresAdmin: true,
 				Tags:          []string{"system", "cache", "success"},
@@ -358,7 +362,7 @@ func GetSystemTestSuite() *TestSuite {
 				Method:        "GET",
 				URL:           "/api/system/cache/stats",
 				ExpectedCode:  0,
-				ExpectedMsg:   "获取成功",
+				ExpectedMsg:   "success",
 				RequiresAuth:  true,
 				RequiresAdmin: true,
 				Tags:          []string{"system", "cache", "stats", "success"},
@@ -373,7 +377,7 @@ func GetSystemTestSuite() *TestSuite {
 					"backupType": "full",
 				},
 				ExpectedCode: 0,
-				ExpectedMsg:  "备份成功",
+				ExpectedMsg:  "success",
 				ValidateData: func(data interface{}) bool {
 					dataMap, ok := data.(map[string]interface{})
 					if !ok {
@@ -400,7 +404,7 @@ func GetSystemTestSuite() *TestSuite {
 				Method:       "GET",
 				URL:          "/api/system/backup",
 				ExpectedCode: 0,
-				ExpectedMsg:  "获取成功",
+				ExpectedMsg:  "success",
 				ValidateData: func(data interface{}) bool {
 					dataMap, ok := data.(map[string]interface{})
 					if !ok {
@@ -427,7 +431,7 @@ func GetSystemTestSuite() *TestSuite {
 				Method:        "GET",
 				URL:           "/api/system/server",
 				ExpectedCode:  0,
-				ExpectedMsg:   "获取成功",
+				ExpectedMsg:   "success",
 				RequiresAuth:  true,
 				RequiresAdmin: true,
 				Tags:          []string{"system", "server", "info", "success"},
@@ -439,7 +443,7 @@ func GetSystemTestSuite() *TestSuite {
 				Method:        "GET",
 				URL:           "/api/system/database",
 				ExpectedCode:  0,
-				ExpectedMsg:   "获取成功",
+				ExpectedMsg:   "success",
 				RequiresAuth:  true,
 				RequiresAdmin: true,
 				Tags:          []string{"system", "database", "info", "success"},
@@ -451,7 +455,7 @@ func GetSystemTestSuite() *TestSuite {
 				Method:        "POST",
 				URL:           "/api/system/database/optimize",
 				ExpectedCode:  0,
-				ExpectedMsg:   "优化成功",
+				ExpectedMsg:   "success",
 				RequiresAuth:  true,
 				RequiresAdmin: true,
 				Tags:          []string{"system", "database", "optimize", "success"},
@@ -473,7 +477,7 @@ func GetStatisticsTestSuite() *TestSuite {
 				Method:       "GET",
 				URL:          "/api/statistics/dashboard",
 				ExpectedCode: 0,
-				ExpectedMsg:  "获取成功",
+				ExpectedMsg:  "success",
 				ValidateData: func(data interface{}) bool {
 					dataMap, ok := data.(map[string]interface{})
 					if !ok {
@@ -502,7 +506,7 @@ func GetStatisticsTestSuite() *TestSuite {
 					"appId": "test_app_001",
 				},
 				ExpectedCode: 0,
-				ExpectedMsg:  "获取成功",
+				ExpectedMsg:  "success",
 				ValidateData: func(data interface{}) bool {
 					dataMap, ok := data.(map[string]interface{})
 					if !ok {
@@ -546,7 +550,7 @@ func GetStatisticsTestSuite() *TestSuite {
 					"pageSize": "20",
 				},
 				ExpectedCode: 0,
-				ExpectedMsg:  "获取成功",
+				ExpectedMsg:  "success",
 				ValidateData: func(data interface{}) bool {
 					dataMap, ok := data.(map[string]interface{})
 					if !ok {
@@ -576,7 +580,7 @@ func GetStatisticsTestSuite() *TestSuite {
 					"days":  "7",
 				},
 				ExpectedCode: 0,
-				ExpectedMsg:  "获取成功",
+				ExpectedMsg:  "success",
 				RequiresAuth: true,
 				SetupFunc: func() error {
 					return CreateTestApp("test_app_001")
@@ -595,7 +599,7 @@ func GetStatisticsTestSuite() *TestSuite {
 					"days":     "7",
 				},
 				ExpectedCode: 0,
-				ExpectedMsg:  "获取成功",
+				ExpectedMsg:  "success",
 				ValidateData: func(data interface{}) bool {
 					dataMap, ok := data.(map[string]interface{})
 					if !ok {
@@ -629,7 +633,7 @@ func GetStatisticsTestSuite() *TestSuite {
 					"format":   "csv",
 				},
 				ExpectedCode: 0,
-				ExpectedMsg:  "导出成功",
+				ExpectedMsg:  "success",
 				ValidateData: func(data interface{}) bool {
 					dataMap, ok := data.(map[string]interface{})
 					if !ok {
@@ -675,9 +679,355 @@ func GetStatisticsTestSuite() *TestSuite {
 				Method:       "GET",
 				URL:          "/api/statistics/system",
 				ExpectedCode: 0,
-				ExpectedMsg:  "获取成功",
+				ExpectedMsg:  "success",
 				RequiresAuth: true,
 				Tags:         []string{"statistics", "system", "success"},
+			},
+		},
+	}
+}
+
+// GetApplicationTestSuite 应用管理测试套件
+func GetApplicationTestSuite() *TestSuite {
+	return &TestSuite{
+		Name:        "ApplicationManagement",
+		Description: "应用管理相关接口测试，包括应用创建、更新、删除等功能",
+		TestCases: []*TestCase{
+			{
+				Name:         "GetApplications_Success",
+				Description:  "成功获取应用列表",
+				Method:       "GET",
+				URL:          "/api/applications",
+				ExpectedCode: 0,
+				ExpectedMsg:  "success",
+				RequiresAuth: true,
+				Tags:         []string{"application", "list", "success"},
+			},
+			{
+				Name:        "CreateApplication_Success",
+				Description: "成功创建应用",
+				Method:      "POST",
+				URL:         "/api/applications",
+				RequestData: map[string]interface{}{
+					"appName":     "Test Application",
+					"description": "Test Description",
+					"appType":     "game",
+				},
+				ExpectedCode: 0,
+				ExpectedMsg:  "success",
+				RequiresAuth: true,
+				Tags:         []string{"application", "create", "success"},
+			},
+		},
+	}
+}
+
+// GetPermissionTestSuite 权限管理测试套件
+func GetPermissionTestSuite() *TestSuite {
+	return &TestSuite{
+		Name:        "PermissionManagement",
+		Description: "权限管理相关接口测试，包括角色和权限管理",
+		TestCases: []*TestCase{
+			{
+				Name:         "GetRoles_Success",
+				Description:  "成功获取角色列表",
+				Method:       "GET",
+				URL:          "/api/permissions/roles",
+				ExpectedCode: 0,
+				ExpectedMsg:  "success",
+				RequiresAuth: true,
+				Tags:         []string{"permission", "roles", "success"},
+			},
+			{
+				Name:         "GetPermissions_Success",
+				Description:  "成功获取权限列表",
+				Method:       "GET",
+				URL:          "/api/permissions/permissions",
+				ExpectedCode: 0,
+				ExpectedMsg:  "success",
+				RequiresAuth: true,
+				Tags:         []string{"permission", "permissions", "success"},
+			},
+		},
+	}
+}
+
+// GetGameDataTestSuite 游戏数据管理测试套件
+func GetGameDataTestSuite() *TestSuite {
+	return &TestSuite{
+		Name:        "GameDataManagement",
+		Description: "游戏数据管理相关接口测试，包括排行榜、邮件、配置等",
+		TestCases: []*TestCase{
+			{
+				Name:        "GetLeaderboard_Success",
+				Description: "成功获取排行榜数据",
+				Method:      "POST",
+				URL:         "/api/game-data/leaderboard",
+				RequestData: map[string]interface{}{
+					"appId":    "test_app_001",
+					"page":     1,
+					"pageSize": 20,
+				},
+				ExpectedCode: 0,
+				ExpectedMsg:  "success",
+				RequiresAuth: true,
+				Tags:         []string{"gamedata", "leaderboard", "success"},
+			},
+			{
+				Name:        "GetMailList_Success",
+				Description: "成功获取邮件列表",
+				Method:      "POST",
+				URL:         "/api/game-data/mail",
+				RequestData: map[string]interface{}{
+					"appId":    "test_app_001",
+					"page":     1,
+					"pageSize": 20,
+				},
+				ExpectedCode: 0,
+				ExpectedMsg:  "success",
+				RequiresAuth: true,
+				Tags:         []string{"gamedata", "mail", "success"},
+			},
+			{
+				Name:        "SendMail_Success",
+				Description: "成功发送邮件",
+				Method:      "POST",
+				URL:         "/api/game-data/mail/send",
+				RequestData: map[string]interface{}{
+					"appId":       "test_app_001",
+					"playerId":    "test_player_001",
+					"title":       "Test Mail",
+					"content":     "Test Content",
+					"attachments": "{}",
+				},
+				ExpectedCode: 0,
+				ExpectedMsg:  "success",
+				RequiresAuth: true,
+				Tags:         []string{"gamedata", "mail", "send", "success"},
+			},
+		},
+	}
+}
+
+// GetFileTestSuite 文件管理测试套件
+func GetFileTestSuite() *TestSuite {
+	return &TestSuite{
+		Name:        "FileManagement",
+		Description: "文件管理相关接口测试，包括文件上传、下载、删除等功能",
+		TestCases: []*TestCase{
+			{
+				Name:         "GetFileList_Success",
+				Description:  "成功获取文件列表",
+				Method:       "GET",
+				URL:          "/api/files",
+				ExpectedCode: 0,
+				ExpectedMsg:  "success",
+				RequiresAuth: true,
+				Tags:         []string{"file", "list", "success"},
+			},
+			// 注意：文件上传测试需要特殊处理，这里先跳过
+		},
+	}
+}
+
+// GetCounterTestSuite 计数器管理测试套件
+func GetCounterTestSuite() *TestSuite {
+	return &TestSuite{
+		Name:        "CounterManagement",
+		Description: "计数器管理相关接口测试，包括计数器创建、更新、删除等功能",
+		TestCases: []*TestCase{
+			{
+				Name:        "GetCounterList_Success",
+				Description: "成功获取计数器列表",
+				Method:      "POST",
+				URL:         "/counter/getList",
+				RequestData: map[string]interface{}{
+					"appId":    "test_app_001",
+					"page":     1,
+					"pageSize": 10,
+				},
+				ExpectedCode: 0,
+				ExpectedMsg:  "获取成功",
+				RequiresAuth: true,
+				Tags:         []string{"counter", "list", "success"},
+			},
+			{
+				Name:        "GetCounterStats_Success",
+				Description: "成功获取计数器统计",
+				Method:      "POST",
+				URL:         "/counter/getAllStats",
+				RequestData: map[string]interface{}{
+					"appId": "test_app_001",
+				},
+				ExpectedCode: 0,
+				ExpectedMsg:  "获取成功",
+				RequiresAuth: true,
+				Tags:         []string{"counter", "stats", "success"},
+			},
+		},
+	}
+}
+
+// GetLeaderboardTestSuite 排行榜管理测试套件
+func GetLeaderboardTestSuite() *TestSuite {
+	return &TestSuite{
+		Name:        "LeaderboardManagement",
+		Description: "排行榜管理相关接口测试，包括排行榜创建、更新、删除等功能",
+		TestCases: []*TestCase{
+			{
+				Name:        "GetLeaderboardList_Success",
+				Description: "成功获取排行榜列表",
+				Method:      "POST",
+				URL:         "/leaderboard/getAll",
+				RequestData: map[string]interface{}{
+					"appId":    "test_app_001",
+					"page":     1,
+					"pageSize": 10,
+				},
+				ExpectedCode: 0,
+				ExpectedMsg:  "获取成功",
+				RequiresAuth: true,
+				Tags:         []string{"leaderboard", "list", "success"},
+			},
+			{
+				Name:        "GetLeaderboardData_Success",
+				Description: "成功获取排行榜数据",
+				Method:      "POST",
+				URL:         "/leaderboard/getData",
+				RequestData: map[string]interface{}{
+					"appId":           "test_app_001",
+					"leaderboardName": "daily_score",
+					"page":            1,
+					"pageSize":        10,
+				},
+				ExpectedCode: 0,
+				ExpectedMsg:  "获取成功",
+				RequiresAuth: true,
+				Tags:         []string{"leaderboard", "data", "success"},
+			},
+		},
+	}
+}
+
+// GetMailSystemTestSuite 邮件系统测试套件
+func GetMailSystemTestSuite() *TestSuite {
+	return &TestSuite{
+		Name:        "MailSystem",
+		Description: "邮件系统相关接口测试，包括邮件发送、获取、统计等功能",
+		TestCases: []*TestCase{
+			{
+				Name:        "GetMailList_Success",
+				Description: "成功获取邮件列表",
+				Method:      "POST",
+				URL:         "/mail/getAll",
+				RequestData: map[string]interface{}{
+					"appId":    "test_app_001",
+					"page":     1,
+					"pageSize": 10,
+				},
+				ExpectedCode: 0,
+				ExpectedMsg:  "获取成功",
+				RequiresAuth: true,
+				Tags:         []string{"mail", "list", "success"},
+			},
+			{
+				Name:        "GetMailStats_Success",
+				Description: "成功获取邮件统计",
+				Method:      "POST",
+				URL:         "/mail/getStats",
+				RequestData: map[string]interface{}{
+					"appId": "test_app_001",
+				},
+				ExpectedCode: 0,
+				ExpectedMsg:  "获取成功",
+				RequiresAuth: true,
+				Tags:         []string{"mail", "stats", "success"},
+			},
+			{
+				Name:        "SendMail_Success",
+				Description: "成功发送邮件",
+				Method:      "POST",
+				URL:         "/mail/send",
+				RequestData: map[string]interface{}{
+					"appId":       "test_app_001",
+					"userId":      "test_player_001",
+					"title":       "Test Mail",
+					"content":     "Test Content",
+					"attachments": "{}",
+				},
+				ExpectedCode: 0,
+				ExpectedMsg:  "发送成功",
+				RequiresAuth: true,
+				Tags:         []string{"mail", "send", "success"},
+			},
+		},
+	}
+}
+
+// GetGameConfigTestSuite 游戏配置测试套件
+func GetGameConfigTestSuite() *TestSuite {
+	return &TestSuite{
+		Name:        "GameConfig",
+		Description: "游戏配置相关接口测试，包括配置获取、更新、删除等功能",
+		TestCases: []*TestCase{
+			{
+				Name:        "GetConfigList_Success",
+				Description: "成功获取配置列表",
+				Method:      "POST",
+				URL:         "/gameConfig/getList",
+				RequestData: map[string]interface{}{
+					"appId":    "test_app_001",
+					"page":     1,
+					"pageSize": 10,
+				},
+				ExpectedCode: 0,
+				ExpectedMsg:  "获取成功",
+				RequiresAuth: true,
+				Tags:         []string{"config", "list", "success"},
+			},
+		},
+	}
+}
+
+// GetAdminTestSuite 管理员管理测试套件
+func GetAdminTestSuite() *TestSuite {
+	return &TestSuite{
+		Name:        "AdminManagement",
+		Description: "管理员管理相关接口测试，包括管理员创建、更新、删除等功能",
+		TestCases: []*TestCase{
+			{
+				Name:        "GetAdminList_Success",
+				Description: "成功获取管理员列表",
+				Method:      "POST",
+				URL:         "/admin/getList",
+				RequestData: map[string]interface{}{
+					"page":     1,
+					"pageSize": 10,
+				},
+				ExpectedCode: 0,
+				ExpectedMsg:  "获取成功",
+				RequiresAuth: true,
+				Tags:         []string{"admin", "list", "success"},
+			},
+		},
+	}
+}
+
+// GetHealthTestSuite 健康检查测试套件
+func GetHealthTestSuite() *TestSuite {
+	return &TestSuite{
+		Name:        "HealthCheck",
+		Description: "健康检查相关接口测试",
+		TestCases: []*TestCase{
+			{
+				Name:         "Health_Success",
+				Description:  "健康检查成功",
+				Method:       "GET",
+				URL:          "/health",
+				ExpectedCode: 0,
+				ExpectedMsg:  "healthy",
+				RequiresAuth: false,
+				Tags:         []string{"health", "success"},
 			},
 		},
 	}

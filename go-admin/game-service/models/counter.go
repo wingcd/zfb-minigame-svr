@@ -16,8 +16,8 @@ type Counter struct {
 	Count         int64     `orm:"default(0)" json:"count"`
 	ResetTime     time.Time `orm:"null" json:"reset_time"`
 	ResetInterval int       `orm:"null" json:"reset_interval"`
-	CreatedAt     string    `orm:"auto_now_add;type(datetime)" json:"created_at"`
-	UpdatedAt     string    `orm:"auto_now;type(datetime)" json:"updated_at"`
+	CreatedAt     string    `orm:"auto_now_add;type(datetime)" json:"create_time"`
+	UpdatedAt     string    `orm:"auto_now;type(datetime)" json:"update_time"`
 }
 
 // GetTableName 获取动态表名
@@ -89,7 +89,7 @@ func IncrementCounter(appId, counterName, userId string, increment int64) (int64
 
 	// 增加计数
 	counter.Count += increment
-	_, err = o.Update(counter, "count", "updated_at")
+	_, err = o.Update(counter, "count", "update_time")
 	return counter.Count, err
 }
 
@@ -124,7 +124,7 @@ func DecrementCounter(appId, counterName, userId string, decrement int64) (int64
 	if counter.Count < 0 {
 		counter.Count = 0
 	}
-	_, err = o.Update(counter, "count", "updated_at")
+	_, err = o.Update(counter, "count", "update_time")
 	return counter.Count, err
 }
 
@@ -153,7 +153,7 @@ func SetCounter(appId, counterName, userId string, value int64) error {
 
 	// 更新计数器值
 	counter.Count = value
-	_, err = o.Update(counter, "count", "updated_at")
+	_, err = o.Update(counter, "count", "update_time")
 	return err
 }
 
@@ -177,7 +177,7 @@ func ResetCounter(appId, counterName, userId string) error {
 
 	// 重置计数器
 	counter.Count = 0
-	_, err = o.Update(counter, "count", "updated_at")
+	_, err = o.Update(counter, "count", "update_time")
 	return err
 }
 
@@ -198,7 +198,7 @@ func resetCounterIfNeeded(counter *Counter, tableName string) error {
 	// 重置计数器
 	counter.Count = 0
 	counter.ResetTime = nextResetTime
-	_, err := o.Update(counter, "count", "reset_time", "updated_at")
+	_, err := o.Update(counter, "count", "reset_time", "update_time")
 	return err
 }
 

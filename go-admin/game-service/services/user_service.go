@@ -40,7 +40,7 @@ func (s *UserService) SaveUserData(appId, userId string, data interface{}) error
 	if err == sql.ErrNoRows {
 		// 用户不存在，插入新记录
 		insertSQL := fmt.Sprintf(`
-			INSERT INTO %s (user_id, data, created_at, updated_at) 
+			INSERT INTO %s (user_id, data, create_time, update_time) 
 			VALUES (?, ?, NOW(), NOW())
 		`, tableName)
 		_, err = o.Raw(insertSQL, userId, dataStr).Exec()
@@ -50,7 +50,7 @@ func (s *UserService) SaveUserData(appId, userId string, data interface{}) error
 	} else if err == nil {
 		// 用户已存在，更新记录
 		updateSQL := fmt.Sprintf(`
-			UPDATE %s SET data = ?, updated_at = NOW() WHERE user_id = ?
+			UPDATE %s SET data = ?, update_time = NOW() WHERE user_id = ?
 		`, tableName)
 		_, err = o.Raw(updateSQL, dataStr, userId).Exec()
 		if err != nil {
@@ -139,7 +139,7 @@ func (s *UserService) GetUserList(appId string, page, pageSize int, keyword stri
 	// 分页查询
 	offset := (page - 1) * pageSize
 	querySQL := fmt.Sprintf(`
-		SELECT id, user_id, created_at, updated_at 
+		SELECT id, user_id, create_time, update_time 
 		FROM %s %s 
 		ORDER BY id DESC 
 		LIMIT ? OFFSET ?
@@ -237,7 +237,7 @@ func (s *UserService) GetUserStats(appId string) (map[string]interface{}, error)
 
 	// 今日新增用户数
 	var todayUsers int64
-	todaySQL := fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE DATE(created_at) = CURDATE()", tableName)
+	todaySQL := fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE DATE(create_time) = CURDATE()", tableName)
 	err = o.Raw(todaySQL).QueryRow(&todayUsers)
 	if err == nil {
 		stats["today_new_users"] = todayUsers
@@ -245,7 +245,7 @@ func (s *UserService) GetUserStats(appId string) (map[string]interface{}, error)
 
 	// 本周新增用户数
 	var weekUsers int64
-	weekSQL := fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)", tableName)
+	weekSQL := fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE create_time >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)", tableName)
 	err = o.Raw(weekSQL).QueryRow(&weekUsers)
 	if err == nil {
 		stats["week_new_users"] = weekUsers
@@ -253,7 +253,7 @@ func (s *UserService) GetUserStats(appId string) (map[string]interface{}, error)
 
 	// 活跃用户数（最近7天有更新的用户）
 	var activeUsers int64
-	activeSQL := fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE updated_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)", tableName)
+	activeSQL := fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE update_time >= DATE_SUB(NOW(), INTERVAL 7 DAY)", tableName)
 	err = o.Raw(activeSQL).QueryRow(&activeUsers)
 	if err == nil {
 		stats["active_users"] = activeUsers
@@ -279,10 +279,10 @@ func (s *UserService) CreateUserDataTable(appId string) error {
 			id BIGINT AUTO_INCREMENT PRIMARY KEY,
 			user_id VARCHAR(100) NOT NULL,
 			data LONGTEXT,
-			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+			create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+			update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 			UNIQUE KEY uk_user_id (user_id),
-			KEY idx_updated_at (updated_at)
+			KEY idx_update_time (update_time)
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户数据表'
 	`, tableName)
 

@@ -41,7 +41,31 @@ api.interceptors.request.use(
   }
 )
 
-// 响应拦截器 - 处理401错误和数据格式
+// 用于跟踪是否正在刷新token
+let isRefreshing = false
+// 存储等待刷新token的请求队列
+let failedQueue = []
+
+// 处理队列中的请求
+const processQueue = (error, token = null) => {
+  failedQueue.forEach(({ resolve, reject, config }) => {
+    if (error) {
+      reject(error)
+    } else {
+      // 更新请求的token
+      if (token) {
+        config.headers.authorization = `Bearer ${token}`
+        if (typeof config.data === 'object') {
+          config.data.token = token
+        }
+      }
+      resolve(api(config))
+    }
+  })
+  failedQueue = []
+}
+
+// 响应拦截器 - 处理401错误和数据格式，支持自动token刷新
 api.interceptors.response.use(
   response => {
     const data = response.data
@@ -56,7 +80,7 @@ api.interceptors.response.use(
       data: null
     }
   },
-  error => {
+  async error => {
     console.error('Response Error:', error)
     
     // 处理网络错误
@@ -68,19 +92,88 @@ api.interceptors.response.use(
       })
     }
     
-    // 处理HTTP错误
+    const originalRequest = error.config
     const { status, data } = error.response
     
-    if (status === 401) {
-      // token失效，清除本地存储并跳转到登录页
-      localStorage.removeItem('admin_token')
-      localStorage.removeItem('admin_info')
-      window.location.href = '/login'
-      return Promise.resolve({
-        code: 4001,
-        msg: '登录已过期，请重新登录',
-        data: null
-      })
+    if (status === 401 && !originalRequest._retry) {
+      // 避免无限递归
+      if (originalRequest.url?.includes('/admin/login') || originalRequest.url?.includes('/admin/verifyToken')) {
+        // 登录或验证token接口返回401，直接跳转到登录页
+        localStorage.removeItem('admin_token')
+        localStorage.removeItem('admin_info')
+        window.location.href = '/login'
+        return Promise.resolve({
+          code: 4001,
+          msg: '登录已过期，请重新登录',
+          data: null
+        })
+      }
+
+      if (isRefreshing) {
+        // 如果正在刷新token，将请求加入队列
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject, config: originalRequest })
+        })
+      }
+
+      originalRequest._retry = true
+      isRefreshing = true
+
+      try {
+        // 尝试验证当前token是否仍有效
+        const currentToken = localStorage.getItem('admin_token')
+        if (currentToken) {
+          const verifyResponse = await api.post('/admin/verifyToken', { token: currentToken })
+          
+          if (verifyResponse.code === 0 && verifyResponse.data?.valid) {
+            // token仍然有效，可能是临时网络问题
+            isRefreshing = false
+            processQueue(null, currentToken)
+            
+            // 重试原始请求
+            originalRequest.headers.authorization = `Bearer ${currentToken}`
+            if (typeof originalRequest.data === 'object') {
+              originalRequest.data.token = currentToken
+            }
+            return api(originalRequest)
+          }
+        }
+        
+        // token已失效，清除存储并跳转到登录页
+        localStorage.removeItem('admin_token')
+        localStorage.removeItem('admin_info')
+        
+        isRefreshing = false
+        processQueue(new Error('Token expired'), null)
+        
+        // 延迟跳转，给用户一些提示时间
+        setTimeout(() => {
+          if (window.location.pathname !== '/login') {
+            window.location.href = '/login'
+          }
+        }, 1000)
+        
+        return Promise.resolve({
+          code: 4001,
+          msg: '登录已过期，正在跳转到登录页...',
+          data: null
+        })
+        
+      } catch (refreshError) {
+        // 刷新失败，清除token并跳转
+        isRefreshing = false
+        processQueue(refreshError, null)
+        
+        localStorage.removeItem('admin_token')
+        localStorage.removeItem('admin_info')
+        window.location.href = '/login'
+        
+        return Promise.resolve({
+          code: 4001,
+          msg: '登录已过期，请重新登录',
+          data: null
+        })
+      }
     }
     
     // 返回服务器错误信息或默认错误

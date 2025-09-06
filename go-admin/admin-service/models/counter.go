@@ -32,8 +32,8 @@ type CounterData struct {
 	Location   string    `orm:"size(100);default(default)" json:"location"`
 	Value      int64     `orm:"default(0)" json:"value"`
 	ResetTime  time.Time `orm:"type(datetime);null" json:"reset_time"`
-	CreatedAt  string    `orm:"auto_now_add;type(datetime)" json:"created_at"`
-	UpdatedAt  string    `orm:"auto_now;type(datetime)" json:"updated_at"`
+	CreatedAt  string    `orm:"auto_now_add;type(datetime)" json:"create_time"`
+	UpdatedAt  string    `orm:"auto_now;type(datetime)" json:"update_time"`
 }
 
 // GetTableName 获取动态表名
@@ -117,7 +117,7 @@ func GetCounterConfigListWithFilter(appId string, page, pageSize int, key, reset
 
 	var configs []*CounterConfig
 	offset := (page - 1) * pageSize
-	_, err := qs.OrderBy("-updated_at").Limit(pageSize, offset).All(&configs)
+	_, err := qs.OrderBy("-update_time").Limit(pageSize, offset).All(&configs)
 
 	return configs, total, err
 }
@@ -127,7 +127,7 @@ func UpdateCounterConfig(appId, key string, fields map[string]interface{}) error
 	o := orm.NewOrm()
 
 	// 添加更新时间
-	fields["updated_at"] = time.Now()
+	fields["update_time"] = time.Now()
 
 	_, err := o.QueryTable("counter_config").
 		Filter("app_id", appId).
@@ -146,8 +146,8 @@ func DeleteCounterConfig(appId, key string) error {
 		Filter("app_id", appId).
 		Filter("counter_key", key).
 		Update(orm.Params{
-			"is_active":  false,
-			"updated_at": time.Now(),
+			"is_active":   false,
+			"update_time": time.Now(),
 		})
 
 	if err != nil {
@@ -177,14 +177,14 @@ func UpdateCounterValue(appId, key, location string, value int64) error {
 	if err == orm.ErrNoRows {
 		// 插入新记录
 		insertSQL := fmt.Sprintf(`
-			INSERT INTO %s (counter_key, location, value, created_at, updated_at) 
+			INSERT INTO %s (counter_key, location, value, create_time, update_time) 
 			VALUES (?, ?, ?, NOW(), NOW())
 		`, tableName)
 		_, err = o.Raw(insertSQL, key, location, value).Exec()
 	} else if err == nil {
 		// 更新现有记录
 		updateSQL := fmt.Sprintf(`
-			UPDATE %s SET value = ?, updated_at = NOW() 
+			UPDATE %s SET value = ?, update_time = NOW() 
 			WHERE counter_key = ? AND location = ?
 		`, tableName)
 		_, err = o.Raw(updateSQL, value, key, location).Exec()
@@ -259,8 +259,8 @@ func createCounterTable(appId string) error {
 				location VARCHAR(100) DEFAULT 'default',
 				value BIGINT DEFAULT 0,
 				reset_time DATETIME NULL,
-				created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-				updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+				create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+				update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 				UNIQUE KEY uk_key_location (counter_key, location),
 				INDEX idx_counter_key (counter_key)
 			) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
