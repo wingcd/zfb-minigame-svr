@@ -86,7 +86,7 @@ func SignAuthMiddleware(ctx *context.Context) {
 
 	// 将应用信息存储到上下文中
 	ctx.Input.SetData("app_id", appId)
-	ctx.Input.SetData("app_secret", app.AppSecret)
+	ctx.Input.SetData("appSecret", app.AppSecret)
 }
 
 // CORSMiddleware CORS中间件

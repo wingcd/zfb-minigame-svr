@@ -18,42 +18,7 @@ func NewAuthService() *AuthService {
 	return &AuthService{}
 }
 
-// Login 管理员登录
-func (s *AuthService) Login(username, password string) (*models.AdminUser, string, error) {
-	o := orm.NewOrm()
-
-	// 查找用户
-	user := &models.AdminUser{}
-	err := o.QueryTable("admin_users").Filter("username", username).Filter("status", 1).One(user)
-	if err != nil {
-		if err == orm.ErrNoRows {
-			return nil, "", fmt.Errorf("用户不存在或已被禁用")
-		}
-		return nil, "", fmt.Errorf("查询用户失败: %v", err)
-	}
-
-	// 验证密码
-	hashedPassword := utils.HashPassword(password)
-	if user.Password != hashedPassword {
-		return nil, "", fmt.Errorf("用户名或密码错误")
-	}
-
-	// 生成JWT Token (统一使用utils.GenerateJWT)
-	token, err := utils.GenerateJWT(user.Id, user.Username, user.RoleId)
-	if err != nil {
-		return nil, "", fmt.Errorf("生成token失败: %v", err)
-	}
-
-	// 更新登录时间和IP
-	user.LastLoginAt = time.Now()
-	_, err = o.Update(user, "last_login_at")
-	if err != nil {
-		// 登录时间更新失败不影响登录流程，只记录日志
-		fmt.Printf("更新用户登录时间失败: %v\n", err)
-	}
-
-	return user, token, nil
-}
+// 登录逻辑已移至 models 层，AuthService 保留核心认证功能
 
 // GetUserInfo 获取用户信息
 func (s *AuthService) GetUserInfo(userId int64) (*models.AdminUser, error) {
@@ -92,7 +57,7 @@ func (s *AuthService) ChangePassword(userId int64, oldPassword, newPassword stri
 	user.Password = utils.HashPassword(newPassword)
 	user.UpdatedAt = time.Now()
 
-	_, err = o.Update(user, "password", "update_time")
+	_, err = o.Update(user, "password", "updateTime")
 	if err != nil {
 		return fmt.Errorf("修改密码失败: %v", err)
 	}

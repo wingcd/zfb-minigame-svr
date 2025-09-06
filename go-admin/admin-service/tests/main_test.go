@@ -106,7 +106,7 @@ func createTestTables() error {
 
 	// 创建应用表
 	createApplicationsTable := `
-	CREATE TABLE IF NOT EXISTS applications (
+	CREATE TABLE IF NOT EXISTS apps (
 		id BIGINT AUTO_INCREMENT PRIMARY KEY,
 		app_id VARCHAR(100) UNIQUE NOT NULL,
 		app_name VARCHAR(200) NOT NULL,

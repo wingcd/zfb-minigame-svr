@@ -7,16 +7,16 @@ import (
 // FileInfo 文件信息模型
 type FileInfo struct {
 	BaseModel
-	OriginalName string `orm:"size(255)" json:"original_name"`
-	FileName     string `orm:"size(255)" json:"file_name"`
-	FilePath     string `orm:"size(500)" json:"file_path"`
-	FileSize     int64  `json:"file_size"`
-	FileType     string `orm:"size(50)" json:"file_type"`
-	FileExt      string `orm:"size(20)" json:"file_ext"`
-	FileMD5      string `orm:"size(32)" json:"file_md5"`
-	IsPublic     bool   `orm:"default(false)" json:"is_public"`
-	UploadBy     int64  `json:"upload_by"`
-	UploadTime   int64  `json:"upload_time"`
+	OriginalName string `orm:"size(255)" json:"originalName"`
+	FileName     string `orm:"size(255)" json:"fileName"`
+	FilePath     string `orm:"size(500)" json:"filePath"`
+	FileSize     int64  `json:"fileSize"`
+	FileType     string `orm:"size(50)" json:"fileType"`
+	FileExt      string `orm:"size(20)" json:"fileExt"`
+	FileMD5      string `orm:"size(32)" json:"fileMd5"`
+	IsPublic     bool   `orm:"default(false)" json:"isPublic"`
+	UploadBy     int64  `json:"uploadBy"`
+	UploadTime   int64  `json:"uploadTime"`
 }
 
 func (f *FileInfo) TableName() string {

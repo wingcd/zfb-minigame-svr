@@ -1,5 +1,10 @@
 package tests
 
+import (
+	"math/rand"
+	"strconv"
+)
+
 // GetAllTestSuites 获取所有测试套件
 func GetAllTestSuites() []*TestSuite {
 	return []*TestSuite{
@@ -709,9 +714,11 @@ func GetApplicationTestSuite() *TestSuite {
 				Method:      "POST",
 				URL:         "/api/applications",
 				RequestData: map[string]interface{}{
+					"appId":       "test_app_00" + strconv.Itoa(rand.Intn(100)),
 					"appName":     "Test Application",
 					"description": "Test Description",
 					"appType":     "game",
+					"status":      "active",
 				},
 				ExpectedCode: 0,
 				ExpectedMsg:  "success",

@@ -2,6 +2,7 @@ package models
 
 import (
 	"admin-service/utils"
+	"database/sql"
 	"fmt"
 	"log"
 	"time"
@@ -19,8 +20,8 @@ var (
 // BaseModel 基础模型
 type BaseModel struct {
 	Id        int64     `orm:"auto" json:"id"`
-	CreatedAt time.Time `orm:"auto_now_add;type(datetime);column(create_time)" json:"create_time"`
-	UpdatedAt time.Time `orm:"auto_now;type(datetime);column(update_time)" json:"update_time"`
+	CreatedAt time.Time `orm:"auto_now_add;type(datetime);column(create_time)" json:"createdAt"`
+	UpdatedAt time.Time `orm:"auto_now;type(datetime);column(update_time)" json:"updatedAt"`
 }
 
 // Response 通用响应结构 - 兼容云函数格式
@@ -36,7 +37,7 @@ type PageData struct {
 	List     interface{} `json:"list"`
 	Total    int64       `json:"total"`
 	Page     int         `json:"page"`
-	PageSize int         `json:"page_size"`
+	PageSize int         `json:"pageSize"`
 }
 
 // InitDB 初始化数据库
@@ -53,8 +54,31 @@ func InitDB() error {
 	mysqlPort := getConfigString(appconf, "mysql_port", "3306")
 	mysqlUser := getConfigString(appconf, "mysql_user", "root")
 	mysqlPassword := getConfigString(appconf, "mysql_password", "")
-	mysqlDatabase := getConfigString(appconf, "mysql_database", "minigame_server")
+	mysqlDatabase := getConfigString(appconf, "mysql_database", "minigame_admin")
 	mysqlCharset := getConfigString(appconf, "mysql_charset", "utf8mb4")
+
+	// 先连接到MySQL根目录，确保数据库存在
+	rootDataSource := fmt.Sprintf("%s:%s@tcp(%s:%s)/?charset=%s&parseTime=true&loc=Local",
+		mysqlUser, mysqlPassword, mysqlHost, mysqlPort, mysqlCharset)
+
+	// 使用标准sql包连接MySQL根目录
+	rootDB, err := sql.Open("mysql", rootDataSource)
+	if err != nil {
+		return fmt.Errorf("连接MySQL根目录失败: %v", err)
+	}
+	defer rootDB.Close()
+
+	// 测试连接
+	if err := rootDB.Ping(); err != nil {
+		return fmt.Errorf("MySQL连接失败: %v", err)
+	}
+
+	// 确保数据库存在
+	_, err = rootDB.Exec(fmt.Sprintf("CREATE DATABASE IF NOT EXISTS %s CHARACTER SET %s COLLATE %s_unicode_ci",
+		mysqlDatabase, mysqlCharset, mysqlCharset))
+	if err != nil {
+		return fmt.Errorf("创建数据库失败: %v", err)
+	}
 
 	// 构建数据库连接字符串
 	dataSource := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=%s&parseTime=true&loc=Local",

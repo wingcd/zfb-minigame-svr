@@ -9,13 +9,13 @@ import (
 // AdminOperationLog 管理员操作日志模型
 type AdminOperationLog struct {
 	BaseModel
-	UserId    int64  `orm:"" json:"user_id"`
+	UserId    int64  `orm:"" json:"userId"`
 	Username  string `orm:"size(50)" json:"username"`
 	Action    string `orm:"size(100)" json:"action"`
 	Resource  string `orm:"size(100)" json:"resource"`
 	Params    string `orm:"type(text)" json:"params"`
-	IpAddress string `orm:"size(45)" json:"ip_address"`
-	UserAgent string `orm:"size(500)" json:"user_agent"`
+	IpAddress string `orm:"size(45)" json:"ipAddress"`
+	UserAgent string `orm:"size(500)" json:"userAgent"`
 }
 
 func (l *AdminOperationLog) TableName() string {

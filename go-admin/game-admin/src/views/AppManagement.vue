@@ -109,8 +109,8 @@
       </el-table-column>
       <el-table-column label="状态" width="100">
         <template #default="scope">
-          <el-tag :type="scope.row.status === 'active' ? 'success' : 'danger'">
-            {{ scope.row.status === 'active' ? '正常' : '停用' }}
+          <el-tag :type="scope.row.status === 1 ? 'success' : 'danger'">
+            {{ scope.row.status === 1 ? '正常' : '停用' }}
           </el-tag>
         </template>
       </el-table-column>
@@ -120,9 +120,9 @@
           <el-button link @click="editApp(scope.row)">编辑</el-button>
           <el-button 
             link 
-            :class="scope.row.status === 'active' ? 'warning' : 'success'"
+            :class="scope.row.status === 1 ? 'warning' : 'success'"
             @click="toggleAppStatus(scope.row)">
-            {{ scope.row.status === 'active' ? '停用' : '启用' }}
+            {{ scope.row.status === 1 ? '停用' : '启用' }}
           </el-button>
           <el-button link class="danger" @click="deleteApp(scope.row)">删除</el-button>
         </template>
@@ -170,8 +170,8 @@
         <el-form-item label="状态" prop="status">
           <el-switch 
             v-model="appDialog.form.status" 
-            active-value="active" 
-            inactive-value="inactive"
+            :active-value="1" 
+            :inactive-value="0"
             active-text="启用" 
             inactive-text="停用">
           </el-switch>
@@ -198,8 +198,8 @@
                 <el-descriptions-item label="渠道应用ID">{{ detailDialog.app.channelAppId }}</el-descriptions-item>
                 <el-descriptions-item label="创建时间">{{ detailDialog.app.createTime }}</el-descriptions-item>
                 <el-descriptions-item label="状态">
-                  <el-tag :type="detailDialog.app.status === 'active' ? 'success' : 'danger'">
-                    {{ detailDialog.app.status === 'active' ? '正常' : '停用' }}
+                  <el-tag :type="detailDialog.app.status === 1 ? 'success' : 'danger'">
+                    {{ detailDialog.app.status === 1 ? '正常' : '停用' }}
                   </el-tag>
                 </el-descriptions-item>
                 <el-descriptions-item label="描述" :span="2">{{ detailDialog.app.description || '无' }}</el-descriptions-item>
@@ -297,7 +297,7 @@ export default {
         channelAppId: '',
         channelAppKey: '',
         description: '',
-        status: 'active'
+        status: 1
       }
     })
     
@@ -374,7 +374,7 @@ export default {
         channelAppId: '',
         channelAppKey: '',
         description: '',
-        status: 'active'
+        status: 1
       }
       appDialog.visible = true
     }
@@ -394,8 +394,8 @@ export default {
         
         // 如果是创建，使用initApp接口的参数格式
         if (!appDialog.isEdit) {
-          data.appId = data.channelAppId
-          data.appKey = data.channelAppKey
+          // 保持与后端模型一致的字段名称
+          // data.appId 和 data.channelAppId 等字段名已经与后端一致
         }
         
         const result = await apiCall(data)
@@ -418,13 +418,13 @@ export default {
     
     // 切换应用状态
     const toggleAppStatus = async (app) => {
-      const action = app.status === 'active' ? '停用' : '启用'
+      const action = app.status === 1 ? '停用' : '启用'
       try {
         await ElMessageBox.confirm(`确定要${action}应用 "${app.appName}" 吗？`, '确认操作')
         
         const result = await appAPI.update({
           ...app,
-          status: app.status === 'active' ? 'inactive' : 'active'
+          status: app.status === 1 ? 0 : 1
         })
         
         if (result.code === 0) {

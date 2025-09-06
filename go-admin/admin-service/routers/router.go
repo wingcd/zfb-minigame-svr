@@ -13,12 +13,7 @@ func init() {
 
 	// 注册认证中间件 - 对需要认证的路由进行验证
 	web.InsertFilter("/app/*", web.BeforeRouter, middlewares.AuthMiddleware)
-	// 对于admin路径，需要排除登录相关接口
-	web.InsertFilter("/admin/create", web.BeforeRouter, middlewares.AuthMiddleware)
-	web.InsertFilter("/admin/getList", web.BeforeRouter, middlewares.AuthMiddleware)
-	web.InsertFilter("/admin/update", web.BeforeRouter, middlewares.AuthMiddleware)
-	web.InsertFilter("/admin/delete", web.BeforeRouter, middlewares.AuthMiddleware)
-	web.InsertFilter("/admin/resetPwd", web.BeforeRouter, middlewares.AuthMiddleware)
+	// 对于admin路径，大部分都是登录相关接口，不需要认证
 	web.InsertFilter("/user/*", web.BeforeRouter, middlewares.AuthMiddleware)
 	web.InsertFilter("/leaderboard/*", web.BeforeRouter, middlewares.AuthMiddleware)
 	web.InsertFilter("/counter/*", web.BeforeRouter, middlewares.AuthMiddleware)
@@ -27,7 +22,6 @@ func init() {
 	web.InsertFilter("/gameConfig/*", web.BeforeRouter, middlewares.AuthMiddleware)
 	// 新API路径的认证中间件（具体指定需要认证的路径）
 	web.InsertFilter("/api/applications*", web.BeforeRouter, middlewares.AuthMiddleware)
-	web.InsertFilter("/api/admins*", web.BeforeRouter, middlewares.AuthMiddleware)
 	web.InsertFilter("/api/game-data*", web.BeforeRouter, middlewares.AuthMiddleware)
 	web.InsertFilter("/api/user-management*", web.BeforeRouter, middlewares.AuthMiddleware)
 	web.InsertFilter("/api/statistics*", web.BeforeRouter, middlewares.AuthMiddleware)
@@ -52,7 +46,6 @@ func init() {
 	web.InsertFilter("/gameConfig/*", web.BeforeExec, middlewares.PermissionMiddleware)
 	// 新API路径的权限检查中间件（具体指定需要权限检查的路径）
 	web.InsertFilter("/api/applications*", web.BeforeExec, middlewares.PermissionMiddleware)
-	web.InsertFilter("/api/admins*", web.BeforeExec, middlewares.PermissionMiddleware)
 	web.InsertFilter("/api/game-data*", web.BeforeExec, middlewares.PermissionMiddleware)
 	web.InsertFilter("/api/user-management*", web.BeforeExec, middlewares.PermissionMiddleware)
 	web.InsertFilter("/api/statistics*", web.BeforeExec, middlewares.PermissionMiddleware)
@@ -77,20 +70,28 @@ func init() {
 	// 基本认证模块
 	web.Router("/admin/login", &controllers.AuthController{}, "post:AdminLogin")
 	web.Router("/admin/verifyToken", &controllers.AuthController{}, "post:VerifyToken")
+	web.Router("/admin/logout", &controllers.AuthController{}, "post:LogoutAdmin")
+	web.Router("/admin/getProfile", &controllers.AuthController{}, "post:GetAdminProfile")
+	web.Router("/admin/updateProfile", &controllers.AuthController{}, "post:UpdateAdminProfile")
+	web.Router("/admin/changePassword", &controllers.AuthController{}, "post:ChangeAdminPassword")
 
-	// 基本管理员管理模块
-	web.Router("/admin/create", &controllers.AdminController{}, "post:CreateAdmin")
+	// 初始化管理员
 	web.Router("/admin/init", &controllers.AdminController{}, "post:InitAdmin")
-	web.Router("/admin/getList", &controllers.AdminController{}, "post:GetAdmins")
-	web.Router("/admin/update", &controllers.AdminController{}, "post:UpdateAdmin")
-	web.Router("/admin/delete", &controllers.AdminController{}, "post:DeleteAdmin")
-	web.Router("/admin/resetPwd", &controllers.AdminController{}, "post:ResetPassword")
+
+	// 角色管理模块
+	web.Router("/role/getList", &controllers.AdminRoleController{}, "post:GetRoleList")
+	web.Router("/role/create", &controllers.AdminRoleController{}, "post:CreateRole")
+	web.Router("/role/update", &controllers.AdminRoleController{}, "post:UpdateRole")
+	web.Router("/role/delete", &controllers.AdminRoleController{}, "post:DeleteRole")
+	web.Router("/role/get", &controllers.AdminRoleController{}, "post:GetRole")
+	web.Router("/role/getAll", &controllers.AdminRoleController{}, "post:GetAllRoles")
 
 	// 基本应用管理模块
 	web.Router("/app/getAll", &controllers.ApplicationController{}, "post:GetApplications")
 	web.Router("/app/create", &controllers.ApplicationController{}, "post:CreateApplication")
 	web.Router("/app/update", &controllers.ApplicationController{}, "post:UpdateApplication")
 	web.Router("/app/delete", &controllers.ApplicationController{}, "post:DeleteApplication")
+	web.Router("/app/resetSecret", &controllers.ApplicationController{}, "post:ResetAppSecret")
 	web.Router("/app/init", &controllers.ApplicationController{}, "post:CreateApplication")
 	web.Router("/app/query", &controllers.ApplicationController{}, "post:GetApplication")
 	web.Router("/app/getDetail", &controllers.ApplicationController{}, "post:GetApplication")
@@ -156,11 +157,11 @@ func init() {
 
 	apiNamespace := web.NewNamespace("/api",
 		// 认证相关
-		web.NSRouter("/auth/login", &controllers.AuthController{}, "post:Login"),
-		web.NSRouter("/auth/logout", &controllers.AuthController{}, "post:Logout"),
-		web.NSRouter("/auth/profile", &controllers.AuthController{}, "get:GetProfile"),
-		web.NSRouter("/auth/profile", &controllers.AuthController{}, "put:UpdateProfile"),
-		web.NSRouter("/auth/password", &controllers.AuthController{}, "put:ChangePassword"),
+		web.NSRouter("/auth/login", &controllers.AuthController{}, "post:AdminLogin"),
+		web.NSRouter("/auth/logout", &controllers.AuthController{}, "post:LogoutAdmin"),
+		web.NSRouter("/auth/profile", &controllers.AuthController{}, "get:GetAdminProfile"),
+		web.NSRouter("/auth/profile", &controllers.AuthController{}, "put:UpdateAdminProfile"),
+		web.NSRouter("/auth/password", &controllers.AuthController{}, "put:ChangeAdminPassword"),
 
 		// 应用管理
 		web.NSRouter("/applications", &controllers.ApplicationController{}, "get:GetApplications"),
@@ -169,14 +170,6 @@ func init() {
 		web.NSRouter("/applications/:id", &controllers.ApplicationController{}, "put:UpdateApplication"),
 		web.NSRouter("/applications/:id", &controllers.ApplicationController{}, "delete:DeleteApplication"),
 		web.NSRouter("/applications/:id/reset-secret", &controllers.ApplicationController{}, "post:ResetAppSecret"),
-
-		// 管理员管理
-		web.NSRouter("/admins", &controllers.AdminController{}, "get:GetAdmins"),
-		web.NSRouter("/admins", &controllers.AdminController{}, "post:CreateAdmin"),
-		web.NSRouter("/admins/:id", &controllers.AdminController{}, "get:GetAdmin"),
-		web.NSRouter("/admins/:id", &controllers.AdminController{}, "put:UpdateAdmin"),
-		web.NSRouter("/admins/:id", &controllers.AdminController{}, "delete:DeleteAdmin"),
-		web.NSRouter("/admins/:id/reset-password", &controllers.AdminController{}, "post:ResetPassword"),
 
 		// 游戏数据管理
 		web.NSRouter("/game-data/user-data", &controllers.GameDataController{}, "get:GetUserDataList"),

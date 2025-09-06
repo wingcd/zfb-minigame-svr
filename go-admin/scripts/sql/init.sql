@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS `applications` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
   `app_id` varchar(50) NOT NULL COMMENT '应用ID',
   `app_name` varchar(100) NOT NULL COMMENT '应用名称',
-  `app_secret` varchar(100) NOT NULL COMMENT '应用密钥',
+  `appSecret` varchar(100) NOT NULL COMMENT '应用密钥',
   `platform` varchar(50) DEFAULT NULL COMMENT '平台类型',
   `channel_app_id` varchar(100) DEFAULT NULL COMMENT '渠道应用ID',
   `channel_app_key` varchar(100) DEFAULT NULL COMMENT '渠道应用密钥',

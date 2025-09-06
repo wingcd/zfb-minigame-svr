@@ -43,7 +43,7 @@ func (c *StatisticsController) GetDashboard() {
 	}
 
 	// 获取应用状态统计
-	activeApps, err := models.GetApplicationsByStatus(1)
+	activeApps, err := models.GetApplicationsByStatus("active") // active = 启用
 	if err != nil {
 		utils.ErrorResponse(&c.Controller, 1003, "获取活跃应用数失败: "+err.Error(), nil)
 		return

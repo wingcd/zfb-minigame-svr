@@ -4,7 +4,6 @@ import (
 	"admin-service/models"
 	"admin-service/utils"
 	"encoding/json"
-	"strconv"
 
 	"github.com/beego/beego/v2/server/web"
 )
@@ -13,47 +12,187 @@ type ApplicationController struct {
 	web.Controller
 }
 
-// GetApplications 获取应用列表
+// GetApplications 获取应用列表（对齐云函数getAppList接口）
 func (c *ApplicationController) GetApplications() {
-	// JWT验证
-	if utils.ValidateJWT(c.Ctx) == nil {
+	var req struct {
+		Page     int    `json:"page"`
+		PageSize int    `json:"pageSize"`
+		Keyword  string `json:"keyword"`
+	}
+
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4001,
+			"msg":       "参数解析失败",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
 		return
 	}
 
-	// 获取分页参数
-	pageStr := c.GetString("page", "1")
-	pageSizeStr := c.GetString("pageSize", "10")
-	keyword := c.GetString("keyword", "")
-
-	page, err := strconv.Atoi(pageStr)
-	if err != nil || page <= 0 {
-		page = 1
+	// 设置默认值
+	if req.Page <= 0 {
+		req.Page = 1
 	}
-
-	pageSize, err := strconv.Atoi(pageSizeStr)
-	if err != nil || pageSize <= 0 || pageSize > 100 {
-		pageSize = 10
+	if req.PageSize <= 0 {
+		req.PageSize = 20
 	}
 
 	// 获取应用列表
-	applications, total, err := models.GetApplicationList(page, pageSize, keyword)
+	applications, total, err := models.GetApplicationList(req.Page, req.PageSize, req.Keyword)
 	if err != nil {
-		utils.ErrorResponse(&c.Controller, 1003, "获取应用列表失败: "+err.Error(), nil)
+		c.Data["json"] = map[string]interface{}{
+			"code":      5001,
+			"msg":       "获取应用列表失败: " + err.Error(),
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
 		return
 	}
 
-	result := map[string]interface{}{
-		"applications": applications,
-		"total":        total,
-		"page":         page,
-		"pageSize":     pageSize,
+	c.Data["json"] = map[string]interface{}{
+		"code":      0,
+		"msg":       "获取成功",
+		"timestamp": utils.UnixMilli(),
+		"data": map[string]interface{}{
+			"list":     applications,
+			"total":    total,
+			"page":     req.Page,
+			"pageSize": req.PageSize,
+		},
 	}
-
-	utils.SuccessResponse(&c.Controller, "获取成功", result)
+	c.ServeJSON()
 }
 
-// CreateApplication 创建应用
+// CreateApplication 创建应用（对齐云函数createApp接口）
 func (c *ApplicationController) CreateApplication() {
+	var req struct {
+		AppName       string `json:"appName"`
+		Platform      string `json:"platform"`
+		ChannelAppId  string `json:"channelAppId"`
+		ChannelAppKey string `json:"channelAppKey"`
+		Description   string `json:"description"`
+		Status        int    `json:"status"`
+	}
+
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4001,
+			"msg":       "参数解析失败",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	if req.AppName == "" {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4001,
+			"msg":       "应用名称不能为空",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	// 创建应用
+	application := &models.Application{
+		AppName:       req.AppName,
+		Platform:      req.Platform,
+		ChannelAppKey: req.ChannelAppId,
+		AppSecret:     req.ChannelAppKey,
+		Description:   req.Description,
+		Status:        "active", // 默认状态为活跃
+	}
+
+	err := application.Insert()
+	if err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      5001,
+			"msg":       "创建应用失败: " + err.Error(),
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	// 记录操作日志
+	models.LogAdminOperation(0, "SYSTEM", "CREATE", "APP", map[string]interface{}{
+		"appId":   application.AppId,
+		"appName": application.AppName,
+	})
+
+	c.Data["json"] = map[string]interface{}{
+		"code":      0,
+		"msg":       "创建成功",
+		"timestamp": utils.UnixMilli(),
+		"data": map[string]interface{}{
+			"id":      application.Id,
+			"appId":   application.AppId,
+			"appName": application.AppName,
+		},
+	}
+	c.ServeJSON()
+}
+
+// GetApplication 获取应用详情（对齐云函数getApp接口）
+func (c *ApplicationController) GetApplication() {
+	var req struct {
+		AppId string `json:"appId"`
+	}
+
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4001,
+			"msg":       "参数解析失败",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	if req.AppId == "" {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4001,
+			"msg":       "应用ID不能为空",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	// 获取应用详情
+	application := &models.Application{}
+	err := application.GetByAppId(req.AppId)
+	if err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4004,
+			"msg":       "应用不存在",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	c.Data["json"] = map[string]interface{}{
+		"code":      0,
+		"msg":       "获取成功",
+		"timestamp": utils.UnixMilli(),
+		"data":      application,
+	}
+	c.ServeJSON()
+}
+
+// UpdateApplication 更新应用（对齐云函数updateApp接口）
+func (c *ApplicationController) UpdateApplication() {
 	// JWT验证
 	claims := utils.ValidateJWT(c.Ctx)
 	if claims == nil {
@@ -62,16 +201,28 @@ func (c *ApplicationController) CreateApplication() {
 
 	// 解析JSON请求体
 	var request struct {
-		AppName       string `json:"appName"`
-		Platform      string `json:"platform"`
-		ChannelAppId  string `json:"channelAppId"`
-		ChannelAppKey string `json:"channelAppKey"`
-		Description   string `json:"description"`
-		Status        string `json:"status"`
+		AppId         string      `json:"appId"` // 支持appId参数
+		AppName       string      `json:"appName"`
+		Platform      string      `json:"platform"`
+		ChannelAppId  string      `json:"channelAppId"`  // 添加渠道相关字段
+		ChannelAppKey string      `json:"channelAppKey"` // 添加渠道相关字段
+		Description   string      `json:"description"`
+		Status        interface{} `json:"status"` // 改为interface{}以支持int和string
 	}
 
+	// 解析JSON请求体
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &request); err != nil {
-		utils.ErrorResponse(&c.Controller, 1001, "请求参数格式错误", nil)
+		utils.ErrorResponse(&c.Controller, 4001, "参数解析失败: "+err.Error(), nil)
+		return
+	}
+
+	// 如果appId为空，尝试从URL参数获取
+	if request.AppId == "" {
+		request.AppId = c.Ctx.Input.Param(":id")
+	}
+
+	if request.AppId == "" {
+		utils.ErrorResponse(&c.Controller, 1002, "应用ID不能为空", nil)
 		return
 	}
 
@@ -80,196 +231,203 @@ func (c *ApplicationController) CreateApplication() {
 		return
 	}
 
-	// 设置状态
-	status := 1
-	if request.Status == "inactive" {
-		status = 0
-	}
-
-	// 创建应用
-	application := &models.Application{
-		AppName:       request.AppName,
-		Platform:      request.Platform,
-		ChannelAppId:  request.ChannelAppId,
-		ChannelAppKey: request.ChannelAppKey,
-		Description:   request.Description,
-		Status:        status,
-	}
-
-	err := application.Insert()
-	if err != nil {
-		utils.ErrorResponse(&c.Controller, 1003, "创建应用失败: "+err.Error(), nil)
-		return
-	}
-
-	// 记录操作日志
-	utils.LogOperation(claims.UserID, "创建应用", "创建应用: "+request.AppName)
-
-	result := map[string]interface{}{
-		"id":        application.Id,
-		"appId":     application.AppId,
-		"appSecret": application.AppSecret,
-		"appName":   application.AppName,
-	}
-
-	utils.SuccessResponse(&c.Controller, "创建成功", result)
-}
-
-// GetApplication 获取应用详情
-func (c *ApplicationController) GetApplication() {
-	// JWT验证
-	if utils.ValidateJWT(c.Ctx) == nil {
-		return
-	}
-
-	// 获取参数
-	idStr := c.Ctx.Input.Param(":id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil {
-		utils.ErrorResponse(&c.Controller, 1002, "应用ID格式错误", nil)
-		return
-	}
-
-	// 获取应用详情
+	// 获取原应用信息
 	application := &models.Application{}
-	err = application.GetById(id)
+	err := application.GetByAppId(request.AppId)
 	if err != nil {
-		utils.ErrorResponse(&c.Controller, 1003, "获取应用详情失败: "+err.Error(), nil)
+		utils.ErrorResponse(&c.Controller, 1003, "应用不存在: "+err.Error(), nil)
 		return
 	}
 
-	utils.SuccessResponse(&c.Controller, "获取成功", application)
-}
-
-// UpdateApplication 更新应用
-func (c *ApplicationController) UpdateApplication() {
-	// JWT验证
-	claims := utils.ValidateJWT(c.Ctx)
-	if claims == nil {
-		return
+	// 更新字段
+	application.AppName = request.AppName
+	application.Description = request.Description
+	if request.Platform != "" {
+		application.Platform = request.Platform
+	}
+	if request.ChannelAppKey != "" {
+		application.ChannelAppKey = request.ChannelAppKey
+	}
+	if request.ChannelAppId != "" {
+		application.ChannelAppId = request.ChannelAppId
 	}
 
-	// 获取参数
-	idStr := c.Ctx.Input.Param(":id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil {
-		utils.ErrorResponse(&c.Controller, 1002, "应用ID格式错误", nil)
-		return
-	}
-
-	appName := c.GetString("appName")
-	description := c.GetString("description")
-	statusStr := c.GetString("status")
-
-	if appName == "" {
-		utils.ErrorResponse(&c.Controller, 1002, "应用名称不能为空", nil)
-		return
-	}
-
-	status := 1
-	if statusStr != "" {
-		status, err = strconv.Atoi(statusStr)
-		if err != nil {
+	// 处理状态字段 - 支持int和string类型
+	if request.Status != nil {
+		switch v := request.Status.(type) {
+		case string:
+			if v == "active" || v == "1" {
+				application.Status = "active"
+			} else if v == "inactive" || v == "0" {
+				application.Status = "inactive"
+			} else if v == "pending" {
+				application.Status = "pending"
+			} else {
+				utils.ErrorResponse(&c.Controller, 1002, "状态格式错误", nil)
+				return
+			}
+		case float64: // JSON中的数字会被解析为float64
+			if v == 1 {
+				application.Status = "active"
+			} else if v == 0 {
+				application.Status = "inactive"
+			} else {
+				utils.ErrorResponse(&c.Controller, 1002, "状态格式错误", nil)
+				return
+			}
+		case int:
+			if v == 1 {
+				application.Status = "active"
+			} else if v == 0 {
+				application.Status = "inactive"
+			} else {
+				utils.ErrorResponse(&c.Controller, 1002, "状态格式错误", nil)
+				return
+			}
+		default:
 			utils.ErrorResponse(&c.Controller, 1002, "状态格式错误", nil)
 			return
 		}
 	}
 
-	// 更新应用
-	application := &models.Application{
-		BaseModel:   models.BaseModel{Id: id},
-		AppName:     appName,
-		Description: description,
-		Status:      status,
-	}
-	err = application.Update("app_name", "description", "status")
+	// 执行更新
+	err = application.Update("appName", "description", "status", "platform", "channelAppId", "channelAppKey")
 	if err != nil {
 		utils.ErrorResponse(&c.Controller, 1003, "更新应用失败: "+err.Error(), nil)
 		return
 	}
 
 	// 记录操作日志
-	utils.LogOperation(claims.UserID, "更新应用", "更新应用: "+appName)
+	utils.LogOperation(claims.UserID, "更新应用", "更新应用: "+request.AppName)
 
 	utils.SuccessResponse(&c.Controller, "更新成功", nil)
 }
 
-// DeleteApplication 删除应用
+// DeleteApplication 删除应用（对齐云函数deleteApp接口）
 func (c *ApplicationController) DeleteApplication() {
-	// JWT验证
-	claims := utils.ValidateJWT(c.Ctx)
-	if claims == nil {
+	var req struct {
+		AppId string `json:"appId"`
+	}
+
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4001,
+			"msg":       "参数解析失败",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
 		return
 	}
 
-	// 获取参数
-	idStr := c.Ctx.Input.Param(":id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil {
-		utils.ErrorResponse(&c.Controller, 1002, "应用ID格式错误", nil)
+	if req.AppId == "" {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4001,
+			"msg":       "应用ID不能为空",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
 		return
 	}
 
-	// 获取应用信息用于日志
+	// 获取应用信息用于验证
 	application := &models.Application{}
-	err = application.GetById(id)
+	err := application.GetByAppId(req.AppId)
 	if err != nil {
-		utils.ErrorResponse(&c.Controller, 1003, "应用不存在", nil)
+		c.Data["json"] = map[string]interface{}{
+			"code":      4004,
+			"msg":       "应用不存在",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
 		return
 	}
 
 	// 删除应用
-	err = models.DeleteApplication(id)
+	err = models.DeleteApplication(application.Id)
 	if err != nil {
-		utils.ErrorResponse(&c.Controller, 1003, "删除应用失败: "+err.Error(), nil)
+		c.Data["json"] = map[string]interface{}{
+			"code":      5001,
+			"msg":       "删除应用失败: " + err.Error(),
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
 		return
 	}
 
 	// 记录操作日志
-	utils.LogOperation(claims.UserID, "删除应用", "删除应用: "+application.AppName)
+	models.LogAdminOperation(0, "SYSTEM", "DELETE", "APP", map[string]interface{}{
+		"deletedAppId": req.AppId,
+		"appName":      application.AppName,
+	})
 
-	utils.SuccessResponse(&c.Controller, "删除成功", nil)
+	c.Data["json"] = map[string]interface{}{
+		"code":      0,
+		"msg":       "删除成功",
+		"timestamp": utils.UnixMilli(),
+		"data":      map[string]interface{}{},
+	}
+	c.ServeJSON()
 }
 
-// ResetAppSecret 重置应用密钥
+// ResetAppSecret 重置应用密钥（对齐云函数resetAppSecret接口）
 func (c *ApplicationController) ResetAppSecret() {
-	// JWT验证
-	claims := utils.ValidateJWT(c.Ctx)
-	if claims == nil {
+	var req struct {
+		AppId string `json:"appId"`
+	}
+
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4001,
+			"msg":       "参数解析失败",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
 		return
 	}
 
-	// 获取参数
-	idStr := c.Ctx.Input.Param(":id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil {
-		utils.ErrorResponse(&c.Controller, 1002, "应用ID格式错误", nil)
+	if req.AppId == "" {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4001,
+			"msg":       "应用ID不能为空",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
 		return
 	}
 
-	// 重置密钥
+	// 获取应用信息
 	application := &models.Application{}
-	err = application.GetById(id)
+	err := application.GetByAppId(req.AppId)
 	if err != nil {
-		utils.ErrorResponse(&c.Controller, 1003, "应用不存在", nil)
+		c.Data["json"] = map[string]interface{}{
+			"code":      4004,
+			"msg":       "应用不存在",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
 		return
 	}
-
-	// 生成新密钥
-	application.AppSecret = utils.GenerateAppSecret()
-	err = application.Update("app_secret")
-	if err != nil {
-		utils.ErrorResponse(&c.Controller, 1003, "重置密钥失败: "+err.Error(), nil)
-		return
-	}
-	newSecret := application.AppSecret
 
 	// 记录操作日志
-	utils.LogOperation(claims.UserID, "重置密钥", "重置应用密钥，应用ID: "+idStr)
+	models.LogAdminOperation(0, "SYSTEM", "RESET_SECRET", "APP", map[string]interface{}{
+		"appId":   req.AppId,
+		"appName": application.AppName,
+	})
 
-	result := map[string]interface{}{
-		"appSecret": newSecret,
+	c.Data["json"] = map[string]interface{}{
+		"code":      0,
+		"msg":       "重置成功",
+		"timestamp": utils.UnixMilli(),
+		"data": map[string]interface{}{
+			"appSecret": application.AppSecret,
+		},
 	}
-
-	utils.SuccessResponse(&c.Controller, "重置成功", result)
+	c.ServeJSON()
 }

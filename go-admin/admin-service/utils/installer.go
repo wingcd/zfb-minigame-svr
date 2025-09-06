@@ -39,10 +39,17 @@ type InstallConfig struct {
 var (
 	installLockFile = ".installed"
 	sqliteDbFile    = "data/minigame.db"
+	appconf         config.Configer
 )
 
 // CheckInstallStatus 检查安装状态
 func CheckInstallStatus() *InstallStatus {
+	cfg, err := config.NewConfig("ini", FindConfigFile())
+	appconf = cfg
+	if err != nil {
+		return nil
+	}
+
 	status := &InstallStatus{
 		IsInstalled:    false,
 		DatabaseType:   "unknown",
@@ -93,6 +100,51 @@ func checkDatabaseStatus() string {
 	return "not_configured"
 }
 
+func testCeateMySQLDB() bool {
+	mysqlHost := getConfigString(appconf, "mysql_host", "127.0.0.1")
+	mysqlPort := getConfigString(appconf, "mysql_port", "3306")
+	mysqlUser := getConfigString(appconf, "mysql_user", "root")
+	mysqlPassword := getConfigString(appconf, "mysql_password", "")
+	mysqlDatabase := getConfigString(appconf, "mysql_database", "minigame_admin")
+
+	// 先连接到MySQL根目录，不指定数据库
+	dataSource := fmt.Sprintf("%s:%s@tcp(%s:%s)/?charset=utf8mb4&parseTime=true&loc=Local",
+		mysqlUser, mysqlPassword, mysqlHost, mysqlPort)
+
+	db, err := sql.Open("mysql", dataSource)
+	if err != nil {
+		return false
+	}
+	defer db.Close()
+
+	// 测试基础连接
+	if err := db.Ping(); err != nil {
+		return false
+	}
+
+	// 尝试创建数据库（如果不存在）
+	_, err = db.Exec(fmt.Sprintf("CREATE DATABASE IF NOT EXISTS %s CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci", mysqlDatabase))
+	if err != nil {
+		return false
+	}
+
+	// 现在测试连接到指定数据库
+	dataSourceWithDB := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=true&loc=Local",
+		mysqlUser, mysqlPassword, mysqlHost, mysqlPort, mysqlDatabase)
+
+	dbWithDB, err := sql.Open("mysql", dataSourceWithDB)
+	if err != nil {
+		return false
+	}
+	defer dbWithDB.Close()
+
+	if err := dbWithDB.Ping(); err != nil {
+		return false
+	}
+
+	return true
+}
+
 // testMySQLConnection 测试MySQL连接
 func testMySQLConnection() bool {
 	configPath := FindConfigFile()
@@ -107,8 +159,9 @@ func testMySQLConnection() bool {
 	mysqlPassword := getConfigString(appconf, "mysql_password", "")
 	mysqlDatabase := getConfigString(appconf, "mysql_database", "minigame_admin")
 
-	dataSource := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=true&loc=Local",
-		mysqlUser, mysqlPassword, mysqlHost, mysqlPort, mysqlDatabase)
+	// 先连接到MySQL根目录，不指定数据库
+	dataSource := fmt.Sprintf("%s:%s@tcp(%s:%s)/?charset=utf8mb4&parseTime=true&loc=Local",
+		mysqlUser, mysqlPassword, mysqlHost, mysqlPort)
 
 	db, err := sql.Open("mysql", dataSource)
 	if err != nil {
@@ -116,7 +169,37 @@ func testMySQLConnection() bool {
 	}
 	defer db.Close()
 
+	// 测试基础连接
 	if err := db.Ping(); err != nil {
+		return false
+	}
+
+	// 检查数据库是否存在，如果不存在则尝试创建
+	var dbExists int
+	err = db.QueryRow("SELECT COUNT(*) FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = ?", mysqlDatabase).Scan(&dbExists)
+	if err != nil {
+		return false
+	}
+
+	if dbExists == 0 {
+		// 数据库不存在，尝试创建
+		_, err = db.Exec(fmt.Sprintf("CREATE DATABASE IF NOT EXISTS %s CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci", mysqlDatabase))
+		if err != nil {
+			return false
+		}
+	}
+
+	// 现在测试连接到指定数据库
+	dataSourceWithDB := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=true&loc=Local",
+		mysqlUser, mysqlPassword, mysqlHost, mysqlPort, mysqlDatabase)
+
+	dbWithDB, err := sql.Open("mysql", dataSourceWithDB)
+	if err != nil {
+		return false
+	}
+	defer dbWithDB.Close()
+
+	if err := dbWithDB.Ping(); err != nil {
 		return false
 	}
 
@@ -143,6 +226,28 @@ func getMySQLDB() (*sql.DB, error) {
 	mysqlPassword := getConfigString(appconf, "mysql_password", "")
 	mysqlDatabase := getConfigString(appconf, "mysql_database", "minigame_admin")
 
+	// 先连接到MySQL根目录，确保数据库存在
+	rootDataSource := fmt.Sprintf("%s:%s@tcp(%s:%s)/?charset=utf8mb4&parseTime=true&loc=Local",
+		mysqlUser, mysqlPassword, mysqlHost, mysqlPort)
+
+	rootDB, err := sql.Open("mysql", rootDataSource)
+	if err != nil {
+		return nil, err
+	}
+	defer rootDB.Close()
+
+	// 测试连接
+	if err := rootDB.Ping(); err != nil {
+		return nil, fmt.Errorf("MySQL连接失败: %v", err)
+	}
+
+	// 确保数据库存在
+	_, err = rootDB.Exec(fmt.Sprintf("CREATE DATABASE IF NOT EXISTS %s CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci", mysqlDatabase))
+	if err != nil {
+		return nil, fmt.Errorf("创建数据库失败: %v", err)
+	}
+
+	// 现在连接到指定数据库
 	dataSource := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=true&loc=Local",
 		mysqlUser, mysqlPassword, mysqlHost, mysqlPort, mysqlDatabase)
 
@@ -209,17 +314,19 @@ func AutoInstall() error {
 	}
 
 	// 尝试MySQL安装，失败则使用SQLite
-	var dbType string
+	var dbType string = getConfigString(appconf, "database_type", "mysql")
 	var err error
 
-	if testMySQLConnection() {
-		log.Println("检测到MySQL连接，使用MySQL数据库")
-		err = installWithMySQL()
-		dbType = "mysql"
+	if dbType == "mysql" {
+		if testCeateMySQLDB() {
+			err = installWithMySQL()
+		} else {
+			log.Println("MySQL连接失败，使用SQLite数据库")
+			err = installWithMySQL()
+		}
 	} else {
-		log.Println("MySQL连接失败，使用SQLite数据库")
+		log.Println("数据库类型错误，使用SQLite数据库")
 		err = installWithSQLite()
-		dbType = "sqlite"
 	}
 
 	if err != nil {
@@ -284,8 +391,32 @@ func installWithMySQL() error {
 
 // installWithSQLite 使用SQLite安装
 func installWithSQLite() error {
-	log.Println("SQLite支持需要CGO，当前版本使用MySQL作为主要数据库")
-	return fmt.Errorf("SQLite支持需要CGO编译，请配置MySQL数据库")
+	log.Println("初始化SQLite数据库...")
+
+	// 连接SQLite数据库（如果文件不存在会自动创建）
+	db, err := sql.Open("sqlite3", sqliteDbFile)
+	if err != nil {
+		return fmt.Errorf("连接SQLite数据库失败: %v", err)
+	}
+	defer db.Close()
+
+	// 测试连接
+	if err := db.Ping(); err != nil {
+		return fmt.Errorf("SQLite数据库连接测试失败: %v", err)
+	}
+
+	// 创建表结构
+	if err := createTables(db, "sqlite"); err != nil {
+		return fmt.Errorf("创建SQLite表结构失败: %v", err)
+	}
+
+	// 创建默认角色
+	if err := createDefaultRoles(db); err != nil {
+		return fmt.Errorf("创建默认角色失败: %v", err)
+	}
+
+	log.Println("SQLite数据库初始化完成")
+	return nil
 }
 
 // createTables 创建数据表
@@ -316,151 +447,285 @@ func getMySQLTables() []string {
 		// 管理员表 - 匹配AdminUser模型
 		`CREATE TABLE IF NOT EXISTS admin_users (
 			id BIGINT PRIMARY KEY AUTO_INCREMENT,
-			create_time DATETIME NOT NULL,
-			update_time DATETIME NOT NULL,
+			createTime DATETIME NOT NULL,
+			updateTime DATETIME NOT NULL,
 			username VARCHAR(50) NOT NULL UNIQUE,
 			password VARCHAR(255) NOT NULL,
 			email VARCHAR(100) NOT NULL DEFAULT '',
 			phone VARCHAR(20) NOT NULL DEFAULT '',
-			real_name VARCHAR(50) NOT NULL DEFAULT '',
+			realName VARCHAR(50) NOT NULL DEFAULT '',
 			avatar VARCHAR(255) NOT NULL DEFAULT '',
 			status INT NOT NULL DEFAULT 1,
-			last_login_at DATETIME NULL,
-			last_login_ip VARCHAR(50) NOT NULL DEFAULT '',
-			role_id BIGINT NOT NULL DEFAULT 0,
+			lastLoginAt DATETIME NULL,
+			lastLoginIp VARCHAR(50) NOT NULL DEFAULT '',
+			roleId BIGINT NOT NULL DEFAULT 0,
 			token VARCHAR(128) NULL,
-			token_expire DATETIME NULL,
+			tokenExpire DATETIME NULL,
 			INDEX idx_username (username),
 			INDEX idx_email (email),
 			INDEX idx_status (status)
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
 
+		// 角色表 - 匹配AdminRole模型
+		`CREATE TABLE IF NOT EXISTS admin_roles (
+			id BIGINT PRIMARY KEY AUTO_INCREMENT,
+			createTime DATETIME NOT NULL,
+			updateTime DATETIME NOT NULL,
+			roleCode VARCHAR(50) NULL,
+			roleName VARCHAR(50) NULL,
+			name VARCHAR(50) NOT NULL UNIQUE,
+			description VARCHAR(255) DEFAULT '',
+			permissions TEXT,
+			status INT NOT NULL DEFAULT 1,
+			INDEX idx_name (name),
+			INDEX idx_role_code (roleCode),
+			INDEX idx_status (status)
+		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+
 		// 应用表
 		`CREATE TABLE IF NOT EXISTS apps (
-			id INT PRIMARY KEY AUTO_INCREMENT,
-			app_id VARCHAR(50) NOT NULL UNIQUE,
-			app_name VARCHAR(100) NOT NULL,
-			description TEXT,
-			status TINYINT DEFAULT 1,
-			user_count INT DEFAULT 0,
-			create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-			update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-			INDEX idx_app_id (app_id),
-			INDEX idx_status (status)
+			id BIGINT PRIMARY KEY AUTO_INCREMENT,
+			createTime DATETIME NOT NULL,
+			updateTime DATETIME NOT NULL,
+			appId VARCHAR(50) NOT NULL UNIQUE COMMENT '应用ID（唯一）',
+			appName VARCHAR(100) NOT NULL COMMENT '应用名称',
+			description TEXT COMMENT '应用描述',
+			channelAppId VARCHAR(100) NOT NULL DEFAULT '' COMMENT '渠道应用ID',
+			channelAppKey VARCHAR(100) NOT NULL DEFAULT '' COMMENT '渠道应用密钥',
+			appSecret VARCHAR(100) NOT NULL DEFAULT '' COMMENT '应用密钥',
+			category VARCHAR(50) NOT NULL DEFAULT 'game' COMMENT '应用分类: game/tool/social',
+			platform VARCHAR(50) NOT NULL DEFAULT '' COMMENT '平台: alipay/wechat/baidu',
+			status VARCHAR(20) NOT NULL DEFAULT 'active' COMMENT '状态: active/inactive/pending',
+			version VARCHAR(50) NOT NULL DEFAULT '1.0.0' COMMENT '当前版本',
+			minVersion VARCHAR(50) NOT NULL DEFAULT '1.0.0' COMMENT '最低支持版本',
+			settings TEXT COMMENT '应用设置(JSON格式)',
+			userCount BIGINT NOT NULL DEFAULT 0 COMMENT '用户数量',
+			scoreCount BIGINT NOT NULL DEFAULT 0 COMMENT '分数记录数',
+			dailyActive BIGINT NOT NULL DEFAULT 0 COMMENT '日活跃用户',
+			monthlyActive BIGINT NOT NULL DEFAULT 0 COMMENT '月活跃用户',
+			createdBy VARCHAR(50) NOT NULL DEFAULT '' COMMENT '创建者',
+			INDEX idx_app_id (appId),
+			INDEX idx_status (status),
+			INDEX idx_category (category),
+			INDEX idx_platform (platform),
+			INDEX idx_created_by (createdBy)
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
 
 		// 用户数据表
 		`CREATE TABLE IF NOT EXISTS user_data (
 			id INT PRIMARY KEY AUTO_INCREMENT,
-			app_id VARCHAR(50) NOT NULL,
-			player_id VARCHAR(50) NOT NULL,
+			appId VARCHAR(50) NOT NULL,
+			playerId VARCHAR(50) NOT NULL,
 			data JSON,
-			create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-			update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-			UNIQUE KEY uk_app_player (app_id, player_id),
-			INDEX idx_app_id (app_id),
-			INDEX idx_player_id (player_id)
-		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
-
-		// 排行榜表
-		`CREATE TABLE IF NOT EXISTS leaderboards (
-			id INT PRIMARY KEY AUTO_INCREMENT,
-			app_id VARCHAR(50) NOT NULL,
-			leaderboard_id VARCHAR(50) NOT NULL,
-			name VARCHAR(100) NOT NULL,
-			description TEXT,
-			sort_order ENUM('asc', 'desc') DEFAULT 'desc',
-			max_entries INT DEFAULT 100,
-			status TINYINT DEFAULT 1,
-			create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-			update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-			UNIQUE KEY uk_app_leaderboard (app_id, leaderboard_id),
-			INDEX idx_app_id (app_id)
+			createTime DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updateTime DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+			UNIQUE KEY uk_app_player (appId, playerId),
+			INDEX idx_app_id (appId),
+			INDEX idx_player_id (playerId)
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
 
 		// 系统配置表
 		`CREATE TABLE IF NOT EXISTS system_configs (
 			id INT PRIMARY KEY AUTO_INCREMENT,
-			config_key VARCHAR(100) NOT NULL UNIQUE,
-			config_value TEXT,
+			configKey VARCHAR(100) NOT NULL UNIQUE,
+			configValue TEXT,
 			description VARCHAR(255),
-			create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-			update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-			INDEX idx_key (config_key)
+			createTime DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updateTime DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+			INDEX idx_key (configKey)
+		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+
+		// 管理员操作日志表
+		`CREATE TABLE IF NOT EXISTS admin_operation_logs (
+			id BIGINT PRIMARY KEY AUTO_INCREMENT,
+			createTime DATETIME NOT NULL,
+			updateTime DATETIME NOT NULL,
+			userId BIGINT NOT NULL,
+			username VARCHAR(50) NOT NULL,
+			action VARCHAR(100) NOT NULL,
+			resource VARCHAR(100) NOT NULL DEFAULT '',
+			params TEXT,
+			ipAddress VARCHAR(45) NOT NULL DEFAULT '',
+			userAgent VARCHAR(500) NOT NULL DEFAULT '',
+			INDEX idx_user_id (userId),
+			INDEX idx_username (username),
+			INDEX idx_action (action),
+			INDEX idx_create_time (createTime)
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
 	}
 }
 
-// getSQLiteTables 获取SQLite表结构
+// getSQLiteTables 获取SQLite表结构（与MySQL对齐）
 func getSQLiteTables() []string {
 	return []string{
-		// 管理员表
-		`CREATE TABLE IF NOT EXISTS admins (
+		// 管理员表 - 对齐AdminUser模型
+		`CREATE TABLE IF NOT EXISTS admin_users (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			createTime DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updateTime DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			username TEXT NOT NULL UNIQUE,
 			password TEXT NOT NULL,
-			email TEXT,
-			role TEXT DEFAULT 'admin',
-			status INTEGER DEFAULT 1,
-			last_login DATETIME,
-			create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-			update_time DATETIME DEFAULT CURRENT_TIMESTAMP
+			email TEXT NOT NULL DEFAULT '',
+			phone TEXT NOT NULL DEFAULT '',
+			realName TEXT NOT NULL DEFAULT '',
+			avatar TEXT NOT NULL DEFAULT '',
+			status INTEGER NOT NULL DEFAULT 1,
+			lastLoginAt DATETIME NULL,
+			lastLoginIp TEXT NOT NULL DEFAULT '',
+			roleId INTEGER NOT NULL DEFAULT 0,
+			token TEXT NULL,
+			tokenExpire DATETIME NULL
 		)`,
 
-		// 应用表
+		// 角色表 - 对齐AdminRole模型
+		`CREATE TABLE IF NOT EXISTS admin_roles (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			createTime DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updateTime DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			roleCode TEXT NULL,
+			roleName TEXT NULL,
+			name TEXT NOT NULL UNIQUE,
+			description TEXT DEFAULT '',
+			permissions TEXT,
+			status INTEGER NOT NULL DEFAULT 1
+		)`,
+
+		// 权限表 - 对齐AdminPermission模型
+		`CREATE TABLE IF NOT EXISTS admin_permissions (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			createTime DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updateTime DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			permissionCode TEXT NOT NULL UNIQUE,
+			permissionName TEXT NOT NULL,
+			description TEXT DEFAULT '',
+			status INTEGER NOT NULL DEFAULT 1
+		)`,
+
+		// 角色权限关联表
+		`CREATE TABLE IF NOT EXISTS admin_role_permissions (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			roleId INTEGER NOT NULL,
+			permissionId INTEGER NOT NULL,
+			createTime DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			UNIQUE(roleId, permissionId)
+		)`,
+
+		// 用户角色关联表
+		`CREATE TABLE IF NOT EXISTS admin_user_roles (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			userId INTEGER NOT NULL,
+			roleId INTEGER NOT NULL,
+			createTime DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			UNIQUE(userId, roleId)
+		)`,
+
+		// 应用表 - 对齐MySQL版本
 		`CREATE TABLE IF NOT EXISTS apps (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			app_id TEXT NOT NULL UNIQUE,
-			app_name TEXT NOT NULL,
+			createTime DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updateTime DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			appId TEXT NOT NULL UNIQUE,
+			appName TEXT NOT NULL,
 			description TEXT,
-			status INTEGER DEFAULT 1,
-			user_count INTEGER DEFAULT 0,
-			create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-			update_time DATETIME DEFAULT CURRENT_TIMESTAMP
+			channelAppId TEXT NOT NULL DEFAULT '',
+			channelAppKey TEXT NOT NULL DEFAULT '',
+			appSecret TEXT NOT NULL DEFAULT '',
+			category TEXT NOT NULL DEFAULT 'game',
+			platform TEXT NOT NULL DEFAULT '',
+			status TEXT NOT NULL DEFAULT 'active',
+			version TEXT NOT NULL DEFAULT '1.0.0',
+			minVersion TEXT NOT NULL DEFAULT '1.0.0',
+			settings TEXT,
+			userCount INTEGER NOT NULL DEFAULT 0,
+			scoreCount INTEGER NOT NULL DEFAULT 0,
+			dailyActive INTEGER NOT NULL DEFAULT 0,
+			monthlyActive INTEGER NOT NULL DEFAULT 0,
+			createdBy TEXT NOT NULL DEFAULT ''
 		)`,
 
-		// 用户数据表
+		// 用户数据表 - 对齐MySQL版本
 		`CREATE TABLE IF NOT EXISTS user_data (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			app_id TEXT NOT NULL,
-			player_id TEXT NOT NULL,
+			appId TEXT NOT NULL,
+			playerId TEXT NOT NULL,
 			data TEXT,
-			create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-			update_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-			UNIQUE(app_id, player_id)
+			createTime DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updateTime DATETIME DEFAULT CURRENT_TIMESTAMP,
+			UNIQUE(appId, playerId)
 		)`,
 
-		// 排行榜表
-		`CREATE TABLE IF NOT EXISTS leaderboards (
+		// 分数记录表 - 对齐MySQL版本
+		`CREATE TABLE IF NOT EXISTS score_records (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			app_id TEXT NOT NULL,
-			leaderboard_id TEXT NOT NULL,
-			name TEXT NOT NULL,
-			description TEXT,
-			sort_order TEXT DEFAULT 'desc',
-			max_entries INTEGER DEFAULT 100,
-			status INTEGER DEFAULT 1,
-			create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-			update_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-			UNIQUE(app_id, leaderboard_id)
+			createTime DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updateTime DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			appId TEXT NOT NULL,
+			playerId TEXT NOT NULL,
+			score INTEGER NOT NULL DEFAULT 0,
+			level INTEGER NOT NULL DEFAULT 1,
+			gameTime INTEGER NOT NULL DEFAULT 0,
+			extras TEXT,
+			ipAddress TEXT NOT NULL DEFAULT '',
+			userAgent TEXT NOT NULL DEFAULT '',
+			platform TEXT NOT NULL DEFAULT '',
+			version TEXT NOT NULL DEFAULT '1.0.0'
 		)`,
 
-		// 系统配置表
+		// 系统配置表 - 对齐MySQL版本
 		`CREATE TABLE IF NOT EXISTS system_configs (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			config_key TEXT NOT NULL UNIQUE,
-			config_value TEXT,
+			configKey TEXT NOT NULL UNIQUE,
+			configValue TEXT,
 			description TEXT,
-			create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-			update_time DATETIME DEFAULT CURRENT_TIMESTAMP
+			createTime DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updateTime DATETIME DEFAULT CURRENT_TIMESTAMP
 		)`,
 
-		// 创建索引
-		`CREATE INDEX IF NOT EXISTS idx_admins_username ON admins(username)`,
-		`CREATE INDEX IF NOT EXISTS idx_apps_app_id ON apps(app_id)`,
-		`CREATE INDEX IF NOT EXISTS idx_user_data_app_id ON user_data(app_id)`,
-		`CREATE INDEX IF NOT EXISTS idx_user_data_player_id ON user_data(player_id)`,
-		`CREATE INDEX IF NOT EXISTS idx_leaderboards_app_id ON leaderboards(app_id)`,
+		// 操作日志表 - 对齐MySQL版本
+		`CREATE TABLE IF NOT EXISTS operation_logs (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			createTime DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updateTime DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			userId INTEGER NOT NULL DEFAULT 0,
+			username TEXT NOT NULL DEFAULT '',
+			action TEXT NOT NULL,
+			resource TEXT NOT NULL DEFAULT '',
+			resourceId TEXT NOT NULL DEFAULT '',
+			details TEXT,
+			ipAddress TEXT NOT NULL DEFAULT '',
+			userAgent TEXT NOT NULL DEFAULT '',
+			result INTEGER NOT NULL DEFAULT 1,
+			errorMessage TEXT DEFAULT ''
+		)`,
+
+		// 创建索引 - 对齐MySQL版本
+		`CREATE INDEX IF NOT EXISTS idx_admin_users_username ON admin_users(username)`,
+		`CREATE INDEX IF NOT EXISTS idx_admin_users_email ON admin_users(email)`,
+		`CREATE INDEX IF NOT EXISTS idx_admin_users_status ON admin_users(status)`,
+		`CREATE INDEX IF NOT EXISTS idx_admin_roles_name ON admin_roles(name)`,
+		`CREATE INDEX IF NOT EXISTS idx_admin_roles_role_code ON admin_roles(roleCode)`,
+		`CREATE INDEX IF NOT EXISTS idx_admin_roles_status ON admin_roles(status)`,
+		`CREATE INDEX IF NOT EXISTS idx_admin_permissions_permission_code ON admin_permissions(permissionCode)`,
+		`CREATE INDEX IF NOT EXISTS idx_admin_permissions_status ON admin_permissions(status)`,
+		`CREATE INDEX IF NOT EXISTS idx_admin_role_permissions_role_id ON admin_role_permissions(roleId)`,
+		`CREATE INDEX IF NOT EXISTS idx_admin_role_permissions_permission_id ON admin_role_permissions(permissionId)`,
+		`CREATE INDEX IF NOT EXISTS idx_admin_user_roles_user_id ON admin_user_roles(userId)`,
+		`CREATE INDEX IF NOT EXISTS idx_admin_user_roles_role_id ON admin_user_roles(roleId)`,
+		`CREATE INDEX IF NOT EXISTS idx_apps_app_id ON apps(appId)`,
+		`CREATE INDEX IF NOT EXISTS idx_apps_status ON apps(status)`,
+		`CREATE INDEX IF NOT EXISTS idx_apps_category ON apps(category)`,
+		`CREATE INDEX IF NOT EXISTS idx_apps_platform ON apps(platform)`,
+		`CREATE INDEX IF NOT EXISTS idx_apps_created_by ON apps(createdBy)`,
+		`CREATE INDEX IF NOT EXISTS idx_user_data_app_id ON user_data(appId)`,
+		`CREATE INDEX IF NOT EXISTS idx_user_data_player_id ON user_data(playerId)`,
+		`CREATE INDEX IF NOT EXISTS idx_score_records_app_id ON score_records(appId)`,
+		`CREATE INDEX IF NOT EXISTS idx_score_records_player_id ON score_records(playerId)`,
+		`CREATE INDEX IF NOT EXISTS idx_score_records_score ON score_records(score)`,
+		`CREATE INDEX IF NOT EXISTS idx_score_records_create_time ON score_records(createTime)`,
+		`CREATE INDEX IF NOT EXISTS idx_system_configs_config_key ON system_configs(configKey)`,
+		`CREATE INDEX IF NOT EXISTS idx_operation_logs_user_id ON operation_logs(userId)`,
+		`CREATE INDEX IF NOT EXISTS idx_operation_logs_action ON operation_logs(action)`,
+		`CREATE INDEX IF NOT EXISTS idx_operation_logs_create_time ON operation_logs(createTime)`,
 	}
 }
 
@@ -533,7 +798,7 @@ func createDefaultRoles(db *sql.DB) error {
 
 		// 插入角色
 		_, err = db.Exec(`
-			INSERT INTO admin_roles (id, create_time, update_time, role_code, role_name, name, description, permissions, status) 
+			INSERT INTO admin_roles (id, createTime, updateTime, roleCode, roleName, name, description, permissions, status) 
 			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 			role.ID, now, now, role.RoleCode, role.RoleName, role.Name, role.Description, role.Permissions, role.Status)
 
@@ -569,7 +834,7 @@ func createDefaultAdminWithParams(db *sql.DB, username, password string) error {
 	// 插入默认管理员
 	now := time.Now()
 	_, err = db.Exec(`
-		INSERT INTO admin_users (create_time, update_time, username, password, email, phone, real_name, avatar, status, role_id) 
+		INSERT INTO admin_users (createTime, updateTime, username, password, email, phone, realName, avatar, status, roleId) 
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		now, now, username, hashedPassword, "admin@example.com", "", "系统管理员", "", 1, 1)
 
@@ -625,7 +890,7 @@ func createDefaultAdmin() error {
 	// 插入默认管理员
 	now := time.Now()
 	_, err = db.Exec(`
-		INSERT INTO admin_users (create_time, update_time, username, password, email, phone, real_name, avatar, status, role_id) 
+		INSERT INTO admin_users (createTime, updateTime, username, password, email, phone, realName, avatar, status, roleId) 
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		now, now, username, hashedPassword, "admin@example.com", "", "系统管理员", "", 1, 1)
 
@@ -739,7 +1004,7 @@ func createAdminWithConfig(config *InstallConfig) error {
 
 	now := time.Now()
 	_, err = db.Exec(`
-		INSERT INTO admin_users (create_time, update_time, username, password, email, phone, real_name, avatar, status, role_id) 
+		INSERT INTO admin_users (createTime, updateTime, username, password, email, phone, realName, avatar, status, roleId) 
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		now, now, config.AdminUsername, hashedPassword, config.AdminEmail, "", config.AdminUsername, "", 1, 1)
 
@@ -750,7 +1015,13 @@ func createAdminWithConfig(config *InstallConfig) error {
 func Uninstall() error {
 	log.Println("开始卸载...")
 
-	// 删除SQLite数据库文件
+	// 清理数据库
+	if err := cleanupDatabase(); err != nil {
+		log.Printf("清理数据库失败: %v", err)
+		// 不返回错误，继续执行其他清理步骤
+	}
+
+	// 删除SQLite数据库文件（兼容性保留）
 	if err := os.RemoveAll("data"); err != nil {
 		log.Printf("删除数据目录失败: %v", err)
 	}
@@ -771,6 +1042,67 @@ func Uninstall() error {
 	}
 
 	log.Println("卸载完成")
+	return nil
+}
+
+// cleanupDatabase 清理数据库
+func cleanupDatabase() error {
+	log.Println("开始清理数据库...")
+
+	// 检查是否使用MySQL
+	if testMySQLConnection() {
+		return cleanupMySQLDatabase()
+	} else {
+		return cleanupSQLiteDatabase()
+	}
+}
+
+// cleanupMySQLDatabase 清理MySQL数据库
+func cleanupMySQLDatabase() error {
+	log.Println("清理MySQL数据库...")
+
+	db, err := getMySQLDB()
+	if err != nil {
+		return fmt.Errorf("获取MySQL连接失败: %v", err)
+	}
+	defer db.Close()
+
+	// 获取数据库名称
+	var dbName string = "minigame_admin"
+	// 删除数据库
+	_, err = db.Exec(fmt.Sprintf("DROP DATABASE IF EXISTS %s", dbName))
+	if err != nil {
+		return fmt.Errorf("删除数据库失败: %v", err)
+	}
+
+	log.Println("MySQL数据库清理完成")
+	return nil
+}
+
+// cleanupSQLiteDatabase 清理SQLite数据库
+func cleanupSQLiteDatabase() error {
+	log.Println("清理SQLite数据库...")
+
+	// 检查SQLite数据库文件是否存在
+	if _, err := os.Stat(sqliteDbFile); os.IsNotExist(err) {
+		log.Println("SQLite数据库文件不存在，跳过清理")
+		return nil
+	}
+
+	// 连接SQLite数据库
+	db, err := sql.Open("sqlite3", sqliteDbFile)
+	if err != nil {
+		return fmt.Errorf("连接SQLite数据库失败: %v", err)
+	}
+	defer db.Close()
+
+	dbName := "minigame_admin"
+	_, err = db.Exec(fmt.Sprintf("DROP DATABASE IF EXISTS %s", dbName))
+	if err != nil {
+		return fmt.Errorf("删除数据库失败: %v", err)
+	}
+
+	log.Println("SQLite数据库清理完成")
 	return nil
 }
 
@@ -961,7 +1293,8 @@ func CreateAdminUser(username, password, email, realName string) error {
 	// 连接数据库
 	var db *sql.DB
 	var err error
-	if testMySQLConnection() {
+	var dbType = getConfigString(appconf, "database_type", "mysql")
+	if dbType == "mysql" {
 		db, err = getMySQLDB()
 		if err != nil {
 			return fmt.Errorf("获取MySQL连接失败: %v", err)
@@ -996,7 +1329,7 @@ func CreateAdminUser(username, password, email, realName string) error {
 	// 插入新管理员
 	now := time.Now()
 	_, err = db.Exec(`
-		INSERT INTO admin_users (create_time, update_time, username, password, email, phone, real_name, avatar, status, role_id) 
+		INSERT INTO admin_users (createTime, updateTime, username, password, email, phone, realName, avatar, status, roleId) 
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		now, now, username, hashedPassword, email, "", realName, "", 1, 1)
 

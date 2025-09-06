@@ -13,7 +13,7 @@ INSERT INTO `admin_users` (`username`, `password`, `email`, `real_name`, `status
 ('admin', '$2a$10$YourHashedPasswordHere', 'admin@example.com', '系统管理员', 1, 1);
 
 -- 插入示例应用
-INSERT INTO `applications` (`app_id`, `app_name`, `app_secret`, `description`, `platform`, `status`, `config`) VALUES
+INSERT INTO `applications` (`app_id`, `app_name`, `appSecret`, `description`, `platform`, `status`, `config`) VALUES
 ('demo_app_001', '示例小游戏', 'demo_secret_key_12345678901234567890', '这是一个示例小游戏应用', 'wechat', 1, '{"enable_leaderboard": true, "enable_mail": true, "enable_counter": true}');
 
 -- 插入示例游戏配置
@@ -132,5 +132,5 @@ INSERT INTO `mail_demo_app_001` (`mail_id`, `title`, `content`, `sender`, `recip
 
 -- 注意：在实际部署时，需要：
 -- 1. 修改默认管理员密码（使用正确的bcrypt哈希）
--- 2. 修改示例应用的app_secret
+-- 2. 修改示例应用的appSecret
 -- 3. 根据实际需求调整配置数据 

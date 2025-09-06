@@ -42,8 +42,8 @@
             placeholder="请选择状态"
             clearable
           >
-            <el-option label="启用" value="active" />
-            <el-option label="禁用" value="inactive" />
+            <el-option label="启用" :value="1" />
+            <el-option label="禁用" :value="0" />
           </el-select>
         </el-form-item>
         <el-form-item>
@@ -73,8 +73,8 @@
         <el-table-column prop="phone" label="手机号" width="130" />
         <el-table-column label="状态" width="80">
           <template #default="{ row }">
-            <el-tag :type="row.status === 'active' ? 'success' : 'danger'">
-              {{ row.status === 'active' ? '启用' : '禁用' }}
+            <el-tag :type="row.status === 1 ? 'success' : 'danger'">
+              {{ row.status === 1 ? '启用' : '禁用' }}
             </el-tag>
           </template>
         </el-table-column>
@@ -187,8 +187,8 @@
         </el-form-item>
         <el-form-item label="状态" prop="status" v-if="editingAdmin">
           <el-radio-group v-model="adminForm.status">
-            <el-radio label="active">启用</el-radio>
-            <el-radio label="inactive">禁用</el-radio>
+            <el-radio :label="1">启用</el-radio>
+            <el-radio :label="0">禁用</el-radio>
           </el-radio-group>
         </el-form-item>
       </el-form>
@@ -244,7 +244,7 @@ const adminForm = reactive({
   role: '',
   email: '',
   phone: '',
-  status: 'active'
+  status: 1
 })
 
 // 表单验证规则
@@ -360,7 +360,7 @@ const resetForm = () => {
     role: '',
     email: '',
     phone: '',
-    status: 'active'
+    status: 1
   })
   adminFormRef.value?.resetFields()
 }

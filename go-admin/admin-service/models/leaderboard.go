@@ -41,12 +41,12 @@ type Leaderboard struct {
 // LeaderboardData 排行榜数据模型（动态表）
 type LeaderboardData struct {
 	Id              int64  `orm:"auto" json:"id"`
-	LeaderboardName string `orm:"size(100)" json:"leaderboard_name"`
-	UserId          string `orm:"size(100)" json:"user_id"`
+	LeaderboardName string `orm:"size(100)" json:"leaderboardName"`
+	UserId          string `orm:"size(100)" json:"userId"`
 	Score           int64  `orm:"default(0)" json:"score"`
-	ExtraData       string `orm:"type(text)" json:"extra_data"`
-	CreatedAt       string `orm:"auto_now_add;type(datetime)" json:"create_time"`
-	UpdatedAt       string `orm:"auto_now;type(datetime)" json:"update_time"`
+	ExtraData       string `orm:"type(text)" json:"extraData"`
+	CreatedAt       string `orm:"auto_now_add;type(datetime)" json:"createdAt"`
+	UpdatedAt       string `orm:"auto_now;type(datetime)" json:"updatedAt"`
 }
 
 // LeaderboardScore 排行榜分数记录（兼容性保持）

@@ -2,19 +2,18 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { verifyToken, isLoggedIn } from '../utils/auth.js'
 import { ElMessage } from 'element-plus'
 
-// 懒加载组件
-const Dashboard = () => import('../views/Dashboard.vue')
-const AppManagement = () => import('../views/AppManagement.vue')
-const LeaderboardManagement = () => import('../views/LeaderboardManagement.vue')
-const CounterManagement = () => import('../views/CounterManagement.vue')
-const UserManagement = () => import('../views/UserManagement.vue')
-const AdminManagement = () => import('../views/AdminManagement.vue')
-const RoleManagement = () => import('../views/RoleManagement.vue')
-const MailManagement = () => import('../views/MailManagement.vue')
-const MailTest = () => import('../views/MailTest.vue')
-const GameConfigManagement = () => import('../views/GameConfigManagement.vue')
-
-const Login = () => import('../views/Login.vue')
+// 直接导入组件 - 临时修复ChunkLoadError
+import Dashboard from '../views/Dashboard.vue'
+import AppManagement from '../views/AppManagement.vue'
+import LeaderboardManagement from '../views/LeaderboardManagement.vue'
+import CounterManagement from '../views/CounterManagement.vue'
+import UserManagement from '../views/UserManagement.vue'
+import AdminManagement from '../views/AdminManagement.vue'
+import RoleManagement from '../views/RoleManagement.vue'
+import MailManagement from '../views/MailManagement.vue'
+import MailTest from '../views/MailTest.vue'
+import GameConfigManagement from '../views/GameConfigManagement.vue'
+import Login from '../views/Login.vue'
 
 const routes = [
   {

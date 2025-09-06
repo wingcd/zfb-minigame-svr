@@ -9,9 +9,9 @@ import (
 // AdminRole 管理员角色模型
 type AdminRole struct {
 	BaseModel
-	RoleCode    string `orm:"unique;size(50)" json:"role_code"` // 对齐云函数的roleCode
-	RoleName    string `orm:"size(50)" json:"role_name"`        // 对齐云函数的roleName
-	Name        string `orm:"unique;size(50)" json:"name"`      // 保持兼容性
+	RoleCode    string `orm:"unique;size(50)" json:"roleCode"` // 对齐云函数的roleCode
+	RoleName    string `orm:"size(50)" json:"roleName"`        // 对齐云函数的roleName
+	Name        string `orm:"unique;size(50)" json:"name"`     // 保持兼容性
 	Description string `orm:"size(255)" json:"description"`
 	Permissions string `orm:"type(text)" json:"permissions"`
 	Status      int    `orm:"default(1)" json:"status"`

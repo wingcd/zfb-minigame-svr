@@ -12,48 +12,64 @@ type LeaderboardController struct {
 	web.Controller
 }
 
-// GetAllLeaderboards 获取所有排行榜
+// GetAllLeaderboards 获取所有排行榜（对齐云函数getLeaderboards接口）
 func (c *LeaderboardController) GetAllLeaderboards() {
-	var requestData struct {
+	var req struct {
 		AppId           string `json:"appId"`
 		Page            int    `json:"page"`
 		PageSize        int    `json:"pageSize"`
 		LeaderboardName string `json:"leaderboardName"`
 	}
 
-	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &requestData); err != nil {
-		utils.ErrorResponse(&c.Controller, utils.CodeBadRequest, "参数错误", nil)
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4001,
+			"msg":       "参数解析失败",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
 		return
 	}
 
 	// 设置默认值
-	if requestData.Page <= 0 {
-		requestData.Page = 1
+	if req.Page <= 0 {
+		req.Page = 1
 	}
-	if requestData.PageSize <= 0 {
-		requestData.PageSize = 10
+	if req.PageSize <= 0 {
+		req.PageSize = 20
 	}
 
-	leaderboards, total, err := models.GetLeaderboardList(requestData.AppId, requestData.Page, requestData.PageSize, requestData.LeaderboardName)
+	leaderboards, total, err := models.GetLeaderboardList(req.AppId, req.Page, req.PageSize, req.LeaderboardName)
 	if err != nil {
-		utils.ErrorResponse(&c.Controller, utils.CodeServerError, "获取排行榜列表失败", nil)
+		c.Data["json"] = map[string]interface{}{
+			"code":      5001,
+			"msg":       "获取排行榜列表失败: " + err.Error(),
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
 		return
 	}
 
-	data := map[string]interface{}{
-		"list":       leaderboards,
-		"total":      total,
-		"page":       requestData.Page,
-		"pageSize":   requestData.PageSize,
-		"totalPages": (total + int64(requestData.PageSize) - 1) / int64(requestData.PageSize),
+	c.Data["json"] = map[string]interface{}{
+		"code":      0,
+		"msg":       "获取成功",
+		"timestamp": utils.UnixMilli(),
+		"data": map[string]interface{}{
+			"list":       leaderboards,
+			"total":      total,
+			"page":       req.Page,
+			"pageSize":   req.PageSize,
+			"totalPages": (total + int64(req.PageSize) - 1) / int64(req.PageSize),
+		},
 	}
-
-	utils.SuccessResponse(&c.Controller, "success", data)
+	c.ServeJSON()
 }
 
-// CreateLeaderboard 创建排行榜
+// CreateLeaderboard 创建排行榜（对齐云函数createLeaderboard接口）
 func (c *LeaderboardController) CreateLeaderboard() {
-	var requestData struct {
+	var req struct {
 		AppId       string `json:"appId"`
 		Type        string `json:"type"`
 		Name        string `json:"name"`
@@ -62,41 +78,77 @@ func (c *LeaderboardController) CreateLeaderboard() {
 		MaxEntries  int    `json:"maxEntries"`
 	}
 
-	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &requestData); err != nil {
-		utils.ErrorResponse(&c.Controller, utils.CodeBadRequest, "参数错误", nil)
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4001,
+			"msg":       "参数解析失败",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
 		return
 	}
 
 	// 参数验证
-	if requestData.AppId == "" || requestData.Type == "" || requestData.Name == "" {
-		utils.ErrorResponse(&c.Controller, utils.CodeBadRequest, "缺少必要参数", nil)
+	if req.AppId == "" || req.Type == "" || req.Name == "" {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4001,
+			"msg":       "缺少必要参数",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
 		return
 	}
 
 	leaderboard := &models.Leaderboard{
-		AppId:       requestData.AppId,
-		Type:        requestData.Type,
-		Name:        requestData.Name,
-		Description: requestData.Description,
-		ResetType:   requestData.ResetType,
-		MaxEntries:  requestData.MaxEntries,
+		AppId:       req.AppId,
+		Type:        req.Type,
+		Name:        req.Name,
+		Description: req.Description,
+		ResetType:   req.ResetType,
+		MaxEntries:  req.MaxEntries,
 	}
 
 	if err := models.CreateLeaderboard(leaderboard); err != nil {
 		if err.Error() == "排行榜已存在" {
-			utils.ErrorResponse(&c.Controller, utils.CodeResourceExists, err.Error(), nil)
+			c.Data["json"] = map[string]interface{}{
+				"code":      4002,
+				"msg":       err.Error(),
+				"timestamp": utils.UnixMilli(),
+				"data":      nil,
+			}
 		} else {
-			utils.ErrorResponse(&c.Controller, utils.CodeServerError, "创建排行榜失败", nil)
+			c.Data["json"] = map[string]interface{}{
+				"code":      5001,
+				"msg":       "创建排行榜失败: " + err.Error(),
+				"timestamp": utils.UnixMilli(),
+				"data":      nil,
+			}
 		}
+		c.ServeJSON()
 		return
 	}
 
-	utils.SuccessResponse(&c.Controller, "success", leaderboard)
+	// 记录操作日志
+	models.LogAdminOperation(0, "SYSTEM", "CREATE", "LEADERBOARD", map[string]interface{}{
+		"appId":           req.AppId,
+		"leaderboardName": req.Name,
+		"type":            req.Type,
+	})
+
+	c.Data["json"] = map[string]interface{}{
+		"code":      0,
+		"msg":       "创建成功",
+		"timestamp": utils.UnixMilli(),
+		"data":      leaderboard,
+	}
+	c.ServeJSON()
 }
 
-// UpdateLeaderboard 更新排行榜配置
+// UpdateLeaderboard 更新排行榜配置（对齐云函数updateLeaderboard接口）
 func (c *LeaderboardController) UpdateLeaderboard() {
-	var requestData struct {
+	var req struct {
 		AppId       string `json:"appId"`
 		Type        string `json:"type"`
 		Name        string `json:"name"`
@@ -105,51 +157,87 @@ func (c *LeaderboardController) UpdateLeaderboard() {
 		MaxEntries  int    `json:"maxEntries"`
 	}
 
-	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &requestData); err != nil {
-		utils.ErrorResponse(&c.Controller, utils.CodeBadRequest, "参数错误", nil)
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4001,
+			"msg":       "参数解析失败",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
 		return
 	}
 
 	fields := make(map[string]interface{})
-	if requestData.Name != "" {
-		fields["name"] = requestData.Name
+	if req.Name != "" {
+		fields["name"] = req.Name
 	}
-	if requestData.Description != "" {
-		fields["description"] = requestData.Description
+	if req.Description != "" {
+		fields["description"] = req.Description
 	}
-	if requestData.ResetType != "" {
-		fields["reset_type"] = requestData.ResetType
+	if req.ResetType != "" {
+		fields["reset_type"] = req.ResetType
 	}
-	if requestData.MaxEntries > 0 {
-		fields["max_entries"] = requestData.MaxEntries
+	if req.MaxEntries > 0 {
+		fields["max_entries"] = req.MaxEntries
 	}
 
-	if err := models.UpdateLeaderboard(requestData.AppId, requestData.Type, fields); err != nil {
-		utils.ErrorResponse(&c.Controller, utils.CodeServerError, "更新排行榜失败", nil)
+	if err := models.UpdateLeaderboard(req.AppId, req.Type, fields); err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      5001,
+			"msg":       "更新排行榜失败: " + err.Error(),
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
 		return
 	}
 
-	utils.SuccessResponse(&c.Controller, "success", nil)
+	c.Data["json"] = map[string]interface{}{
+		"code":      0,
+		"msg":       "更新成功",
+		"timestamp": utils.UnixMilli(),
+		"data":      map[string]interface{}{},
+	}
+	c.ServeJSON()
 }
 
-// DeleteLeaderboard 删除排行榜
+// DeleteLeaderboard 删除排行榜（对齐云函数deleteLeaderboard接口）
 func (c *LeaderboardController) DeleteLeaderboard() {
-	var requestData struct {
+	var req struct {
 		AppId string `json:"appId"`
 		Type  string `json:"type"`
 	}
 
-	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &requestData); err != nil {
-		utils.ErrorResponse(&c.Controller, utils.CodeBadRequest, "参数错误", nil)
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4001,
+			"msg":       "参数解析失败",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
 		return
 	}
 
-	if err := models.DeleteLeaderboard(requestData.AppId, requestData.Type); err != nil {
-		utils.ErrorResponse(&c.Controller, utils.CodeServerError, "删除排行榜失败", nil)
+	if err := models.DeleteLeaderboard(req.AppId, req.Type); err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      5001,
+			"msg":       "删除排行榜失败: " + err.Error(),
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
 		return
 	}
 
-	utils.SuccessResponse(&c.Controller, "success", nil)
+	c.Data["json"] = map[string]interface{}{
+		"code":      0,
+		"msg":       "删除成功",
+		"timestamp": utils.UnixMilli(),
+		"data":      map[string]interface{}{},
+	}
+	c.ServeJSON()
 }
 
 // GetLeaderboardData 获取排行榜数据

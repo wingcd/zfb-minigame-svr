@@ -4,7 +4,6 @@ import (
 	"admin-service/models"
 	"admin-service/utils"
 	"encoding/json"
-	"strconv"
 
 	"github.com/beego/beego/v2/server/web"
 )
@@ -186,9 +185,22 @@ func (c *AdminRoleController) DeleteRole() {
 
 // GetRole 获取单个角色详情
 func (c *AdminRoleController) GetRole() {
-	idStr := c.Ctx.Input.Param(":id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil {
+	var req struct {
+		ID int64 `json:"id"`
+	}
+
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4001,
+			"msg":       "参数错误",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	if req.ID <= 0 {
 		c.Data["json"] = map[string]interface{}{
 			"code":      4001,
 			"msg":       "无效的角色ID",
@@ -199,10 +211,10 @@ func (c *AdminRoleController) GetRole() {
 		return
 	}
 
-	// TODO: 实现根据ID获取角色详情
-	// 暂时返回空角色
-	role := &models.AdminRole{BaseModel: models.BaseModel{Id: id}}
-	if false {
+	// 获取角色详情
+	role := &models.AdminRole{}
+	err := role.GetById(req.ID)
+	if err != nil {
 		c.Data["json"] = map[string]interface{}{
 			"code":      4004,
 			"msg":       "角色不存在",
@@ -217,7 +229,58 @@ func (c *AdminRoleController) GetRole() {
 		"code":      0,
 		"msg":       "获取成功",
 		"timestamp": utils.UnixMilli(),
-		"data":      role,
+		"data": map[string]interface{}{
+			"id":          role.Id,
+			"roleName":    role.RoleName,
+			"roleCode":    role.RoleCode,
+			"description": role.Description,
+			"permissions": role.Permissions,
+		},
+	}
+	c.ServeJSON()
+}
+
+// GetAllRoles 获取所有角色列表（对齐云函数getAllRoles接口）
+func (c *AdminRoleController) GetAllRoles() {
+	roles, _, err := models.GetRoleList(1, 100, "")
+	if err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      5001,
+			"msg":       "获取角色失败: " + err.Error(),
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	// 转换为云函数格式
+	var roleList []map[string]interface{}
+	for _, role := range roles {
+		// 解析权限JSON
+		permissions := []string{}
+		if role.Permissions != "" {
+			if err := json.Unmarshal([]byte(role.Permissions), &permissions); err != nil {
+				permissions = []string{}
+			}
+		}
+
+		roleList = append(roleList, map[string]interface{}{
+			"roleCode":    role.RoleCode,
+			"roleName":    role.RoleName,
+			"description": role.Description,
+			"permissions": permissions,
+		})
+	}
+
+	c.Data["json"] = map[string]interface{}{
+		"code":      0,
+		"msg":       "success",
+		"timestamp": utils.UnixMilli(),
+		"data": map[string]interface{}{
+			"roles": roleList,
+			"total": len(roleList),
+		},
 	}
 	c.ServeJSON()
 }

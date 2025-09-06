@@ -7,21 +7,21 @@ import (
 // SystemConfig 系统配置模型
 type SystemConfig struct {
 	BaseModel
-	SiteName           string `orm:"size(100)" json:"site_name"`
-	SiteUrl            string `orm:"size(255)" json:"site_url"`
-	SiteLogo           string `orm:"size(255)" json:"site_logo"`
-	SiteDescription    string `orm:"type(text)" json:"site_description"`
-	SiteKeywords       string `orm:"type(text)" json:"site_keywords"`
-	AdminEmail         string `orm:"size(100)" json:"admin_email"`
-	EnableRegister     bool   `orm:"default(true)" json:"enable_register"`
-	EnableEmailVerify  bool   `orm:"default(false)" json:"enable_email_verify"`
-	EnableCaptcha      bool   `orm:"default(true)" json:"enable_captcha"`
-	JwtSecret          string `orm:"size(255)" json:"jwt_secret"`
-	JwtExpireHours     int    `orm:"default(24)" json:"jwt_expire_hours"`
-	EnableCache        bool   `orm:"default(true)" json:"enable_cache"`
-	CacheExpireMinutes int    `orm:"default(30)" json:"cache_expire_minutes"`
-	LogLevel           string `orm:"size(20);default(info)" json:"log_level"`
-	LogRetentionDays   int    `orm:"default(30)" json:"log_retention_days"`
+	SiteName           string `orm:"size(100)" json:"siteName"`
+	SiteUrl            string `orm:"size(255)" json:"siteUrl"`
+	SiteLogo           string `orm:"size(255)" json:"siteLogo"`
+	SiteDescription    string `orm:"type(text)" json:"siteDescription"`
+	SiteKeywords       string `orm:"type(text)" json:"siteKeywords"`
+	AdminEmail         string `orm:"size(100)" json:"adminEmail"`
+	EnableRegister     bool   `orm:"default(true)" json:"enableRegister"`
+	EnableEmailVerify  bool   `orm:"default(false)" json:"enableEmailVerify"`
+	EnableCaptcha      bool   `orm:"default(true)" json:"enableCaptcha"`
+	JwtSecret          string `orm:"size(255)" json:"jwtSecret"`
+	JwtExpireHours     int    `orm:"default(24)" json:"jwtExpireHours"`
+	EnableCache        bool   `orm:"default(true)" json:"enableCache"`
+	CacheExpireMinutes int    `orm:"default(30)" json:"cacheExpireMinutes"`
+	LogLevel           string `orm:"size(20);default(info)" json:"logLevel"`
+	LogRetentionDays   int    `orm:"default(30)" json:"logRetentionDays"`
 }
 
 func (s *SystemConfig) TableName() string {

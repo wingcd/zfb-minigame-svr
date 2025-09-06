@@ -93,7 +93,7 @@ func GetTopApps(limit int) ([]TopApp, error) {
 	// 目前返回应用列表作为示例
 	sql := `
 		SELECT app_id, app_name, 0 as user_count, 0 as access_count 
-		FROM applications 
+		FROM apps 
 		WHERE status = 1 
 		ORDER BY create_time DESC 
 		LIMIT ?

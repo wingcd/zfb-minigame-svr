@@ -9,13 +9,13 @@ import (
 // GameConfig 游戏配置模型
 type GameConfig struct {
 	BaseModel
-	AppId       string `orm:"size(32)" json:"app_id" valid:"Required"`
-	ConfigKey   string `orm:"size(100)" json:"config_key" valid:"Required"`
-	ConfigValue string `orm:"type(text)" json:"config_value"`
-	ConfigType  string `orm:"size(20)" json:"config_type"` // string, number, boolean, json
+	AppId       string `orm:"size(32)" json:"appId" valid:"Required"`
+	ConfigKey   string `orm:"size(100)" json:"configKey" valid:"Required"`
+	ConfigValue string `orm:"type(text)" json:"configValue"`
+	ConfigType  string `orm:"size(20)" json:"configType"` // string, number, boolean, json
 	Description string `orm:"size(255)" json:"description"`
-	IsPublic    int    `orm:"default(1)" json:"is_public"` // 1:公开 0:私有
-	Status      int    `orm:"default(1)" json:"status"`    // 1:启用 0:禁用
+	IsPublic    int    `orm:"default(1)" json:"isPublic"` // 1:公开 0:私有
+	Status      int    `orm:"default(1)" json:"status"`   // 1:启用 0:禁用
 }
 
 // TableName 指定表名

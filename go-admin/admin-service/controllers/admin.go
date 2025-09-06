@@ -7,7 +7,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"strconv"
-	"time"
 
 	"github.com/beego/beego/v2/server/web"
 )
@@ -17,118 +16,9 @@ type AdminController struct {
 	web.Controller
 }
 
-// LoginRequest 登录请求结构
-type LoginRequest struct {
-	Username string `json:"username" valid:"Required"`
-	Password string `json:"password" valid:"Required"`
-}
+// 登录相关功能已移至 AuthController
 
-// LoginResponse 登录响应结构
-type LoginResponse struct {
-	Token     string            `json:"token"`
-	User      *models.AdminUser `json:"user"`
-	ExpiresAt int64             `json:"expires_at"`
-}
-
-// Login 管理员登录
-func (c *AdminController) Login() {
-	var req LoginRequest
-	if err := utils.ParseJSON(&c.Controller, &req); err != nil {
-		utils.Error(&c.Controller, utils.CodeInvalidParam, "参数解析失败")
-		return
-	}
-
-	// 验证必填参数
-	if !utils.ValidateRequired(&c.Controller, map[string]interface{}{
-		"username": req.Username,
-		"password": req.Password,
-	}) {
-		return
-	}
-
-	// 查找用户
-	user, err := models.GetAdminUserByUsername(req.Username)
-	if err != nil {
-		utils.Error(&c.Controller, utils.CodeUnauthorized, "用户名或密码错误")
-		return
-	}
-
-	// 验证用户状态
-	if user.Status != 1 {
-		utils.Error(&c.Controller, utils.CodeForbidden, "账户已被禁用")
-		return
-	}
-
-	// 验证密码
-	if !utils.CheckPassword(req.Password, user.Password) {
-		utils.Error(&c.Controller, utils.CodeUnauthorized, "用户名或密码错误")
-		return
-	}
-
-	// 生成JWT令牌
-	token, err := utils.GenerateJWT(user.Id, user.Username, user.RoleId)
-	if err != nil {
-		utils.Error(&c.Controller, utils.CodeError, "令牌生成失败")
-		return
-	}
-
-	// 更新登录信息
-	clientIP := utils.GetClientIP(&c.Controller)
-	models.UpdateAdminUserLoginInfo(user.Id, clientIP)
-
-	// 记录操作日志
-	c.logOperation("管理员登录", "admin", "POST", "/admin/login", req, 1, "", 0)
-
-	// 返回登录信息
-	response := LoginResponse{
-		Token:     token,
-		User:      user,
-		ExpiresAt: time.Now().Add(24 * time.Hour).Unix(),
-	}
-
-	utils.Success(&c.Controller, response)
-}
-
-// Logout 管理员登出
-func (c *AdminController) Logout() {
-	// 这里可以实现令牌黑名单等功能
-	c.logOperation("管理员登出", "admin", "POST", "/admin/logout", nil, 1, "", 0)
-	utils.Success(&c.Controller, "登出成功")
-}
-
-// Profile 获取当前用户信息
-func (c *AdminController) Profile() {
-	// 从中间件获取用户信息
-	userID := c.GetSession("user_id")
-	if userID == nil {
-		utils.Error(&c.Controller, utils.CodeUnauthorized, "未登录")
-		return
-	}
-
-	id, _ := userID.(int64)
-	user, err := models.GetAdminUserById(id)
-	if err != nil {
-		utils.Error(&c.Controller, utils.CodeNotFound, "用户不存在")
-		return
-	}
-
-	utils.Success(&c.Controller, user)
-}
-
-// GetAdmins 获取管理员列表 (API命名空间使用)
-func (c *AdminController) GetAdmins() {
-	page := utils.GetIntParam(&c.Controller, "page", 1)
-	pageSize := utils.GetIntParam(&c.Controller, "page_size", 20)
-	keyword := utils.GetStringParam(&c.Controller, "keyword")
-
-	users, total, err := models.GetAllAdminUsers(page, pageSize, keyword)
-	if err != nil {
-		utils.Error(&c.Controller, utils.CodeError, "获取数据失败")
-		return
-	}
-
-	utils.PageSuccess(&c.Controller, users, total, page, pageSize)
-}
+// GetAdmins 获取管理员列表 (暂时保留但不启用路由)
 
 // GetAdmin 获取单个管理员信息 (API命名空间使用)
 func (c *AdminController) GetAdmin() {
@@ -780,7 +670,15 @@ func (c *AdminController) UpdateAdminStatus() {
 		return
 	}
 
-	if err := models.UpdateAdminUserStatus(requestData.ID, requestData.Status); err != nil {
+	// 将状态转换为字符串
+	var status string
+	if requestData.Status == 1 {
+		status = "active"
+	} else {
+		status = "inactive"
+	}
+
+	if err := models.UpdateAdminUserStatus(requestData.ID, status); err != nil {
 		c.Data["json"] = map[string]interface{}{
 			"code":      5001,
 			"msg":       "更新状态失败",
@@ -875,6 +773,316 @@ func (c *AdminController) GetAdminByToken() {
 		"msg":       "获取成功",
 		"timestamp": utils.UnixMilli(),
 		"data":      user,
+	}
+	c.ServeJSON()
+}
+
+// GetAdminList 获取管理员列表（对齐云函数getAdminList接口）
+func (c *AdminController) GetAdminList() {
+	var req struct {
+		Page     int    `json:"page"`
+		PageSize int    `json:"pageSize"`
+		Keyword  string `json:"keyword"`
+	}
+
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4001,
+			"msg":       "参数解析失败",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	// 设置默认值
+	if req.Page <= 0 {
+		req.Page = 1
+	}
+	if req.PageSize <= 0 {
+		req.PageSize = 20
+	}
+
+	users, total, err := models.GetAllAdminUsers(req.Page, req.PageSize, req.Keyword)
+	if err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      5001,
+			"msg":       "获取管理员列表失败: " + err.Error(),
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	c.Data["json"] = map[string]interface{}{
+		"code":      0,
+		"msg":       "获取成功",
+		"timestamp": utils.UnixMilli(),
+		"data": map[string]interface{}{
+			"list":     users,
+			"total":    total,
+			"page":     req.Page,
+			"pageSize": req.PageSize,
+		},
+	}
+	c.ServeJSON()
+}
+
+// DeleteAdminRequest 删除管理员请求结构
+type DeleteAdminRequest struct {
+	ID int64 `json:"id"`
+}
+
+// DeleteAdminUser 删除管理员（对齐云函数deleteAdmin接口）
+func (c *AdminController) DeleteAdminUser() {
+	var req DeleteAdminRequest
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4001,
+			"msg":       "参数解析失败",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	if req.ID <= 0 {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4001,
+			"msg":       "无效的管理员ID",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	// 检查管理员是否存在
+	_, err := models.GetAdminUserById(req.ID)
+	if err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4004,
+			"msg":       "管理员不存在",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	// 删除管理员
+	if err := models.DeleteAdminUser(req.ID); err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      5001,
+			"msg":       "删除失败: " + err.Error(),
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	// 记录操作日志
+	models.LogAdminOperation(0, "SYSTEM", "DELETE", "ADMIN", map[string]interface{}{
+		"deletedAdminId": req.ID,
+	})
+
+	c.Data["json"] = map[string]interface{}{
+		"code":      0,
+		"msg":       "删除成功",
+		"timestamp": utils.UnixMilli(),
+		"data":      map[string]interface{}{},
+	}
+	c.ServeJSON()
+}
+
+// UpdateAdminRequest 更新管理员请求结构
+type UpdateAdminRequest struct {
+	ID       int64  `json:"id"`
+	Email    string `json:"email"`
+	Phone    string `json:"phone"`
+	RealName string `json:"realName"`
+	RoleId   int64  `json:"roleId"`
+}
+
+// UpdateAdminUser 更新管理员信息（对齐云函数updateAdmin接口）
+func (c *AdminController) UpdateAdminUser() {
+	var req UpdateAdminRequest
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4001,
+			"msg":       "参数解析失败",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	if req.ID <= 0 {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4001,
+			"msg":       "无效的管理员ID",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	// 检查管理员是否存在
+	existUser, err := models.GetAdminUserById(req.ID)
+	if err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4004,
+			"msg":       "管理员不存在",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	// 更新字段
+	updateFields := make(map[string]interface{})
+	if req.Email != "" {
+		updateFields["email"] = req.Email
+	}
+	if req.Phone != "" {
+		updateFields["phone"] = req.Phone
+	}
+	if req.RealName != "" {
+		updateFields["realName"] = req.RealName
+	}
+	if req.RoleId > 0 {
+		updateFields["roleId"] = req.RoleId
+	}
+
+	// 执行更新
+	if err := models.UpdateAdminUserFields(req.ID, updateFields); err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      5001,
+			"msg":       "更新失败: " + err.Error(),
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	// 获取更新后的用户信息
+	updatedUser, _ := models.GetAdminUserById(req.ID)
+
+	// 记录操作日志
+	models.LogAdminOperation(0, "SYSTEM", "UPDATE", "ADMIN", map[string]interface{}{
+		"updatedAdminId": req.ID,
+		"originalData":   existUser,
+		"updatedData":    updatedUser,
+	})
+
+	c.Data["json"] = map[string]interface{}{
+		"code":      0,
+		"msg":       "更新成功",
+		"timestamp": utils.UnixMilli(),
+		"data": map[string]interface{}{
+			"id":       updatedUser.Id,
+			"username": updatedUser.Username,
+			"email":    updatedUser.Email,
+			"phone":    updatedUser.Phone,
+			"realName": updatedUser.RealName,
+			"roleId":   updatedUser.RoleId,
+		},
+	}
+	c.ServeJSON()
+}
+
+// ResetAdminPasswordRequest 重置密码请求结构
+type ResetAdminPasswordRequest struct {
+	ID          int64  `json:"id"`
+	NewPassword string `json:"new_password"`
+}
+
+// ResetAdminPassword 重置管理员密码（对齐云函数resetPassword接口）
+func (c *AdminController) ResetAdminPassword() {
+	var req ResetAdminPasswordRequest
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4001,
+			"msg":       "参数解析失败",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	if req.ID <= 0 {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4001,
+			"msg":       "无效的管理员ID",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	if len(req.NewPassword) < 6 {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4001,
+			"msg":       "密码长度至少6位",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	// 检查管理员是否存在
+	_, err := models.GetAdminUserById(req.ID)
+	if err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4004,
+			"msg":       "管理员不存在",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	// MD5加密密码（对齐云函数）
+	passwordHash := utils.HashPassword(req.NewPassword)
+
+	// 更新密码
+	if err := models.UpdateAdminUserFields(req.ID, map[string]interface{}{
+		"password": passwordHash,
+	}); err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      5001,
+			"msg":       "密码重置失败: " + err.Error(),
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	// 记录操作日志
+	models.LogAdminOperation(0, "SYSTEM", "RESET_PASSWORD", "ADMIN", map[string]interface{}{
+		"targetAdminId": req.ID,
+	})
+
+	c.Data["json"] = map[string]interface{}{
+		"code":      0,
+		"msg":       "密码重置成功",
+		"timestamp": utils.UnixMilli(),
+		"data": map[string]interface{}{
+			"message": "密码重置成功",
+		},
 	}
 	c.ServeJSON()
 }

@@ -126,153 +126,9 @@ func (c *AuthController) AdminLogin() {
 	c.ServeJSON()
 }
 
-// Login 管理员登录（保持原有接口兼容性）
-func (c *AuthController) Login() {
-	// 获取参数
-	username := c.GetString("username")
-	password := c.GetString("password")
+// 旧的Login方法已合并到AdminLogin
 
-	if username == "" || password == "" {
-		utils.ErrorResponse(&c.Controller, 1002, "用户名和密码不能为空", nil)
-		return
-	}
-
-	// 验证登录
-	admin, err := models.AdminLogin(username, password)
-	if err != nil {
-		utils.ErrorResponse(&c.Controller, 1003, "登录失败: "+err.Error(), nil)
-		return
-	}
-
-	// 生成JWT token
-	token, err := utils.GenerateJWT(admin.Id, admin.Username, admin.RoleId)
-	if err != nil {
-		utils.ErrorResponse(&c.Controller, 1003, "生成token失败: "+err.Error(), nil)
-		return
-	}
-
-	// 记录登录日志
-	utils.LogOperation(admin.Id, "登录", "管理员登录")
-
-	result := map[string]interface{}{
-		"token": token,
-		"admin": map[string]interface{}{
-			"id":       admin.Id,
-			"username": admin.Username,
-			"nickname": admin.RealName,
-			"email":    admin.Email,
-			"roleId":   admin.RoleId,
-		},
-	}
-
-	utils.SuccessResponse(&c.Controller, "登录成功", result)
-}
-
-// Logout 管理员登出
-func (c *AuthController) Logout() {
-	// JWT验证
-	claims := utils.ValidateJWT(c.Ctx)
-	if claims == nil {
-		return
-	}
-
-	// 记录登出日志
-	utils.LogOperation(claims.UserID, "登出", "管理员登出")
-
-	utils.SuccessResponse(&c.Controller, "登出成功", nil)
-}
-
-// GetProfile 获取管理员信息
-func (c *AuthController) GetProfile() {
-	// JWT验证
-	claims := utils.ValidateJWT(c.Ctx)
-	if claims == nil {
-		return
-	}
-
-	// 获取管理员详情
-	admin, err := models.GetAdminById(claims.UserID)
-	if err != nil {
-		utils.ErrorResponse(&c.Controller, 1003, "获取管理员信息失败: "+err.Error(), nil)
-		return
-	}
-
-	result := map[string]interface{}{
-		"id":       admin.Id,
-		"username": admin.Username,
-		"nickname": admin.RealName,
-		"email":    admin.Email,
-		"roleId":   admin.RoleId,
-		"status":   admin.Status,
-	}
-
-	utils.SuccessResponse(&c.Controller, "获取成功", result)
-}
-
-// UpdateProfile 更新管理员信息
-func (c *AuthController) UpdateProfile() {
-	// JWT验证
-	claims := utils.ValidateJWT(c.Ctx)
-	if claims == nil {
-		return
-	}
-
-	// 获取参数
-	nickname := c.GetString("nickname")
-	email := c.GetString("email")
-
-	if nickname == "" {
-		utils.ErrorResponse(&c.Controller, 1002, "昵称不能为空", nil)
-		return
-	}
-
-	// 更新管理员信息
-	err := models.UpdateAdminProfile(claims.UserID, nickname, email)
-	if err != nil {
-		utils.ErrorResponse(&c.Controller, 1003, "更新失败: "+err.Error(), nil)
-		return
-	}
-
-	// 记录操作日志
-	utils.LogOperation(claims.UserID, "更新资料", "更新管理员资料")
-
-	utils.SuccessResponse(&c.Controller, "更新成功", nil)
-}
-
-// ChangePassword 修改密码
-func (c *AuthController) ChangePassword() {
-	// JWT验证
-	claims := utils.ValidateJWT(c.Ctx)
-	if claims == nil {
-		return
-	}
-
-	// 获取参数
-	oldPassword := c.GetString("oldPassword")
-	newPassword := c.GetString("newPassword")
-
-	if oldPassword == "" || newPassword == "" {
-		utils.ErrorResponse(&c.Controller, 1002, "原密码和新密码不能为空", nil)
-		return
-	}
-
-	if len(newPassword) < 6 {
-		utils.ErrorResponse(&c.Controller, 1002, "新密码长度至少6位", nil)
-		return
-	}
-
-	// 修改密码
-	err := models.ChangeAdminPassword(claims.UserID, oldPassword, newPassword)
-	if err != nil {
-		utils.ErrorResponse(&c.Controller, 1003, "修改密码失败: "+err.Error(), nil)
-		return
-	}
-
-	// 记录操作日志
-	utils.LogOperation(claims.UserID, "修改密码", "修改管理员密码")
-
-	utils.SuccessResponse(&c.Controller, "修改成功", nil)
-}
+// 旧的认证方法已合并到新的统一接口中
 
 // VerifyTokenRequest Token验证请求结构
 type VerifyTokenRequest struct {
@@ -356,6 +212,250 @@ func (c *AuthController) VerifyToken() {
 				"lastLoginTime": admin.LastLoginAt.Format("2006-01-02 15:04:05"),
 				"createTime":    admin.CreatedAt,
 			},
+		},
+	}
+	c.ServeJSON()
+}
+
+// Logout 登出（对齐云函数logout接口）
+func (c *AuthController) LogoutAdmin() {
+	c.Data["json"] = map[string]interface{}{
+		"code":      0,
+		"msg":       "登出成功",
+		"timestamp": utils.UnixMilli(),
+		"data": map[string]interface{}{
+			"message": "登出成功",
+		},
+	}
+	c.ServeJSON()
+}
+
+// GetProfile 获取当前用户资料（对齐云函数getProfile接口）
+func (c *AuthController) GetAdminProfile() {
+	var req struct {
+		Token string `json:"token"`
+	}
+
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4001,
+			"msg":       "参数解析失败",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	// 验证JWT Token
+	claims, err := utils.ParseJWT(req.Token)
+	if err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4003,
+			"msg":       "Token无效或已过期: " + err.Error(),
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	// 获取管理员信息
+	admin, err := models.GetAdminUserById(claims.UserID)
+	if err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4003,
+			"msg":       "用户不存在",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	// 获取角色权限
+	role, permissions, err := models.GetAdminRolePermissions(admin.RoleId)
+	if err != nil {
+		role = &models.AdminRole{RoleName: "未知角色"}
+		permissions = []string{}
+	}
+
+	c.Data["json"] = map[string]interface{}{
+		"code":      0,
+		"msg":       "获取成功",
+		"timestamp": utils.UnixMilli(),
+		"data": map[string]interface{}{
+			"user": map[string]interface{}{
+				"id":            admin.Id,
+				"username":      admin.Username,
+				"nickname":      admin.RealName,
+				"role":          role.RoleCode,
+				"roleName":      role.RoleName,
+				"permissions":   permissions,
+				"email":         admin.Email,
+				"phone":         admin.Phone,
+				"lastLoginTime": admin.LastLoginAt.Format("2006-01-02 15:04:05"),
+				"createTime":    admin.CreatedAt,
+			},
+		},
+	}
+	c.ServeJSON()
+}
+
+// UpdateProfile 更新用户资料（对齐云函数updateProfile接口）
+func (c *AuthController) UpdateAdminProfile() {
+	var req struct {
+		Token    string `json:"token"`
+		Email    string `json:"email"`
+		Phone    string `json:"phone"`
+		RealName string `json:"realName"`
+	}
+
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4001,
+			"msg":       "参数解析失败",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	// 验证JWT Token
+	claims, err := utils.ParseJWT(req.Token)
+	if err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4003,
+			"msg":       "Token无效或已过期: " + err.Error(),
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	// 更新用户资料
+	updateFields := make(map[string]interface{})
+	if req.Email != "" {
+		updateFields["email"] = req.Email
+	}
+	if req.Phone != "" {
+		updateFields["phone"] = req.Phone
+	}
+	if req.RealName != "" {
+		updateFields["realName"] = req.RealName
+	}
+
+	if err := models.UpdateAdminUserFields(claims.UserID, updateFields); err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      5001,
+			"msg":       "更新失败: " + err.Error(),
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	// 获取更新后的用户信息
+	admin, _ := models.GetAdminUserById(claims.UserID)
+
+	c.Data["json"] = map[string]interface{}{
+		"code":      0,
+		"msg":       "更新成功",
+		"timestamp": utils.UnixMilli(),
+		"data": map[string]interface{}{
+			"user": map[string]interface{}{
+				"id":       admin.Id,
+				"username": admin.Username,
+				"nickname": admin.RealName,
+				"email":    admin.Email,
+				"phone":    admin.Phone,
+			},
+		},
+	}
+	c.ServeJSON()
+}
+
+// ChangePassword 修改密码（对齐云函数changePassword接口）
+func (c *AuthController) ChangeAdminPassword() {
+	var req struct {
+		Token       string `json:"token"`
+		OldPassword string `json:"old_password"`
+		NewPassword string `json:"new_password"`
+	}
+
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4001,
+			"msg":       "参数解析失败",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	if req.OldPassword == "" || req.NewPassword == "" {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4001,
+			"msg":       "原密码和新密码不能为空",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	if len(req.NewPassword) < 6 {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4001,
+			"msg":       "新密码长度至少6位",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	// 验证JWT Token
+	claims, err := utils.ParseJWT(req.Token)
+	if err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4003,
+			"msg":       "Token无效或已过期: " + err.Error(),
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	// 修改密码
+	err = models.ChangeAdminPassword(claims.UserID, req.OldPassword, req.NewPassword)
+	if err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      5001,
+			"msg":       "修改密码失败: " + err.Error(),
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	// 记录操作日志
+	models.LogAdminOperation(claims.UserID, claims.Username, "CHANGE_PASSWORD", "AUTH", map[string]interface{}{
+		"success": true,
+	})
+
+	c.Data["json"] = map[string]interface{}{
+		"code":      0,
+		"msg":       "修改成功",
+		"timestamp": utils.UnixMilli(),
+		"data": map[string]interface{}{
+			"message": "修改成功",
 		},
 	}
 	c.ServeJSON()

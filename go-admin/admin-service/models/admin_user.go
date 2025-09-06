@@ -16,12 +16,12 @@ type AdminUser struct {
 	Password    string    `orm:"size(255)" json:"-"`
 	Email       string    `orm:"size(100)" json:"email"`
 	Phone       string    `orm:"size(20)" json:"phone"`
-	RealName    string    `orm:"size(50)" json:"real_name"`
+	RealName    string    `orm:"size(50)" json:"realName"`
 	Avatar      string    `orm:"size(255)" json:"avatar"`
 	Status      int       `orm:"default(1)" json:"status"` // 1:正常 0:禁用
-	LastLoginAt time.Time `orm:"type(datetime);null" json:"last_login_at"`
-	LastLoginIP string    `orm:"size(50);column(last_login_ip)" json:"last_login_ip"`
-	RoleId      int64     `orm:"default(0)" json:"role_id"`
+	LastLoginAt time.Time `orm:"type(datetime);null" json:"lastLoginAt"`
+	LastLoginIP string    `orm:"size(50);column(lastLoginIp)" json:"lastLoginIp"`
+	RoleId      int64     `orm:"default(0)" json:"roleId"`
 	Token       string    `orm:"size(128);null" json:"-"`      // 添加token字段
 	TokenExpire time.Time `orm:"type(datetime);null" json:"-"` // 添加token过期时间
 }
@@ -40,7 +40,7 @@ func GetAllAdminUsers(page, pageSize int, keyword string) ([]*AdminUser, int64, 
 		qs = qs.Filter("username__icontains", keyword)
 		cond := orm.NewCondition()
 		cond = cond.Or("username__icontains", keyword).
-			Or("real_name__icontains", keyword).
+			Or("realName__icontains", keyword).
 			Or("email__icontains", keyword)
 		qs = qs.SetCond(cond)
 	}
@@ -98,7 +98,7 @@ func DeleteAdminUser(id int64) error {
 }
 
 // UpdateAdminUserStatus 更新管理员状态
-func UpdateAdminUserStatus(id int64, status int) error {
+func UpdateAdminUserStatus(id int64, status string) error {
 	return UpdateAdminUserFields(id, map[string]interface{}{
 		"status":      status,
 		"update_time": time.Now(),
@@ -139,9 +139,9 @@ func GetAdminById(id int64) (*AdminUser, error) {
 // UpdateAdminProfile 更新管理员资料
 func UpdateAdminProfile(id int64, nickname, email string) error {
 	return UpdateAdminUserFields(id, map[string]interface{}{
-		"real_name":   nickname,
-		"email":       email,
-		"update_time": time.Now(),
+		"realName":   nickname,
+		"email":      email,
+		"updateTime": time.Now(),
 	})
 }
 
@@ -160,13 +160,27 @@ func ChangeAdminPassword(id int64, oldPassword, newPassword string) error {
 func AdminLoginWithMD5(username, passwordHash string) (*AdminUser, error) {
 	o := orm.NewOrm()
 	admin := &AdminUser{}
-	err := o.QueryTable("admin_users").
+
+	// 调试查询
+	fmt.Printf("DEBUG: 查询参数 - username=%s, passwordHash=%s\n", username, passwordHash)
+
+	// 先查询用户是否存在
+	userExists := &AdminUser{}
+	err := o.QueryTable("admin_users").Filter("username", username).One(userExists)
+	if err != nil {
+		fmt.Printf("DEBUG: 用户不存在: %v\n", err)
+		return nil, orm.ErrNoRows
+	}
+	fmt.Printf("DEBUG: 找到用户 ID=%d, 状态=%d, 存储的密码=%s\n", userExists.Id, userExists.Status, userExists.Password)
+
+	err = o.QueryTable("admin_users").
 		Filter("username", username).
 		Filter("password", passwordHash).
-		Filter("status", 1). // 只允许活跃用户登录
+		Filter("status", 1). // 1:正常状态
 		One(admin)
 
 	if err == orm.ErrNoRows {
+		fmt.Printf("DEBUG: 查询失败 - 可能是密码或状态不匹配\n")
 		return nil, orm.ErrNoRows
 	}
 	return admin, err
@@ -240,7 +254,7 @@ func LogAdminOperation(adminId int64, username, action, resource string, details
 // GetTotalAdmins 获取管理员总数
 func GetTotalAdmins() (int64, error) {
 	o := orm.NewOrm()
-	count, err := o.QueryTable("admin_users").Filter("status", 1).Count()
+	count, err := o.QueryTable("admin_users").Filter("status", "active").Count()
 	return count, err
 }
 

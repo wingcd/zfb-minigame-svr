@@ -22,21 +22,17 @@ func (s *ApplicationService) CreateApplication(appId, appName, description strin
 	o := orm.NewOrm()
 
 	// 检查应用ID是否已存在
-	exists := o.QueryTable("applications").Filter("app_id", appId).Exist()
+	exists := o.QueryTable("apps").Filter("appId", appId).Exist()
 	if exists {
 		return nil, fmt.Errorf("应用ID已存在")
 	}
-
-	// 生成应用密钥
-	appSecret := utils.GenerateRandomString(32)
 
 	// 创建应用记录
 	app := &models.Application{
 		AppId:       appId,
 		AppName:     appName,
-		AppSecret:   appSecret,
 		Description: description,
-		Status:      1,
+		Status:      "active", // active = 启用
 	}
 	app.CreatedAt = time.Now()
 	app.UpdatedAt = app.CreatedAt
@@ -62,13 +58,13 @@ func (s *ApplicationService) CreateApplication(appId, appName, description strin
 func (s *ApplicationService) GetApplicationList(page, pageSize int, keyword string) (*models.PageData, error) {
 	o := orm.NewOrm()
 
-	qs := o.QueryTable("applications")
+	qs := o.QueryTable("apps")
 
 	// 搜索条件
 	if keyword != "" {
 		cond := orm.NewCondition()
-		cond = cond.Or("app_name__icontains", keyword).
-			Or("app_id__icontains", keyword)
+		cond = cond.Or("appName__icontains", keyword).
+			Or("appId__icontains", keyword)
 		qs = qs.SetCond(cond)
 	}
 
@@ -99,7 +95,7 @@ func (s *ApplicationService) GetApplication(appId string) (*models.Application, 
 	o := orm.NewOrm()
 
 	app := &models.Application{}
-	err := o.QueryTable("applications").Filter("app_id", appId).One(app)
+	err := o.QueryTable("apps").Filter("appId", appId).One(app)
 	if err != nil {
 		if err == orm.ErrNoRows {
 			return nil, fmt.Errorf("应用不存在")
@@ -111,12 +107,12 @@ func (s *ApplicationService) GetApplication(appId string) (*models.Application, 
 }
 
 // UpdateApplication 更新应用信息
-func (s *ApplicationService) UpdateApplication(appId, appName, description string, status int) error {
+func (s *ApplicationService) UpdateApplication(appId, appName, description string, status string) error {
 	o := orm.NewOrm()
 
 	// 查找应用
 	app := &models.Application{}
-	err := o.QueryTable("applications").Filter("app_id", appId).One(app)
+	err := o.QueryTable("apps").Filter("appId", appId).One(app)
 	if err != nil {
 		if err == orm.ErrNoRows {
 			return fmt.Errorf("应用不存在")
@@ -130,7 +126,7 @@ func (s *ApplicationService) UpdateApplication(appId, appName, description strin
 	app.Status = status
 	app.UpdatedAt = time.Now()
 
-	_, err = o.Update(app, "app_name", "description", "status", "update_time")
+	_, err = o.Update(app, "appName", "description", "status", "updateTime")
 	if err != nil {
 		return fmt.Errorf("更新应用失败: %v", err)
 	}
@@ -156,7 +152,7 @@ func (s *ApplicationService) DeleteApplication(appId string) error {
 	}()
 
 	// 删除应用记录
-	_, err = tx.QueryTable("applications").Filter("app_id", appId).Delete()
+	_, err = tx.QueryTable("apps").Filter("appId", appId).Delete()
 	if err != nil {
 		return fmt.Errorf("删除应用记录失败: %v", err)
 	}
@@ -176,7 +172,7 @@ func (s *ApplicationService) ResetAppSecret(appId string) (string, error) {
 
 	// 查找应用
 	app := &models.Application{}
-	err := o.QueryTable("applications").Filter("app_id", appId).One(app)
+	err := o.QueryTable("apps").Filter("appId", appId).One(app)
 	if err != nil {
 		if err == orm.ErrNoRows {
 			return "", fmt.Errorf("应用不存在")
@@ -189,7 +185,7 @@ func (s *ApplicationService) ResetAppSecret(appId string) (string, error) {
 	app.AppSecret = newSecret
 	app.UpdatedAt = time.Now()
 
-	_, err = o.Update(app, "app_secret", "update_time")
+	_, err = o.Update(app, "appSecret", "updateTime")
 	if err != nil {
 		return "", fmt.Errorf("重置应用密钥失败: %v", err)
 	}
@@ -208,12 +204,12 @@ func (s *ApplicationService) CreateAppTables(appId string) error {
 	userDataSQL := fmt.Sprintf(`
 		CREATE TABLE IF NOT EXISTS user_data_%s (
 			id BIGINT AUTO_INCREMENT PRIMARY KEY,
-			user_id VARCHAR(100) NOT NULL,
+			userId VARCHAR(100) NOT NULL,
 			data LONGTEXT,
-			create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-			update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-			UNIQUE KEY uk_user_id (user_id),
-			KEY idx_update_time (update_time)
+			createTime DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updateTime DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+			UNIQUE KEY uk_user_id (userId),
+			KEY idx_update_time (updateTime)
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户数据表'
 	`, cleanAppId)
 
@@ -223,16 +219,16 @@ func (s *ApplicationService) CreateAppTables(appId string) error {
 	counterSQL := fmt.Sprintf(`
 		CREATE TABLE IF NOT EXISTS counter_%s (
 			id BIGINT AUTO_INCREMENT PRIMARY KEY,
-			counter_name VARCHAR(100) NOT NULL,
-			user_id VARCHAR(100) DEFAULT NULL,
+			counterName VARCHAR(100) NOT NULL,
+			userId VARCHAR(100) DEFAULT NULL,
 			count BIGINT DEFAULT 0,
-			reset_time DATETIME DEFAULT NULL,
-			reset_interval INT DEFAULT NULL,
-			create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-			update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-			UNIQUE KEY uk_counter_user (counter_name, user_id),
-			KEY idx_counter_name (counter_name),
-			KEY idx_reset_time (reset_time)
+			resetTime DATETIME DEFAULT NULL,
+			resetInterval INT DEFAULT NULL,
+			createTime DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updateTime DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+			UNIQUE KEY uk_counter_user (counterName, userId),
+			KEY idx_counter_name (counterName),
+			KEY idx_reset_time (resetTime)
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='计数器数据表'
 	`, cleanAppId)
 
@@ -240,18 +236,18 @@ func (s *ApplicationService) CreateAppTables(appId string) error {
 	mailSQL := fmt.Sprintf(`
 		CREATE TABLE IF NOT EXISTS mail_%s (
 			id BIGINT AUTO_INCREMENT PRIMARY KEY,
-			user_id VARCHAR(100) NOT NULL,
+			userId VARCHAR(100) NOT NULL,
 			title VARCHAR(200) NOT NULL,
 			content TEXT,
 			rewards TEXT,
 			status TINYINT DEFAULT 0 COMMENT '0:未读 1:已读 2:已领取',
-			expire_at DATETIME DEFAULT NULL,
-			create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-			update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-			KEY idx_user_id (user_id),
+			expireAt DATETIME DEFAULT NULL,
+			createTime DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updateTime DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+			KEY idx_user_id (userId),
 			KEY idx_status (status),
-			KEY idx_expire_at (expire_at),
-			KEY idx_create_time (create_time)
+			KEY idx_expire_at (expireAt),
+			KEY idx_create_time (createTime)
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='邮件数据表'
 	`, cleanAppId)
 
@@ -259,13 +255,13 @@ func (s *ApplicationService) CreateAppTables(appId string) error {
 	configSQL := fmt.Sprintf(`
 		CREATE TABLE IF NOT EXISTS game_config_%s (
 			id BIGINT AUTO_INCREMENT PRIMARY KEY,
-			config_key VARCHAR(100) NOT NULL,
-			config_value LONGTEXT,
+			configKey VARCHAR(100) NOT NULL,
+			configValue LONGTEXT,
 			version VARCHAR(50) DEFAULT NULL,
 			description VARCHAR(255) DEFAULT NULL,
-			create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-			update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-			UNIQUE KEY uk_config_key (config_key),
+			createTime DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updateTime DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+			UNIQUE KEY uk_config_key (configKey),
 			KEY idx_version (version)
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='游戏配置表'
 	`, cleanAppId)
@@ -314,7 +310,7 @@ func (s *ApplicationService) GetApplicationStats(appId string) (map[string]inter
 	o := orm.NewOrm()
 
 	// 检查应用是否存在
-	exists := o.QueryTable("applications").Filter("app_id", appId).Exist()
+	exists := o.QueryTable("apps").Filter("appId", appId).Exist()
 	if !exists {
 		return nil, fmt.Errorf("应用不存在")
 	}

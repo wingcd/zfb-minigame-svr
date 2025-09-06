@@ -57,7 +57,7 @@ func CreateTestApp(appId string) error {
 
 	// 检查应用是否已存在
 	var count int64
-	err := o.Raw("SELECT COUNT(*) FROM applications WHERE app_id = ?", appId).QueryRow(&count)
+	err := o.Raw("SELECT COUNT(*) FROM apps WHERE app_id = ?", appId).QueryRow(&count)
 	if err != nil {
 		return err
 	}
@@ -71,7 +71,7 @@ func CreateTestApp(appId string) error {
 	description := fmt.Sprintf("这是用于测试的应用: %s", appId)
 
 	// 插入应用数据
-	sql := "INSERT INTO applications (app_id, app_name, description, status, create_time, update_time) VALUES (?, ?, ?, ?, NOW(), NOW())"
+	sql := "INSERT INTO apps (app_id, app_name, description, status, create_time, update_time) VALUES (?, ?, ?, ?, NOW(), NOW())"
 	_, err = o.Raw(sql, appId, appName, description, 1).Exec()
 	if err != nil {
 		logs.Error("创建测试应用失败:", err)
@@ -285,7 +285,7 @@ func CleanupTestApp(appId string) error {
 	}
 
 	// 删除应用记录
-	_, err := o.Raw("DELETE FROM applications WHERE app_id = ?", appId).Exec()
+	_, err := o.Raw("DELETE FROM apps WHERE app_id = ?", appId).Exec()
 	if err != nil {
 		logs.Error("删除应用记录失败:", err)
 		return err

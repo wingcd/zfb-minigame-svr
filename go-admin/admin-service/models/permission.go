@@ -14,7 +14,7 @@ type Permission struct {
 	Code        string `orm:"unique;size(50)" json:"code"`
 	Name        string `orm:"size(100)" json:"name"`
 	Description string `orm:"size(255)" json:"description"`
-	ParentId    int64  `orm:"default(0)" json:"parent_id"`
+	ParentId    int64  `orm:"default(0)" json:"parentId"`
 	Sort        int    `orm:"default(0)" json:"sort"`
 	Status      int    `orm:"default(1)" json:"status"`
 }

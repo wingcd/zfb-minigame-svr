@@ -11,13 +11,13 @@ import (
 // CounterConfig 计数器配置模型
 type CounterConfig struct {
 	BaseModel
-	AppId         string    `orm:"size(100)" json:"app_id"`
-	CounterKey    string    `orm:"size(100)" json:"counter_key"`
-	ResetType     string    `orm:"size(20);default(permanent)" json:"reset_type"` // daily, weekly, monthly, custom, permanent
-	ResetValue    int       `orm:"null" json:"reset_value"`                       // 自定义重置时间(小时)
-	NextResetTime time.Time `orm:"type(datetime);null" json:"next_reset_time"`
+	AppId         string    `orm:"size(100)" json:"appId"`
+	CounterKey    string    `orm:"size(100)" json:"counterKey"`
+	ResetType     string    `orm:"size(20);default(permanent)" json:"resetType"` // daily, weekly, monthly, custom, permanent
+	ResetValue    int       `orm:"null" json:"resetValue"`                       // 自定义重置时间(小时)
+	NextResetTime time.Time `orm:"type(datetime);null" json:"nextResetTime"`
 	Description   string    `orm:"type(text);null" json:"description"`
-	IsActive      bool      `orm:"default(true)" json:"is_active"`
+	IsActive      bool      `orm:"default(true)" json:"isActive"`
 }
 
 // TableName 指定表名
@@ -28,12 +28,12 @@ func (c *CounterConfig) TableName() string {
 // CounterData 计数器数据模型（动态表）
 type CounterData struct {
 	Id         int64     `orm:"auto" json:"id"`
-	CounterKey string    `orm:"size(100)" json:"counter_key"`
+	CounterKey string    `orm:"size(100)" json:"counterKey"`
 	Location   string    `orm:"size(100);default(default)" json:"location"`
 	Value      int64     `orm:"default(0)" json:"value"`
-	ResetTime  time.Time `orm:"type(datetime);null" json:"reset_time"`
-	CreatedAt  string    `orm:"auto_now_add;type(datetime)" json:"create_time"`
-	UpdatedAt  string    `orm:"auto_now;type(datetime)" json:"update_time"`
+	ResetTime  time.Time `orm:"type(datetime);null" json:"resetTime"`
+	CreatedAt  string    `orm:"auto_now_add;type(datetime)" json:"createdAt"`
+	UpdatedAt  string    `orm:"auto_now;type(datetime)" json:"updatedAt"`
 }
 
 // GetTableName 获取动态表名

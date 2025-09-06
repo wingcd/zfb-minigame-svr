@@ -11,18 +11,27 @@ import (
 // Application 应用模型
 type Application struct {
 	BaseModel
-	AppId         string `orm:"unique;size(50)" json:"app_id"`
-	AppName       string `orm:"size(100)" json:"app_name"`
-	AppSecret     string `orm:"size(100)" json:"app_secret"`
-	Platform      string `orm:"size(50)" json:"platform"`
-	ChannelAppId  string `orm:"size(100)" json:"channel_app_id"`
-	ChannelAppKey string `orm:"size(100)" json:"channel_app_key"`
-	Description   string `orm:"type(text)" json:"description"`
-	Status        int    `orm:"default(1)" json:"status"`
+	AppId         string `orm:"unique;size(50);column(appId)" json:"appId"`                // 应用ID（唯一）
+	AppName       string `orm:"size(100);column(appName)" json:"appName"`                  // 应用名称
+	Description   string `orm:"type(text);column(description)" json:"description"`         // 应用描述
+	ChannelAppId  string `orm:"size(100);column(channelAppId)" json:"channelAppId"`        // 渠道应用ID
+	ChannelAppKey string `orm:"size(100);column(channelAppKey)" json:"channelAppKey"`      // 渠道应用密钥
+	AppSecret     string `orm:"size(100);column(appSecret)" json:"appSecret"`              // 应用密钥
+	Category      string `orm:"size(50);default('game');column(category)" json:"category"` // 应用分类: game/tool/social
+	Platform      string `orm:"size(50);column(platform)" json:"platform"`                 // 平台: alipay/wechat/baidu
+	Status        string `orm:"size(20);default('active');column(status)" json:"status"`   // 状态: active/inactive/pending
+	Version       string `orm:"size(50);column(version)" json:"version"`                   // 当前版本
+	MinVersion    string `orm:"size(50);column(minVersion)" json:"minVersion"`             // 最低支持版本
+	Settings      string `orm:"type(text);column(settings)" json:"settings"`               // 应用设置(JSON格式)
+	UserCount     int64  `orm:"default(0);column(userCount)" json:"userCount"`             // 用户数量
+	ScoreCount    int64  `orm:"default(0);column(scoreCount)" json:"scoreCount"`           // 分数记录数
+	DailyActive   int64  `orm:"default(0);column(dailyActive)" json:"dailyActive"`         // 日活跃用户
+	MonthlyActive int64  `orm:"default(0);column(monthlyActive)" json:"monthlyActive"`     // 月活跃用户
+	CreatedBy     string `orm:"size(50);column(createdBy)" json:"createdBy"`               // 创建者
 }
 
 func (a *Application) TableName() string {
-	return "applications"
+	return "apps"
 }
 
 // Insert 插入应用并创建相关数据表
@@ -32,9 +41,6 @@ func (a *Application) Insert() error {
 	// 生成AppId和AppSecret（如果没有设置）
 	if a.AppId == "" {
 		a.AppId = utils.GenerateAppId()
-	}
-	if a.AppSecret == "" {
-		a.AppSecret = utils.GenerateAppSecret()
 	}
 
 	// 开始事务
@@ -173,7 +179,7 @@ func (a *Application) GetByAppId(appId string) error {
 // GetList 获取应用列表
 func GetApplicationList(page, pageSize int, keyword string) ([]Application, int64, error) {
 	o := orm.NewOrm()
-	qs := o.QueryTable("applications")
+	qs := o.QueryTable("apps")
 
 	if keyword != "" {
 		qs = qs.Filter("app_name__icontains", keyword).
@@ -203,7 +209,7 @@ func DeleteApplication(id int64) error {
 
 	// 这里可以选择是否删除相关数据表
 	// 为了安全起见，我们只是标记应用为禁用状态
-	app.Status = 0
+	app.Status = "inactive" // inactive = 禁用, active = 启用
 	_, err = o.Update(app, "status", "update_time")
 	return err
 }
@@ -237,14 +243,14 @@ func (a *Application) dropAppTables() error {
 // GetTotalApplications 获取应用总数
 func GetTotalApplications() (int64, error) {
 	o := orm.NewOrm()
-	count, err := o.QueryTable("applications").Filter("status", 1).Count()
+	count, err := o.QueryTable("apps").Filter("status", "active").Count() // active = 启用
 	return count, err
 }
 
 // GetApplicationsByStatus 获取指定状态的应用数量
-func GetApplicationsByStatus(status int) (int64, error) {
+func GetApplicationsByStatus(status string) (int64, error) {
 	o := orm.NewOrm()
-	count, err := o.QueryTable("applications").Filter("status", status).Count()
+	count, err := o.QueryTable("apps").Filter("status", status).Count()
 	return count, err
 }
 
