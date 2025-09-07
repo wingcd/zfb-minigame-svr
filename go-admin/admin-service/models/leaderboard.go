@@ -1,6 +1,7 @@
 package models
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -13,14 +14,23 @@ import (
 // LeaderboardConfig 排行榜配置结构（管理表）
 type LeaderboardConfig struct {
 	BaseModel
-	AppId       string `orm:"size(100)" json:"appId"`
-	Type        string `orm:"size(100)" json:"type"`
-	Name        string `orm:"size(200)" json:"name"`
-	Description string `orm:"type(text)" json:"description"`
-	ResetType   string `orm:"size(50);default(never)" json:"resetType"` // never, daily, weekly, monthly
-	MaxEntries  int    `orm:"default(1000)" json:"maxEntries"`
-	ScoreType   string `orm:"size(20);default(higher_better)" json:"scoreType"` // higher_better, lower_better
-	Status      int    `orm:"default(1)" json:"status"`                         // 1=启用, 0=禁用
+	AppId            string    `orm:"size(100)" json:"appId"`
+	LeaderboardType  string    `orm:"size(100);column(leaderboard_type)" json:"leaderboardType"`
+	Name             string    `orm:"size(200)" json:"name"`
+	Description      string    `orm:"type(text)" json:"description"`
+	ScoreType        string    `orm:"size(20);default(higher_better)" json:"scoreType"` // higher_better, lower_better
+	MaxRank          int       `orm:"default(1000);column(max_rank)" json:"maxRank"`
+	Enabled          bool      `orm:"default(true)" json:"enabled"`
+	Category         string    `orm:"size(100)" json:"category"`
+	ResetType        string    `orm:"size(50);default(permanent)" json:"resetType"` // permanent, daily, weekly, monthly, custom
+	ResetValue       int       `orm:"default(0);column(reset_value)" json:"resetValue"`
+	ResetTime        time.Time `orm:"null;type(datetime);column(reset_time)" json:"resetTime"`
+	UpdateStrategy   int       `orm:"default(0);column(update_strategy)" json:"updateStrategy"` // 0=最高分, 1=最新分, 2=累计分
+	Sort             int       `orm:"default(1)" json:"sort"`                                   // 0=升序, 1=降序
+	ScoreCount       int       `orm:"default(0);column(score_count)" json:"scoreCount"`
+	ParticipantCount int       `orm:"default(0);column(participant_count)" json:"participantCount"`
+	LastResetTime    time.Time `orm:"null;type(datetime);column(last_reset_time)" json:"lastResetTime"`
+	CreatedBy        string    `orm:"size(100);column(created_by)" json:"createdBy"`
 }
 
 // Leaderboard 排行榜配置结构（兼容性保持）
@@ -123,7 +133,7 @@ func CreateLeaderboardConfig(config *LeaderboardConfig) error {
 	// 检查是否已存在
 	exist := o.QueryTable("leaderboard_config").
 		Filter("appId", config.AppId).
-		Filter("type", config.Type).
+		Filter("leaderboard_type", config.LeaderboardType).
 		Exist()
 
 	if exist {
@@ -171,7 +181,7 @@ func UpdateLeaderboard(appId, leaderboardType string, fields map[string]interfac
 
 	qs := o.QueryTable("leaderboard_config").
 		Filter("appId", appId).
-		Filter("type", leaderboardType)
+		Filter("leaderboard_type", leaderboardType)
 
 	_, err := qs.Update(fields)
 	return err
@@ -184,7 +194,7 @@ func DeleteLeaderboard(appId, leaderboardType string) error {
 	// 删除排行榜配置
 	_, err := o.QueryTable("leaderboard_config").
 		Filter("appId", appId).
-		Filter("type", leaderboardType).
+		Filter("leaderboard_type", leaderboardType).
 		Delete()
 
 	if err != nil {
@@ -233,16 +243,88 @@ func GetLeaderboardData(appId, leaderboardType string, page, pageSize int) ([]ma
 		return nil, 0, err
 	}
 
-	// 转换为map格式并添加排名
+	// 转换为map格式并添加排名，同时获取玩家详细信息
 	var result []map[string]interface{}
+	userTableName := fmt.Sprintf("user_%s", appId)
+
 	for i, row := range results {
+		var playerId string
+		if pid, ok := row["playerId"].(string); ok {
+			playerId = pid
+		} else {
+			playerId = fmt.Sprintf("%v", row["playerId"])
+		}
+
+		// 获取玩家详细信息
+		playerInfo := map[string]interface{}{
+			"playerId": playerId,
+			"token":    "",
+			"nickname": "",
+			"avatar":   "",
+			"data":     map[string]interface{}{},
+			"level":    0,
+			"exp":      0,
+			"coin":     0,
+			"diamond":  0,
+			"vipLevel": 0,
+		}
+
+		// 从用户表中获取玩家数据
+		var userData []orm.Params
+		userSQL := fmt.Sprintf("SELECT data FROM %s WHERE player_id = ?", userTableName)
+		_, err = o.Raw(userSQL, playerId).Values(&userData)
+		if err == nil && len(userData) > 0 {
+			if dataStr, ok := userData[0]["data"].(string); ok && dataStr != "" {
+				var parsedData map[string]interface{}
+				if json.Unmarshal([]byte(dataStr), &parsedData) == nil {
+					// 解析并设置玩家信息字段
+					if token, exists := parsedData["token"]; exists {
+						playerInfo["token"] = token
+					}
+					if nickname, exists := parsedData["nickname"]; exists {
+						playerInfo["nickname"] = nickname
+					}
+					if avatar, exists := parsedData["avatar"]; exists {
+						playerInfo["avatar"] = avatar
+					}
+					if level, exists := parsedData["level"]; exists {
+						playerInfo["level"] = level
+					}
+					if exp, exists := parsedData["exp"]; exists {
+						playerInfo["exp"] = exp
+					}
+					if coin, exists := parsedData["coin"]; exists {
+						playerInfo["coin"] = coin
+					}
+					if diamond, exists := parsedData["diamond"]; exists {
+						playerInfo["diamond"] = diamond
+					}
+					if vipLevel, exists := parsedData["vipLevel"]; exists {
+						playerInfo["vipLevel"] = vipLevel
+					}
+					// 保存完整的游戏数据
+					playerInfo["data"] = parsedData
+				}
+			}
+		}
+
 		item := map[string]interface{}{
 			"rank":      offset + i + 1,
-			"playerId":  row["playerId"],
+			"playerId":  playerId,
 			"score":     row["score"],
 			"extraData": row["extraData"],
 			"createdAt": row["createdAt"],
 			"updatedAt": row["updatedAt"],
+			// 添加玩家详细信息
+			"token":    playerInfo["token"],
+			"nickname": playerInfo["nickname"],
+			"avatar":   playerInfo["avatar"],
+			"data":     playerInfo["data"],
+			"level":    playerInfo["level"],
+			"exp":      playerInfo["exp"],
+			"coin":     playerInfo["coin"],
+			"diamond":  playerInfo["diamond"],
+			"vipLevel": playerInfo["vipLevel"],
 		}
 		result = append(result, item)
 	}
@@ -301,11 +383,11 @@ func CommitLeaderboardScore(appId, leaderboardType, playerId string, score int64
 	o := orm.NewOrm()
 
 	// 检查排行榜是否存在且启用
-	var leaderboard Leaderboard
+	var leaderboard LeaderboardConfig
 	err := o.QueryTable("leaderboard_config").
 		Filter("appId", appId).
-		Filter("type", leaderboardType).
-		Filter("status", 1).
+		Filter("leaderboard_type", leaderboardType).
+		Filter("enabled", true).
 		One(&leaderboard)
 
 	if err != nil {
@@ -326,12 +408,12 @@ func CommitLeaderboardScore(appId, leaderboardType, playerId string, score int64
 
 	if err == orm.ErrNoRows {
 		// 检查是否超过最大条目数
-		if leaderboard.MaxEntries > 0 {
+		if leaderboard.MaxRank > 0 {
 			countSQL := fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE leaderboard_name = ?", tableName)
 			var count int64
 			o.Raw(countSQL, leaderboardType).QueryRow(&count)
 
-			if count >= int64(leaderboard.MaxEntries) {
+			if count >= int64(leaderboard.MaxRank) {
 				// 删除最低分记录
 				lowestSQL := fmt.Sprintf("SELECT score FROM %s WHERE leaderboard_name = ? ORDER BY score ASC, createdAt DESC LIMIT 1", tableName)
 				var lowestScore int64

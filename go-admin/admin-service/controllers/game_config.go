@@ -4,7 +4,9 @@ import (
 	"admin-service/models"
 	"admin-service/utils"
 	"encoding/json"
+	"fmt"
 
+	"github.com/beego/beego/v2/core/logs"
 	"github.com/beego/beego/v2/server/web"
 )
 
@@ -15,11 +17,11 @@ type GameConfigController struct {
 // GetGameConfigList 获取游戏配置列表
 func (c *GameConfigController) GetGameConfigList() {
 	var requestData struct {
-		AppId    string `json:"appId"`
-		Page     int    `json:"page"`
-		PageSize int    `json:"pageSize"`
-		Type     string `json:"type"`
-		Version  string `json:"version"`
+		AppId      string `json:"appId"`
+		Page       int    `json:"page"`
+		PageSize   int    `json:"pageSize"`
+		ConfigType string `json:"configType"`
+		Version    string `json:"version"`
 	}
 
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &requestData); err != nil {
@@ -41,7 +43,7 @@ func (c *GameConfigController) GetGameConfigList() {
 		requestData.PageSize = 20
 	}
 
-	configs, total, err := models.GetGameConfigList(requestData.AppId, requestData.Page, requestData.PageSize, requestData.Type, requestData.Version)
+	configs, total, err := models.GetGameConfigList(requestData.AppId, requestData.Page, requestData.PageSize, requestData.ConfigType, requestData.Version)
 	if err != nil {
 		c.Data["json"] = map[string]interface{}{
 			"code":      5001,
@@ -71,24 +73,29 @@ func (c *GameConfigController) GetGameConfigList() {
 // CreateGameConfig 创建游戏配置
 func (c *GameConfigController) CreateGameConfig() {
 	var requestData struct {
-		AppId       string                 `json:"appId"`
-		ConfigKey   string                 `json:"configKey"`
-		ConfigValue map[string]interface{} `json:"configValue"`
-		Type        string                 `json:"type"`
-		Version     string                 `json:"version"`
-		Description string                 `json:"description"`
+		AppId       string      `json:"appId"`
+		ConfigKey   string      `json:"configKey"`
+		ConfigValue interface{} `json:"configValue"`
+		ConfigType  string      `json:"configType"` // 修正字段名
+		Version     string      `json:"version"`
+		Description string      `json:"description"`
+		IsActive    bool        `json:"isActive"`
 	}
 
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &requestData); err != nil {
+		logs.Error("JSON解析错误:", err)
+		logs.Error("请求数据:", string(c.Ctx.Input.RequestBody))
 		c.Data["json"] = map[string]interface{}{
 			"code":      4001,
-			"msg":       "参数错误",
+			"msg":       "参数错误: " + err.Error(),
 			"timestamp": utils.UnixMilli(),
 			"data":      nil,
 		}
 		c.ServeJSON()
 		return
 	}
+
+	logs.Info("接收到的请求数据:", requestData)
 
 	// 参数验证
 	if requestData.AppId == "" || requestData.ConfigKey == "" {
@@ -105,17 +112,24 @@ func (c *GameConfigController) CreateGameConfig() {
 	// 将 ConfigValue 转换为字符串
 	configValueStr := ""
 	if requestData.ConfigValue != nil {
-		if jsonBytes, err := json.Marshal(requestData.ConfigValue); err == nil {
-			configValueStr = string(jsonBytes)
+		switch v := requestData.ConfigValue.(type) {
+		case string:
+			configValueStr = v
+		default:
+			if jsonBytes, err := json.Marshal(requestData.ConfigValue); err == nil {
+				configValueStr = string(jsonBytes)
+			}
 		}
 	}
 
 	config := &models.GameConfig{
-		AppId:       requestData.AppId,
+		AppID:       requestData.AppId,
 		ConfigKey:   requestData.ConfigKey,
 		ConfigValue: configValueStr,
-		ConfigType:  requestData.Type,
+		ConfigType:  requestData.ConfigType,
+		Version:     requestData.Version,
 		Description: requestData.Description,
+		IsActive:    requestData.IsActive,
 	}
 
 	if err := models.CreateGameConfig(config); err != nil {
@@ -149,13 +163,10 @@ func (c *GameConfigController) CreateGameConfig() {
 
 // UpdateGameConfig 更新游戏配置
 func (c *GameConfigController) UpdateGameConfig() {
-	var requestData struct {
-		AppId     string                 `json:"appId"`
-		ConfigKey string                 `json:"configKey"`
-		Updates   map[string]interface{} `json:"updates"`
-	}
+	var requestData models.UpdateGameConfigRequest
 
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &requestData); err != nil {
+		logs.Error("UpdateGameConfig 解析请求参数失败: %v", err)
 		c.Data["json"] = map[string]interface{}{
 			"code":      4001,
 			"msg":       "参数错误",
@@ -166,10 +177,11 @@ func (c *GameConfigController) UpdateGameConfig() {
 		return
 	}
 
-	if err := models.UpdateGameConfigByKey(requestData.AppId, requestData.ConfigKey, requestData.Updates); err != nil {
+	if err := models.UpdateGameConfigByRequest(&requestData); err != nil {
+		logs.Error("UpdateGameConfig 更新失败: %v", err)
 		c.Data["json"] = map[string]interface{}{
 			"code":      5001,
-			"msg":       "更新游戏配置失败",
+			"msg":       fmt.Sprintf("更新游戏配置失败: %v", err),
 			"timestamp": utils.UnixMilli(),
 			"data":      nil,
 		}
@@ -322,7 +334,8 @@ func (c *GameConfigController) GetAllGameConfigs() {
 // GetGameConfigById 根据ID获取游戏配置
 func (c *GameConfigController) GetGameConfigById() {
 	var requestData struct {
-		ID int64 `json:"id"`
+		ID    int64  `json:"id"`
+		AppId string `json:"appId"`
 	}
 
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &requestData); err != nil {
@@ -336,7 +349,7 @@ func (c *GameConfigController) GetGameConfigById() {
 		return
 	}
 
-	config, err := models.GetGameConfigById(requestData.ID)
+	config, err := models.GetGameConfigById(requestData.ID, requestData.AppId)
 	if err != nil {
 		c.Data["json"] = map[string]interface{}{
 			"code":      4004,

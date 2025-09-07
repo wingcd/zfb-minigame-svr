@@ -235,7 +235,15 @@ const fetchRoleList = async () => {
     const response = await roleAPI.getList(params)
     
     if (response.code === 0) {
-      roleList.value = response.data.list
+      // 处理权限数据，确保是数组格式
+      const processedList = response.data.list.map(role => ({
+        ...role,
+        permissions: typeof role.permissions === 'string' 
+          ? (role.permissions ? JSON.parse(role.permissions) : [])
+          : (role.permissions || [])
+      }))
+      
+      roleList.value = processedList
       pagination.total = response.data.total
     } else {
       ElMessage.error(response.msg || '获取角色列表失败')
@@ -277,11 +285,26 @@ const handleCurrentChange = (page) => {
 // 编辑角色
 const handleEdit = (role) => {
   editingRole.value = role
+  
+  // 处理权限数据，确保是数组格式
+  let permissions = []
+  if (role.permissions) {
+    if (typeof role.permissions === 'string') {
+      try {
+        permissions = JSON.parse(role.permissions)
+      } catch (e) {
+        permissions = []
+      }
+    } else if (Array.isArray(role.permissions)) {
+      permissions = [...role.permissions]
+    }
+  }
+  
   Object.assign(roleForm, {
     roleCode: role.roleCode,
     roleName: role.roleName,
     description: role.description,
-    permissions: [...(role.permissions || [])],
+    permissions: permissions,
     sort: role.sort || 1
   })
   showCreateDialog.value = true
@@ -307,11 +330,17 @@ const handleSubmit = async () => {
     
     submitLoading.value = true
     
+    // 确保权限数据是JSON字符串格式，匹配后端期望
+    const submitData = {
+      ...roleForm,
+      permissions: JSON.stringify(roleForm.permissions)
+    }
+    
     let response
     if (editingRole.value) {
-      response = await roleAPI.update(roleForm)
+      response = await roleAPI.update(submitData)
     } else {
-      response = await roleAPI.create(roleForm)
+      response = await roleAPI.create(submitData)
     }
     
     if (response.code === 0) {

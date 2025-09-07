@@ -146,7 +146,6 @@ func (c *PermissionController) CreateRole() {
 	role := &models.AdminRole{
 		RoleCode:    roleCode,
 		RoleName:    roleName,
-		Name:        roleName, // 兼容性
 		Description: description,
 		Permissions: permissionsStr,
 		Status:      1,
@@ -169,7 +168,7 @@ func (c *PermissionController) CreateRole() {
 
 	// 对齐云函数返回格式
 	result := map[string]interface{}{
-		"id":          role.Id,
+		"id":          role.ID,
 		"roleCode":    roleCode,
 		"roleName":    roleName,
 		"description": description,
@@ -255,7 +254,6 @@ func (c *PermissionController) UpdateRole() {
 	// 更新字段
 	if roleName != "" {
 		role.RoleName = roleName
-		role.Name = roleName // 兼容性
 	}
 	if description != "" {
 		role.Description = description
@@ -319,14 +317,14 @@ func (c *PermissionController) DeleteRole() {
 	}
 
 	// 检查角色是否被使用
-	inUse := models.IsRoleInUse(role.Id)
+	inUse := models.IsRoleInUse(role.ID)
 	if inUse {
 		utils.ErrorResponse(&c.Controller, 4006, "角色正在使用中，不能删除", nil)
 		return
 	}
 
 	// 删除角色
-	err = models.DeleteRole(role.Id)
+	err = models.DeleteRole(role.ID)
 	if err != nil {
 		utils.ErrorResponse(&c.Controller, 5001, "删除角色失败: "+err.Error(), nil)
 		return
@@ -416,7 +414,7 @@ func (c *PermissionController) CreatePermission() {
 	utils.LogOperation(claims.UserID, "创建权限", "创建权限: "+permissionName)
 
 	result := map[string]interface{}{
-		"permissionId": permission.Id,
+		"permissionId": permission.ID,
 	}
 
 	utils.SuccessResponse(&c.Controller, "创建成功", result)
@@ -460,7 +458,7 @@ func (c *PermissionController) UpdatePermission() {
 
 	// 更新权限
 	permission := &models.Permission{
-		BaseModel:   models.BaseModel{Id: int64(permissionId)},
+		BaseModel:   models.BaseModel{ID: int64(permissionId)},
 		Code:        permissionCode,
 		Name:        permissionName,
 		Description: description,

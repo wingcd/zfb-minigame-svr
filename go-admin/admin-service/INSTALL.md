@@ -173,8 +173,6 @@ admin-service/
 
 - `admins`: 管理员账号
 - `apps`: 应用信息
-- `user_data`: 用户数据
-- `leaderboards`: 排行榜
 - `system_configs`: 系统配置
 
 ## 故障排除

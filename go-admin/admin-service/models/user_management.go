@@ -3,6 +3,7 @@ package models
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"strings"
 	"time"
 
@@ -15,6 +16,7 @@ type GameUser struct {
 	ID        int64     `orm:"pk;auto" json:"id"`
 	PlayerId  string    `orm:"size(100);unique" json:"playerId"`
 	Data      string    `orm:"type(longtext)" json:"data"`
+	Banned    bool      `orm:"default(false)" json:"banned"`
 	CreatedAt time.Time `orm:"auto_now_add;type(datetime)" json:"createdAt"`
 	UpdatedAt time.Time `orm:"auto_now;type(datetime)" json:"updatedAt"`
 	// 解析后的数据
@@ -107,12 +109,24 @@ func GetAllGameUsers(appId string, page, pageSize int, keyword, status string) (
 	tableName := fmt.Sprintf("user_%s", appId)
 
 	// 构建查询条件
-	var whereClause string
+	var whereConditions []string
 	var params []interface{}
 
 	if keyword != "" {
-		whereClause = "WHERE playerId LIKE ?"
+		whereConditions = append(whereConditions, "player_id LIKE ?")
 		params = append(params, "%"+keyword+"%")
+	}
+
+	// 根据状态筛选
+	if status == "banned" {
+		whereConditions = append(whereConditions, "banned = true")
+	} else if status == "normal" {
+		whereConditions = append(whereConditions, "banned = false")
+	}
+
+	var whereClause string
+	if len(whereConditions) > 0 {
+		whereClause = "WHERE " + strings.Join(whereConditions, " AND ")
 	}
 
 	// 获取总数
@@ -126,7 +140,7 @@ func GetAllGameUsers(appId string, page, pageSize int, keyword, status string) (
 
 	// 分页查询
 	offset := (page - 1) * pageSize
-	querySql := fmt.Sprintf("SELECT * FROM %s %s ORDER BY createdAt DESC LIMIT ? OFFSET ?", tableName, whereClause)
+	querySql := fmt.Sprintf("SELECT * FROM %s %s ORDER BY created_at DESC LIMIT ? OFFSET ?", tableName, whereClause)
 	params = append(params, pageSize, offset)
 
 	var users []GameUser
@@ -146,24 +160,13 @@ func GetAllGameUsers(appId string, page, pageSize int, keyword, status string) (
 			}
 		}
 
-		// 获取封禁状态
-		if status == "banned" || status == "" {
+		// 获取详细的封禁状态（如果需要）
+		if users[i].Banned {
 			banRecord, _ := GetActiveUserBan(appId, users[i].PlayerId)
 			if banRecord != nil {
 				users[i].BanStatus = banRecord
 			}
 		}
-	}
-
-	// 如果筛选封禁用户，需要过滤结果
-	if status == "banned" {
-		var bannedUsers []GameUser
-		for _, user := range users {
-			if user.BanStatus != nil {
-				bannedUsers = append(bannedUsers, user)
-			}
-		}
-		return bannedUsers, int64(len(bannedUsers)), nil
 	}
 
 	return users, total, nil
@@ -175,9 +178,13 @@ func GetGameUserDetail(appId, playerId string) (*GameUser, error) {
 	tableName := fmt.Sprintf("user_%s", appId)
 
 	var user GameUser
-	sql := fmt.Sprintf("SELECT * FROM %s WHERE playerId = ?", tableName)
+	sql := fmt.Sprintf("SELECT * FROM %s WHERE player_id = ?", tableName)
 	err := o.Raw(sql, playerId).QueryRow(&user)
 	if err != nil {
+		if err == orm.ErrNoRows {
+			logs.Info(fmt.Sprintf("用户不存在: appId=%s, playerId=%s", appId, playerId))
+			return nil, fmt.Errorf("用户不存在")
+		}
 		logs.Error("获取用户详情失败:", err)
 		return nil, err
 	}
@@ -204,7 +211,7 @@ func UpdateGameUserData(appId, playerId, data string) error {
 	o := orm.NewOrm()
 	tableName := fmt.Sprintf("user_%s", appId)
 
-	sql := fmt.Sprintf("UPDATE %s SET data = ?, updatedAt = NOW() WHERE playerId = ?", tableName)
+	sql := fmt.Sprintf("UPDATE %s SET data = ?, updated_at = NOW() WHERE player_id = ?", tableName)
 	_, err := o.Raw(sql, data, playerId).Exec()
 	if err != nil {
 		logs.Error("更新用户数据失败:", err)
@@ -224,6 +231,13 @@ func BanGameUser(appId, playerId string, adminId int64, banType, banReason strin
 		return fmt.Errorf("用户已被封禁")
 	}
 
+	// 开启事务
+	tx, err := o.Begin()
+	if err != nil {
+		return err
+	}
+
+	// 创建封禁记录
 	record := &UserBanRecord{
 		ID:           generateID(),
 		AppId:        appId,
@@ -241,13 +255,24 @@ func BanGameUser(appId, playerId string, adminId int64, banType, banReason strin
 		record.BanEndTime = &endTime
 	}
 
-	_, err := o.Insert(record)
+	_, err = tx.Insert(record)
 	if err != nil {
+		tx.Rollback()
 		logs.Error("创建封禁记录失败:", err)
 		return err
 	}
 
-	return nil
+	// 更新用户表的banned字段
+	tableName := fmt.Sprintf("user_%s", appId)
+	sql := fmt.Sprintf("UPDATE %s SET banned = true, updated_at = NOW() WHERE player_id = ?", tableName)
+	_, err = tx.Raw(sql, playerId).Exec()
+	if err != nil {
+		tx.Rollback()
+		logs.Error("更新用户封禁状态失败:", err)
+		return err
+	}
+
+	return tx.Commit()
 }
 
 // UnbanGameUser 解封游戏用户
@@ -263,6 +288,12 @@ func UnbanGameUser(appId, playerId string, adminId int64, unbanReason string) er
 		return fmt.Errorf("用户未被封禁")
 	}
 
+	// 开启事务
+	tx, err := o.Begin()
+	if err != nil {
+		return err
+	}
+
 	// 更新封禁记录
 	now := time.Now()
 	banRecord.IsActive = false
@@ -271,13 +302,24 @@ func UnbanGameUser(appId, playerId string, adminId int64, unbanReason string) er
 	banRecord.UnbanReason = unbanReason
 	banRecord.UpdatedAt = now
 
-	_, err = o.Update(banRecord, "IsActive", "UnbanAdminId", "UnbanTime", "UnbanReason", "UpdatedAt")
+	_, err = tx.Update(banRecord, "IsActive", "UnbanAdminId", "UnbanTime", "UnbanReason", "UpdatedAt")
 	if err != nil {
+		tx.Rollback()
 		logs.Error("更新封禁记录失败:", err)
 		return err
 	}
 
-	return nil
+	// 更新用户表的banned字段
+	tableName := fmt.Sprintf("user_%s", appId)
+	sql := fmt.Sprintf("UPDATE %s SET banned = false, updated_at = NOW() WHERE player_id = ?", tableName)
+	_, err = tx.Raw(sql, playerId).Exec()
+	if err != nil {
+		tx.Rollback()
+		logs.Error("更新用户解封状态失败:", err)
+		return err
+	}
+
+	return tx.Commit()
 }
 
 // GetActiveUserBan 获取用户的活跃封禁记录
@@ -286,9 +328,9 @@ func GetActiveUserBan(appId, playerId string) (*UserBanRecord, error) {
 
 	var record UserBanRecord
 	err := o.QueryTable("user_ban_records").
-		Filter("appId", appId).
-		Filter("playerId", playerId).
-		Filter("isActive", true).
+		Filter("app_id", appId).
+		Filter("player_id", playerId).
+		Filter("is_active", true).
 		One(&record)
 
 	if err == orm.ErrNoRows {
@@ -302,9 +344,19 @@ func GetActiveUserBan(appId, playerId string) (*UserBanRecord, error) {
 	// 检查临时封禁是否已过期
 	if record.BanType == "temporary" && record.BanEndTime != nil && record.BanEndTime.Before(time.Now()) {
 		// 自动解封
-		record.IsActive = false
-		record.UpdatedAt = time.Now()
-		o.Update(&record, "IsActive", "UpdatedAt")
+		tx, err := o.Begin()
+		if err == nil {
+			record.IsActive = false
+			record.UpdatedAt = time.Now()
+			tx.Update(&record, "IsActive", "UpdatedAt")
+
+			// 更新用户表的banned字段
+			tableName := fmt.Sprintf("user_%s", appId)
+			sql := fmt.Sprintf("UPDATE %s SET banned = false, updated_at = NOW() WHERE player_id = ?", tableName)
+			tx.Raw(sql, playerId).Exec()
+
+			tx.Commit()
+		}
 		return nil, nil
 	}
 
@@ -320,7 +372,7 @@ func GetUserDataList(appId string, page, pageSize int, keyword string) ([]*GameU
 	params := []interface{}{}
 
 	if keyword != "" {
-		sql += " WHERE playerId LIKE ?"
+		sql += " WHERE player_id LIKE ?"
 		params = append(params, "%"+keyword+"%")
 	}
 
@@ -333,7 +385,7 @@ func GetUserDataList(appId string, page, pageSize int, keyword string) ([]*GameU
 	}
 
 	// 获取分页数据
-	sql += " ORDER BY createdAt DESC LIMIT ? OFFSET ?"
+	sql += " ORDER BY created_at DESC LIMIT ? OFFSET ?"
 	params = append(params, pageSize, (page-1)*pageSize)
 
 	var users []*GameUser
@@ -379,93 +431,19 @@ func GetCounterList(appId string, page, pageSize int) ([]map[string]interface{},
 	return list, total, err
 }
 
-// GetAllMailList 获取邮件列表
-func GetAllMailList(appId string, page, pageSize int) ([]map[string]interface{}, int64, error) {
-	o := orm.NewOrm()
-	tableName := fmt.Sprintf("mail_%s", appId)
-
-	sql := fmt.Sprintf("SELECT * FROM %s ORDER BY createdAt DESC LIMIT ? OFFSET ?", tableName)
-	params := []interface{}{pageSize, (page - 1) * pageSize}
-
-	var results []orm.Params
-	_, err := o.Raw(sql, params...).Values(&results)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	// 计算总数
-	countSql := fmt.Sprintf("SELECT COUNT(*) FROM %s", tableName)
-	var total int64
-	err = o.Raw(countSql).QueryRow(&total)
-	if err != nil {
-		return nil, 0, err
-	}
-
-	// 转换结果
-	var list []map[string]interface{}
-	for _, result := range results {
-		item := make(map[string]interface{})
-		for k, v := range result {
-			item[k] = v
-		}
-		list = append(list, item)
-	}
-
-	return list, total, err
-}
-
-// SendMail 发送邮件给特定用户
-func SendMail(appId, playerId, title, content string, attachments string) error {
-	o := orm.NewOrm()
-	tableName := fmt.Sprintf("mail_%s", appId)
-
-	sql := fmt.Sprintf("INSERT INTO %s (playerId, title, content, attachments, createdAt, is_read, is_claimed) VALUES (?, ?, ?, ?, NOW(), 0, 0)", tableName)
-	_, err := o.Raw(sql, playerId, title, content, attachments).Exec()
-
-	return err
-}
-
-// SendBroadcastMail 发送广播邮件
-func SendBroadcastMail(appId, title, content string, attachments string) error {
-	o := orm.NewOrm()
-	tableName := fmt.Sprintf("mail_%s", appId)
-
-	// 获取所有用户
-	userTableName := fmt.Sprintf("user_%s", appId)
-	sql := fmt.Sprintf("SELECT DISTINCT playerId FROM %s", userTableName)
-
-	var playerIds []string
-	_, err := o.Raw(sql).QueryRows(&playerIds)
-	if err != nil {
-		return err
-	}
-
-	// 给每个用户发送邮件
-	for _, playerId := range playerIds {
-		mailSql := fmt.Sprintf("INSERT INTO %s (playerId, title, content, attachments, createdAt, is_read, is_claimed) VALUES (?, ?, ?, ?, NOW(), 0, 0)", tableName)
-		_, err = o.Raw(mailSql, playerId, title, content, attachments).Exec()
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 // GetConfigList 获取配置列表 (别名)
 func GetConfigList(appId string, page, pageSize int, keyword string) ([]*GameConfig, int64, error) {
 	return GetAllGameConfigs(page, pageSize, appId, keyword)
 }
 
 // SetConfig 设置配置 (别名)
-func SetConfig(appId, key, value string) error {
+func SetConfig(appId, key, value string, configType, version string) error {
 	config := &GameConfig{
-		AppId:       appId,
+		AppID:       appId,
 		ConfigKey:   key,
 		ConfigValue: value,
-		ConfigType:  "string",
-		Status:      1,
-		IsPublic:    1,
+		ConfigType:  configType,
+		Version:     version,
 	}
 	return AddGameConfig(config)
 }
@@ -489,7 +467,7 @@ func DeleteGameUser(appId, playerId string) error {
 	}
 
 	// 删除用户数据
-	sql := fmt.Sprintf("DELETE FROM %s WHERE playerId = ?", tableName)
+	sql := fmt.Sprintf("DELETE FROM %s WHERE player_id = ?", tableName)
 	_, err = tx.Raw(sql, playerId).Exec()
 	if err != nil {
 		tx.Rollback()
@@ -499,16 +477,16 @@ func DeleteGameUser(appId, playerId string) error {
 
 	// 删除相关的排行榜数据
 	leaderboardTable := fmt.Sprintf("leaderboard_%s", appId)
-	sql = fmt.Sprintf("DELETE FROM %s WHERE playerId = ?", leaderboardTable)
+	sql = fmt.Sprintf("DELETE FROM %s WHERE player_id = ?", leaderboardTable)
 	tx.Raw(sql, playerId).Exec()
 
 	// 删除相关的邮件数据
 	mailTable := fmt.Sprintf("mail_%s", appId)
-	sql = fmt.Sprintf("DELETE FROM %s WHERE playerId = ?", mailTable)
+	sql = fmt.Sprintf("DELETE FROM %s WHERE user_id = ?", mailTable)
 	tx.Raw(sql, playerId).Exec()
 
 	// 删除封禁记录
-	tx.QueryTable("user_ban_records").Filter("appId", appId).Filter("playerId", playerId).Delete()
+	tx.QueryTable("user_ban_records").Filter("app_id", appId).Filter("player_id", playerId).Delete()
 
 	return tx.Commit()
 }
@@ -524,6 +502,14 @@ func GetGameUserStats(appId, playerId string) (*UserStats, error) {
 	// 获取用户基本信息
 	user, err := GetGameUserDetail(appId, playerId)
 	if err != nil {
+		if err.Error() == "用户不存在" {
+			// 返回一个空的统计信息，表示用户不存在
+			return &UserStats{
+				PlayerId:         playerId,
+				LeaderboardStats: []LeaderboardUserStats{},
+				RegistrationTime: time.Time{},
+			}, nil
+		}
 		return nil, err
 	}
 	stats.RegistrationTime = user.CreatedAt
@@ -533,7 +519,7 @@ func GetGameUserStats(appId, playerId string) (*UserStats, error) {
 	var leaderboardStats []LeaderboardUserStats
 	sql := fmt.Sprintf(`
 		SELECT leaderboard_id, MAX(score) as best_score, COUNT(*) as total_submits
-		FROM %s WHERE playerId = ? GROUP BY leaderboard_id
+		FROM %s WHERE player_id = ? GROUP BY leaderboard_id
 	`, leaderboardTable)
 	o.Raw(sql, playerId).QueryRows(&leaderboardStats)
 	stats.LeaderboardStats = leaderboardStats
@@ -544,10 +530,10 @@ func GetGameUserStats(appId, playerId string) (*UserStats, error) {
 	sql = fmt.Sprintf(`
 		SELECT 
 		COUNT(*) as total_received,
-		SUM(CASE WHEN is_read = 1 THEN 1 ELSE 0 END) as total_read,
-		SUM(CASE WHEN is_claimed = 1 THEN 1 ELSE 0 END) as total_claimed,
-		SUM(CASE WHEN is_read = 0 THEN 1 ELSE 0 END) as unread_count
-		FROM %s WHERE playerId = ?
+		SUM(CASE WHEN status >= 1 THEN 1 ELSE 0 END) as total_read,
+		SUM(CASE WHEN status = 2 THEN 1 ELSE 0 END) as total_claimed,
+		SUM(CASE WHEN status = 0 THEN 1 ELSE 0 END) as unread_count
+		FROM %s WHERE user_id = ?
 	`, mailTable)
 	o.Raw(sql, playerId).QueryRow(&mailStats)
 	stats.MailStats = mailStats
@@ -555,9 +541,9 @@ func GetGameUserStats(appId, playerId string) (*UserStats, error) {
 	// 获取封禁历史
 	var banHistory []UserBanRecord
 	o.QueryTable("user_ban_records").
-		Filter("appId", appId).
-		Filter("playerId", playerId).
-		OrderBy("-createdAt").
+		Filter("app_id", appId).
+		Filter("player_id", playerId).
+		OrderBy("-created_at").
 		All(&banHistory)
 	stats.BanHistory = banHistory
 
@@ -570,10 +556,10 @@ func GetUserRegistrationStats(appId string, days int) ([]RegistrationStats, erro
 	tableName := fmt.Sprintf("user_%s", appId)
 
 	sql := fmt.Sprintf(`
-		SELECT DATE(createdAt) as date, COUNT(*) as count
+		SELECT DATE(created_at) as date, COUNT(*) as count
 		FROM %s 
-		WHERE createdAt >= DATE_SUB(NOW(), INTERVAL ? DAY)
-		GROUP BY DATE(createdAt)
+		WHERE created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
+		GROUP BY DATE(created_at)
 		ORDER BY date DESC
 	`, tableName)
 
@@ -590,6 +576,53 @@ func GetUserRegistrationStats(appId string, days int) ([]RegistrationStats, erro
 // generateID 生成唯一ID
 func generateID() string {
 	return fmt.Sprintf("%d", time.Now().UnixNano())
+}
+
+// MigrateUserTableAddBannedField 为用户表添加banned字段的迁移函数
+func MigrateUserTableAddBannedField(appId string) error {
+	o := orm.NewOrm()
+	tableName := fmt.Sprintf("user_%s", appId)
+
+	// 检查字段是否已存在
+	checkSql := fmt.Sprintf("SHOW COLUMNS FROM %s LIKE 'banned'", tableName)
+	var result []orm.Params
+	_, err := o.Raw(checkSql).Values(&result)
+	if err != nil {
+		logs.Error("检查字段存在性失败:", err)
+		return err
+	}
+
+	// 如果字段已存在，直接返回
+	if len(result) > 0 {
+		logs.Info("字段 banned 已存在于表 %s", tableName)
+		return nil
+	}
+
+	// 添加banned字段
+	alterSql := fmt.Sprintf("ALTER TABLE %s ADD COLUMN banned BOOLEAN NOT NULL DEFAULT FALSE", tableName)
+	_, err = o.Raw(alterSql).Exec()
+	if err != nil {
+		logs.Error("添加banned字段失败:", err)
+		return err
+	}
+
+	// 根据现有的封禁记录更新banned字段
+	updateSql := fmt.Sprintf(`
+		UPDATE %s u 
+		SET banned = TRUE 
+		WHERE EXISTS (
+			SELECT 1 FROM user_ban_records ubr 
+			WHERE ubr.app_id = ? AND ubr.player_id = u.player_id AND ubr.is_active = TRUE
+		)
+	`, tableName)
+	_, err = o.Raw(updateSql, appId).Exec()
+	if err != nil {
+		logs.Error("更新现有用户封禁状态失败:", err)
+		return err
+	}
+
+	logs.Info("成功为表 %s 添加 banned 字段并更新现有数据", tableName)
+	return nil
 }
 
 // GetUserList 获取用户列表（别名）
@@ -625,4 +658,158 @@ func SetUserDetail(appId, playerId, data string) error {
 // GetUserStats 获取用户统计（别名）
 func GetUserStats(appId, playerId string) (*UserStats, error) {
 	return GetGameUserStats(appId, playerId)
+}
+
+// AppUserStats 应用用户统计信息（对齐云函数格式）
+type AppUserStats struct {
+	Total         int64                  `json:"total"`
+	NewToday      int64                  `json:"newToday"`
+	ActiveToday   int64                  `json:"activeToday"`
+	Banned        int64                  `json:"banned"`
+	WeeklyActive  int64                  `json:"weeklyActive"`
+	MonthlyActive int64                  `json:"monthlyActive"`
+	Growth        AppUserStatsGrowth     `json:"growth"`
+	Comparison    AppUserStatsComparison `json:"comparison"`
+}
+
+type AppUserStatsGrowth struct {
+	NewTodayGrowth    float64 `json:"newTodayGrowth"`
+	ActiveTodayGrowth float64 `json:"activeTodayGrowth"`
+}
+
+type AppUserStatsComparison struct {
+	NewYesterday    int64 `json:"newYesterday"`
+	ActiveYesterday int64 `json:"activeYesterday"`
+}
+
+// GetAppUserStats 获取应用用户统计（使用原生SQL实现）
+func GetAppUserStats(appId string) (*AppUserStats, error) {
+	o := orm.NewOrm()
+
+	// 设置表名
+	tableName := fmt.Sprintf("user_%s", appId)
+
+	// 检查表是否存在
+	exists, err := checkTableExists(tableName)
+	if err != nil || !exists {
+		return nil, fmt.Errorf("应用不存在或用户表不存在")
+	}
+
+	stats := &AppUserStats{}
+
+	// 时间范围计算
+	now := time.Now()
+	todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	todayEnd := todayStart.Add(24 * time.Hour)
+	yesterdayStart := todayStart.Add(-24 * time.Hour)
+	yesterdayEnd := todayStart
+	weekStart := todayStart.Add(-time.Duration(int(now.Weekday())) * 24 * time.Hour)
+	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
+
+	// 总用户数 - 使用原生SQL
+	var total int64
+	err = o.Raw(fmt.Sprintf("SELECT COUNT(*) FROM %s", tableName)).QueryRow(&total)
+	if err != nil {
+		return nil, fmt.Errorf("查询总用户数失败: %v", err)
+	}
+	stats.Total = total
+
+	// 今日新增用户 - 使用原生SQL
+	var newToday int64
+	err = o.Raw(fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE created_at >= ? AND created_at < ?", tableName),
+		todayStart, todayEnd).QueryRow(&newToday)
+	if err != nil {
+		return nil, fmt.Errorf("查询今日新增用户失败: %v", err)
+	}
+	stats.NewToday = newToday
+
+	// 今日活跃用户（今天有更新的用户）- 使用原生SQL
+	var activeToday int64
+	err = o.Raw(fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE updated_at >= ? AND updated_at < ?", tableName),
+		todayStart, todayEnd).QueryRow(&activeToday)
+	if err != nil {
+		// 如果表中没有 updated_at 字段，使用 created_at
+		activeToday = newToday
+	}
+	stats.ActiveToday = activeToday
+
+	// 封禁用户数 - 使用原生SQL
+	var banned int64
+	err = o.Raw(fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE banned = 1", tableName)).QueryRow(&banned)
+	if err != nil {
+		// 如果表中没有 banned 字段，则跳过此统计
+		stats.Banned = 0
+	} else {
+		stats.Banned = banned
+	}
+
+	// 本周活跃用户 - 使用原生SQL
+	var weeklyActive int64
+	err = o.Raw(fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE created_at >= ?", tableName),
+		weekStart).QueryRow(&weeklyActive)
+	if err != nil {
+		return nil, fmt.Errorf("查询本周活跃用户失败: %v", err)
+	}
+	stats.WeeklyActive = weeklyActive
+
+	// 本月活跃用户 - 使用原生SQL
+	var monthlyActive int64
+	err = o.Raw(fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE created_at >= ?", tableName),
+		monthStart).QueryRow(&monthlyActive)
+	if err != nil {
+		return nil, fmt.Errorf("查询本月活跃用户失败: %v", err)
+	}
+	stats.MonthlyActive = monthlyActive
+
+	// 昨日新增用户（用于计算增长率）- 使用原生SQL
+	var newYesterday int64
+	err = o.Raw(fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE created_at >= ? AND created_at < ?", tableName),
+		yesterdayStart, yesterdayEnd).QueryRow(&newYesterday)
+	if err != nil {
+		return nil, fmt.Errorf("查询昨日新增用户失败: %v", err)
+	}
+	stats.Comparison.NewYesterday = newYesterday
+
+	// 昨日活跃用户（用于计算增长率）- 使用原生SQL
+	var activeYesterday int64
+	err = o.Raw(fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE updated_at >= ? AND updated_at < ?", tableName),
+		yesterdayStart, yesterdayEnd).QueryRow(&activeYesterday)
+	if err != nil {
+		// 如果表中没有 updated_at 字段，使用 created_at
+		activeYesterday = newYesterday
+	}
+	stats.Comparison.ActiveYesterday = activeYesterday
+
+	// 计算增长率
+	if newYesterday > 0 {
+		stats.Growth.NewTodayGrowth = float64(newToday-newYesterday) / float64(newYesterday) * 100
+	} else {
+		stats.Growth.NewTodayGrowth = 0
+	}
+
+	if activeYesterday > 0 {
+		stats.Growth.ActiveTodayGrowth = float64(activeToday-activeYesterday) / float64(activeYesterday) * 100
+	} else {
+		stats.Growth.ActiveTodayGrowth = 0
+	}
+
+	// 保留两位小数
+	stats.Growth.NewTodayGrowth = math.Round(stats.Growth.NewTodayGrowth*100) / 100
+	stats.Growth.ActiveTodayGrowth = math.Round(stats.Growth.ActiveTodayGrowth*100) / 100
+
+	return stats, nil
+}
+
+// checkTableExists 检查表是否存在（使用ORM实现）
+func checkTableExists(tableName string) (bool, error) {
+	o := orm.NewOrm()
+
+	// 使用 ORM 的 Raw 方法检查表是否存在
+	var count int64
+	err := o.Raw("SELECT COUNT(*) FROM information_schema.tables WHERE table_name = ? AND table_schema = DATABASE()", tableName).QueryRow(&count)
+	if err != nil {
+		return false, err
+	}
+
+	return count > 0, nil
 }

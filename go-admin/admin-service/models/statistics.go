@@ -109,9 +109,9 @@ func GetRecentActivity(limit int) ([]RecentActivity, error) {
 	var activities []RecentActivity
 
 	sql := `
-		SELECT id, playerId, username, action, resource as description, createdAt as createdAt
+		SELECT id, user_id, username, action, resource as description, created_at as createdAt
 		FROM admin_operation_logs 
-		ORDER BY createdAt DESC 
+		ORDER BY created_at DESC 
 		LIMIT ?
 	`
 	_, err := o.Raw(sql, limit).QueryRows(&activities)
@@ -227,6 +227,36 @@ func GetLeaderboardStats(appId string) (map[string]interface{}, error) {
 
 	// 获取今日提交数（模拟数据）
 	stats["todaySubmits"] = int64(0)
+
+	// 获取排行榜列表，包含玩家详细信息
+	leaderboards, _, err := GetLeaderboardList(appId, 1, 100, "")
+	if err != nil {
+		return stats, err
+	}
+
+	var leaderboardData []map[string]interface{}
+	for _, lb := range leaderboards {
+		// 获取每个排行榜的前10名数据，包含玩家详细信息
+		topPlayers, _, err := GetLeaderboardData(appId, lb.LeaderboardType, 1, 10)
+		if err != nil {
+			continue
+		}
+
+		leaderboardInfo := map[string]interface{}{
+			"leaderboardType": lb.LeaderboardType,
+			"name":            lb.Name,
+			"description":     lb.Description,
+			"scoreType":       lb.ScoreType,
+			"maxRank":         lb.MaxRank,
+			"enabled":         lb.Enabled,
+			"category":        lb.Category,
+			"resetType":       lb.ResetType,
+			"topPlayers":      topPlayers,
+		}
+		leaderboardData = append(leaderboardData, leaderboardInfo)
+	}
+
+	stats["leaderboards"] = leaderboardData
 
 	return stats, nil
 }

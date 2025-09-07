@@ -113,7 +113,7 @@ func (c *CounterController) CreateCounter() {
 		"msg":       "创建成功",
 		"timestamp": utils.UnixMilli(),
 		"data": map[string]interface{}{
-			"id":          counter.Id,
+			"id":          counter.ID,
 			"appId":       req.AppId,
 			"key":         req.Key,
 			"resetType":   req.ResetType,
@@ -351,7 +351,7 @@ func (c *CounterController) GetCounterList() {
 			}
 
 			counterList = append(counterList, map[string]interface{}{
-				"_id":           counter.Id,
+				"_id":           counter.ID,
 				"key":           counter.CounterKey,
 				"locations":     locationsArray,
 				"locationCount": locationCount,
@@ -400,7 +400,7 @@ func (c *CounterController) GetCounterList() {
 				}
 
 				flatList = append(flatList, map[string]interface{}{
-					"_id":         counter.Id,
+					"_id":         counter.ID,
 					"key":         counter.CounterKey,
 					"location":    locationKey,
 					"value":       value,
@@ -549,8 +549,9 @@ func (c *CounterController) UpdateCounter() {
 
 // DeleteCounterRequest 删除计数器请求结构
 type DeleteCounterRequest struct {
-	AppId string `json:"appId"`
-	Key   string `json:"key"`
+	AppId    string `json:"appId"`
+	Key      string `json:"key"`
+	Location string `json:"location,omitempty"` // 可选，指定删除特定点位
 }
 
 // DeleteCounter 删除计数器（对齐云函数deleteCounter接口）
@@ -579,17 +580,33 @@ func (c *CounterController) DeleteCounter() {
 		return
 	}
 
-	// 删除计数器配置和数据
-	err := models.DeleteCounterConfig(req.AppId, req.Key)
-	if err != nil {
-		c.Data["json"] = map[string]interface{}{
-			"code":      5001,
-			"msg":       "删除计数器失败: " + err.Error(),
-			"timestamp": utils.UnixMilli(),
-			"data":      nil,
+	var err error
+	// 如果指定了location，则只删除特定点位的数据
+	if req.Location != "" {
+		err = models.DeleteCounterLocation(req.AppId, req.Key, req.Location)
+		if err != nil {
+			c.Data["json"] = map[string]interface{}{
+				"code":      5001,
+				"msg":       "删除计数器点位失败: " + err.Error(),
+				"timestamp": utils.UnixMilli(),
+				"data":      nil,
+			}
+			c.ServeJSON()
+			return
 		}
-		c.ServeJSON()
-		return
+	} else {
+		// 删除整个计数器配置和所有数据
+		err = models.DeleteCounterConfig(req.AppId, req.Key)
+		if err != nil {
+			c.Data["json"] = map[string]interface{}{
+				"code":      5001,
+				"msg":       "删除计数器失败: " + err.Error(),
+				"timestamp": utils.UnixMilli(),
+				"data":      nil,
+			}
+			c.ServeJSON()
+			return
+		}
 	}
 
 	c.Data["json"] = map[string]interface{}{
@@ -601,6 +618,10 @@ func (c *CounterController) DeleteCounter() {
 	c.ServeJSON()
 }
 
+type GetAllCounterStatsRequest struct {
+	AppId string `json:"appId"`
+}
+
 // GetAllCounterStats 获取所有计数器统计信息
 func (c *CounterController) GetAllCounterStats() {
 	// JWT验证
@@ -609,7 +630,13 @@ func (c *CounterController) GetAllCounterStats() {
 	}
 
 	// 获取参数
-	appId := c.GetString("appId")
+	var req GetAllCounterStatsRequest
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
+		utils.ErrorResponse(&c.Controller, 1001, "参数解析失败: "+err.Error(), nil)
+		return
+	}
+
+	appId := req.AppId
 	if appId == "" {
 		utils.ErrorResponse(&c.Controller, 1002, "应用ID不能为空", nil)
 		return

@@ -126,17 +126,20 @@ func CreateTestApp(appId string) error {
 	createMailTableSQL := fmt.Sprintf(`
 		CREATE TABLE IF NOT EXISTS %s (
 			id BIGINT AUTO_INCREMENT PRIMARY KEY,
-			playerId VARCHAR(100) NOT NULL,
+			app_id VARCHAR(100) NOT NULL,
+			user_id VARCHAR(100) NOT NULL,
 			title VARCHAR(200) NOT NULL,
 			content TEXT,
-			attachments TEXT,
-			is_read TINYINT DEFAULT 0,
-			is_claimed TINYINT DEFAULT 0,
-			expire_time DATETIME,
-			createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-			updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-			INDEX idx_player (playerId),
-			INDEX idx_createdAt (createdAt)
+			rewards TEXT,
+			status TINYINT DEFAULT 0 COMMENT '0:未读 1:已读 2:已领取',
+			expire_at DATETIME DEFAULT NULL,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+			INDEX idx_app_id (app_id),
+			INDEX idx_user_id (user_id),
+			INDEX idx_status (status),
+			INDEX idx_expire_at (expire_at),
+			INDEX idx_created_at (created_at)
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
 	`, mailTableName)
 
@@ -341,13 +344,12 @@ func CreateTestGameConfigs(appId string) error {
 
 	for _, config := range configs {
 		gameConfig := &models.GameConfig{
-			AppId:       appId,
+			AppID:       appId,
 			ConfigKey:   config.Key,
 			ConfigValue: config.Value,
 			ConfigType:  config.Type,
 			Description: config.Desc,
-			Status:      1,
-			IsPublic:    1,
+			Version:     "1.0.0",
 		}
 
 		models.AddGameConfig(gameConfig)

@@ -109,7 +109,7 @@
       </el-table-column>
       <el-table-column label="状态" width="100">
         <template #default="scope">
-          <el-tag :type="scope.row.status === 1 ? 'success' : 'danger'">
+        <el-tag :type="scope.row.status === 1 ? 'success' : 'danger'">
             {{ scope.row.status === 1 ? '正常' : '停用' }}
           </el-tag>
         </template>
@@ -338,7 +338,12 @@ export default {
         if (result.code === 0) {
           // 确保数据是数组格式，防止迭代错误
           const dataList = result.data?.list
-          appList.value = Array.isArray(dataList) ? dataList : []
+          // 转换status字段：字符串转换为数字以便前端显示
+          const processedList = Array.isArray(dataList) ? dataList.map(app => ({
+            ...app,
+            status: app.status === 'active' ? 1 : 0
+          })) : []
+          appList.value = processedList
           pagination.total = result.data?.total || 0
         } else {
           appList.value = []
@@ -382,7 +387,11 @@ export default {
     // 编辑应用
     const editApp = (app) => {
       appDialog.isEdit = true
-      appDialog.form = { ...app }
+      // 复制应用数据，确保status字段是数字格式
+      appDialog.form = { 
+        ...app,
+        status: app.status === 'active' ? 1 : (app.status === 1 ? 1 : 0)
+      }
       appDialog.visible = true
     }
     
@@ -391,6 +400,11 @@ export default {
       try {
         const apiCall = appDialog.isEdit ? appAPI.update : appAPI.init
         const data = { ...appDialog.form }
+        
+        // 转换status字段：数字转换为字符串
+        if (typeof data.status === 'number') {
+          data.status = data.status === 1 ? 'active' : 'inactive'
+        }
         
         // 如果是创建，使用initApp接口的参数格式
         if (!appDialog.isEdit) {
@@ -422,9 +436,12 @@ export default {
       try {
         await ElMessageBox.confirm(`确定要${action}应用 "${app.appName}" 吗？`, '确认操作')
         
+        // 转换status字段：数字转换为字符串
+        const newStatus = app.status === 1 ? 'inactive' : 'active'
+        
         const result = await appAPI.update({
           ...app,
-          status: app.status === 1 ? 0 : 1
+          status: newStatus
         })
         
         if (result.code === 0) {
@@ -475,7 +492,11 @@ export default {
     
     // 查看应用详情
     const viewAppDetail = async (app) => {
-      detailDialog.app = app
+      // 确保status字段显示正确
+      detailDialog.app = {
+        ...app,
+        status: app.status === 'active' ? 1 : (app.status === 1 ? 1 : 0)
+      }
       detailDialog.activeTab = 'basic'
       detailDialog.visible = true
       

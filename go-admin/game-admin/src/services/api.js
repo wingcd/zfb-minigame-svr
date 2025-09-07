@@ -298,7 +298,7 @@ const unifiedAPI = {
     getList: (params) => api.post('/gameConfig/getList', params || {}),
     create: (data) => api.post('/gameConfig/create', data),
     update: (data) => api.post('/gameConfig/update', data),
-    delete: (id) => api.post('/gameConfig/delete', { id }),
+    delete: (data) => api.post('/gameConfig/delete', data),
     get: (params) => api.post('/gameConfig/get', params || {})
   }
 }

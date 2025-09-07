@@ -11,28 +11,28 @@ import (
 // Mail 邮件模型
 type Mail struct {
 	ID        int64     `orm:"pk;auto" json:"id"`
-	AppId     string    `orm:"size(100)" json:"appId"`
-	UserId    string    `orm:"size(100)" json:"userId"`
+	AppId     string    `orm:"size(100);column(app_id)" json:"appId"`
+	UserId    string    `orm:"size(100);column(user_id)" json:"userId"`
 	Title     string    `orm:"size(200)" json:"title"`
 	Content   string    `orm:"type(text)" json:"content"`
 	Rewards   string    `orm:"type(text)" json:"rewards"`
 	Status    int       `orm:"default(0)" json:"status"` // 0:未读 1:已读 2:已领取
-	ExpireAt  time.Time `orm:"type(datetime);null" json:"expireAt"`
-	CreatedAt time.Time `orm:"auto_now_add;type(datetime)" json:"createdAt"`
-	UpdatedAt time.Time `orm:"auto_now;type(datetime)" json:"updatedAt"`
+	ExpireAt  time.Time `orm:"type(datetime);null;column(expire_at)" json:"expireAt"`
+	CreatedAt time.Time `orm:"auto_now_add;type(datetime);column(created_at)" json:"createdAt"`
+	UpdatedAt time.Time `orm:"auto_now;type(datetime);column(updated_at)" json:"updatedAt"`
 }
 
 // MailConfig 邮件配置模型
 type MailConfig struct {
 	BaseModel
-	AppId         string `orm:"size(100)" json:"appId"`
+	AppId         string `orm:"size(100);column(app_id)" json:"appId"`
 	MailType      string `orm:"size(50)" json:"mailType"` // personal, broadcast
-	Title         string `orm:"size(200)" json:"title"`
+	Title         string `orm:"size(200);column(title)" json:"title"`
 	Content       string `orm:"type(text)" json:"content"`
-	Rewards       string `orm:"type(text)" json:"rewards"`
+	Rewards       string `orm:"type(text);column(rewards)" json:"rewards"`
 	ExpireDays    int    `orm:"default(7)" json:"expireDays"`
-	Status        int    `orm:"default(1)" json:"status"`        // 1:启用 0:禁用
-	SendCondition string `orm:"type(text)" json:"sendCondition"` // 发送条件JSON
+	Status        int    `orm:"default(1);column(status)" json:"status"`                // 1:启用 0:禁用
+	SendCondition string `orm:"type(text);column(send_condition)" json:"sendCondition"` // 发送条件JSON
 }
 
 // GetMailCount 获取邮件数量统计
@@ -159,7 +159,7 @@ func GetUserMails(appId, userId string, page, pageSize int) ([]map[string]interf
 	tableName := fmt.Sprintf("mail_%s", cleanAppId)
 
 	// 获取用户邮件
-	sql := fmt.Sprintf("SELECT * FROM %s WHERE playerId = ? ORDER BY createdAt DESC LIMIT ? OFFSET ?", tableName)
+	sql := fmt.Sprintf("SELECT * FROM %s WHERE user_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?", tableName)
 	params := []interface{}{userId, pageSize, (page - 1) * pageSize}
 
 	var results []orm.Params
@@ -169,7 +169,7 @@ func GetUserMails(appId, userId string, page, pageSize int) ([]map[string]interf
 	}
 
 	// 计算总数
-	countSql := fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE playerId = ?", tableName)
+	countSql := fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE user_id = ?", tableName)
 	var total int64
 	err = o.Raw(countSql, userId).QueryRow(&total)
 	if err != nil {
@@ -207,7 +207,7 @@ func UpdateMailConfig(config *MailConfig) error {
 func DeleteMailConfig(id int64) error {
 	o := orm.NewOrm()
 	config := &MailConfig{}
-	config.Id = id
+	config.ID = id
 	_, err := o.Delete(config)
 	return err
 }
@@ -218,7 +218,7 @@ func GetMailConfigList(appId string, page, pageSize int) ([]*MailConfig, int64, 
 	qs := o.QueryTable("mail_config")
 
 	if appId != "" {
-		qs = qs.Filter("appId", appId)
+		qs = qs.Filter("app_id", appId)
 	}
 
 	total, _ := qs.Count()
@@ -227,4 +227,106 @@ func GetMailConfigList(appId string, page, pageSize int) ([]*MailConfig, int64, 
 	_, err := qs.OrderBy("-id").Limit(pageSize, (page-1)*pageSize).All(&configs)
 
 	return configs, total, err
+}
+
+// GetAllMailList 获取所有邮件列表
+func GetAllMailList(appId string, page, pageSize int) ([]map[string]interface{}, int64, error) {
+	o := orm.NewOrm()
+	cleanAppId := strings.ReplaceAll(appId, "-", "_")
+	cleanAppId = strings.ReplaceAll(cleanAppId, ".", "_")
+	tableName := fmt.Sprintf("mail_%s", cleanAppId)
+
+	// 检查表是否存在
+	var tableCount int64
+	err := o.Raw("SELECT COUNT(*) FROM information_schema.tables WHERE table_name = ? AND table_schema = DATABASE()", tableName).QueryRow(&tableCount)
+	if err != nil {
+		return nil, 0, err
+	}
+	if tableCount == 0 {
+		return []map[string]interface{}{}, 0, nil
+	}
+
+	// 获取邮件列表
+	sql := fmt.Sprintf("SELECT * FROM %s ORDER BY created_at DESC LIMIT ? OFFSET ?", tableName)
+	params := []interface{}{pageSize, (page - 1) * pageSize}
+
+	var results []orm.Params
+	_, err = o.Raw(sql, params...).Values(&results)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// 计算总数
+	countSql := fmt.Sprintf("SELECT COUNT(*) FROM %s", tableName)
+	var total int64
+	err = o.Raw(countSql).QueryRow(&total)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// 转换结果
+	var list []map[string]interface{}
+	for _, result := range results {
+		item := make(map[string]interface{})
+		for k, v := range result {
+			item[k] = v
+		}
+		list = append(list, item)
+	}
+
+	return list, total, nil
+}
+
+// SendMail 发送邮件给特定用户
+func SendMail(appId, userId, title, content, attachments string) error {
+	o := orm.NewOrm()
+	cleanAppId := strings.ReplaceAll(appId, "-", "_")
+	cleanAppId = strings.ReplaceAll(cleanAppId, ".", "_")
+	tableName := fmt.Sprintf("mail_%s", cleanAppId)
+
+	// 检查表是否存在
+	var tableCount int64
+	err := o.Raw("SELECT COUNT(*) FROM information_schema.tables WHERE table_name = ? AND table_schema = DATABASE()", tableName).QueryRow(&tableCount)
+	if err != nil {
+		return err
+	}
+	if tableCount == 0 {
+		return fmt.Errorf("邮件表不存在，请先初始化邮件系统")
+	}
+
+	// 插入邮件
+	sql := fmt.Sprintf(`
+		INSERT INTO %s (app_id, user_id, title, content, rewards, status, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, 0, NOW(), NOW())
+	`, tableName)
+
+	_, err = o.Raw(sql, appId, userId, title, content, attachments).Exec()
+	return err
+}
+
+// SendBroadcastMail 发送广播邮件
+func SendBroadcastMail(appId, title, content, rewards string) error {
+	o := orm.NewOrm()
+	cleanAppId := strings.ReplaceAll(appId, "-", "_")
+	cleanAppId = strings.ReplaceAll(cleanAppId, ".", "_")
+	tableName := fmt.Sprintf("mail_%s", cleanAppId)
+
+	// 检查表是否存在
+	var tableCount int64
+	err := o.Raw("SELECT COUNT(*) FROM information_schema.tables WHERE table_name = ? AND table_schema = DATABASE()", tableName).QueryRow(&tableCount)
+	if err != nil {
+		return err
+	}
+	if tableCount == 0 {
+		return fmt.Errorf("邮件表不存在，请先初始化邮件系统")
+	}
+
+	// 广播邮件使用空的user_id表示给所有用户
+	sql := fmt.Sprintf(`
+		INSERT INTO %s (app_id, user_id, title, content, rewards, status, created_at, updated_at)
+		VALUES (?, '', ?, ?, ?, 0, NOW(), NOW())
+	`, tableName)
+
+	_, err = o.Raw(sql, appId, title, content, rewards).Exec()
+	return err
 }

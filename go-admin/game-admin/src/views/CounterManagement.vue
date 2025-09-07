@@ -151,10 +151,11 @@
             {{ formatDate(scope.row.gmtCreate) }}
           </template>
         </el-table-column>
-                        <el-table-column label="操作" width="200" align="center" fixed="right">
+                        <el-table-column label="操作" width="240" align="center" fixed="right">
           <template #default="scope">
             <el-button link @click="editCounterConfig(scope.row)">编辑配置</el-button>
-            <el-button link class="danger" @click="deleteCounterAllLocations(scope.row)">删除全部</el-button>
+            <el-button link type="warning" @click="deleteCounterAllLocations(scope.row)">删除全部点位</el-button>
+            <el-button link class="danger" @click="deleteCounterConfig(scope.row)">删除配置</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -625,6 +626,41 @@ export default {
       }
     }
     
+    // 删除计数器配置（删除整个计数器）
+    const deleteCounterConfig = async (counter) => {
+      try {
+        await ElMessageBox.confirm(
+          `确定要删除计数器配置 "${counter.key}" 吗？这将删除该计数器的配置和所有点位数据，此操作不可恢复。`,
+          '确认删除配置',
+          {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            type: 'warning'
+          }
+        )
+        
+        const response = await counterAPI.delete({
+          appId: selectedAppId.value,
+          key: counter.key
+          // 不传递location参数，表示删除整个计数器配置
+        })
+        
+        if (response.code === 0) {
+          ElMessage.success('删除成功')
+          // 刷新计数器列表和统计数据
+          loadCounters()
+          loadStats()
+        } else {
+          ElMessage.error(response.msg || '删除失败')
+        }
+      } catch (error) {
+        if (error !== 'cancel') {
+          console.error('删除计数器配置失败:', error)
+          ElMessage.error('删除失败')
+        }
+      }
+    }
+    
     // 获取重置类型标签类型
     const getResetTypeTagType = (resetType) => {
       const types = {
@@ -714,6 +750,7 @@ export default {
       saveCounter,
       deleteCounter,
       deleteCounterAllLocations,
+      deleteCounterConfig,
       getResetTypeTagType,
       getResetTypeLabel,
       handleResetTypeChange,

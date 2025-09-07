@@ -162,6 +162,18 @@ func DeleteCounterConfig(appId, key string) error {
 	return err
 }
 
+// DeleteCounterLocation 删除计数器特定点位
+func DeleteCounterLocation(appId, key, location string) error {
+	o := orm.NewOrm()
+
+	// 删除计数器数据表中对应的特定点位数据
+	counterData := &CounterData{}
+	tableName := counterData.GetTableName(appId)
+
+	_, err := o.Raw(fmt.Sprintf("DELETE FROM %s WHERE counterKey = ? AND location = ?", tableName), key, location).Exec()
+	return err
+}
+
 // UpdateCounterValue 更新计数器值
 func UpdateCounterValue(appId, key, location string, value int64) error {
 	o := orm.NewOrm()

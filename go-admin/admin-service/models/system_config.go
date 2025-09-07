@@ -80,7 +80,7 @@ func UpdateSystemConfig(config *SystemConfig) error {
 	}
 
 	// 更新现有配置
-	config.Id = existingConfig.Id
+	config.ID = existingConfig.ID
 	_, err = o.Update(config)
 	return err
 }

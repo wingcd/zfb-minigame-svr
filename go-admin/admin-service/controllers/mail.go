@@ -536,20 +536,20 @@ func createMailTable(appId string, force bool) error {
 	createTableSQL := fmt.Sprintf(`
 		CREATE TABLE IF NOT EXISTS %s (
 			id BIGINT PRIMARY KEY AUTO_INCREMENT,
-			appId VARCHAR(100) NOT NULL,
-			userId VARCHAR(100) NOT NULL,
+			app_id VARCHAR(100) NOT NULL,
+			user_id VARCHAR(100) NOT NULL,
 			title VARCHAR(200) NOT NULL,
 			content TEXT,
 			rewards TEXT,
 			status INT DEFAULT 0 COMMENT '0:未读 1:已读 2:已领取',
-			expireAt DATETIME NULL,
-			createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-			updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-			INDEX idx_appId (appId),
-			INDEX idx_playerId (userId),
+			expire_at DATETIME NULL,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+			INDEX idx_app_id (app_id),
+			INDEX idx_user_id (user_id),
 			INDEX idx_status (status),
-			INDEX idx_expireTime (expireAt),
-			INDEX idx_createdAt (createdAt)
+			INDEX idx_expire_at (expire_at),
+			INDEX idx_created_at (created_at)
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='邮件表'
 	`, tableName)
 

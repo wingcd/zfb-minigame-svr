@@ -73,7 +73,7 @@ func (c *AuthController) AdminLogin() {
 	}
 
 	// 生成JWT token
-	token, err := utils.GenerateJWT(admin.Id, admin.Username, admin.RoleId)
+	token, err := utils.GenerateJWT(admin.ID, admin.Username, admin.RoleId)
 	if err != nil {
 		c.Data["json"] = map[string]interface{}{
 			"code":      5001,
@@ -97,7 +97,7 @@ func (c *AuthController) AdminLogin() {
 	}
 
 	// 记录登录日志
-	models.LogAdminOperation(admin.Id, admin.Username, "LOGIN_SUCCESS", "AUTH", map[string]interface{}{
+	models.LogAdminOperation(admin.ID, admin.Username, "LOGIN_SUCCESS", "AUTH", map[string]interface{}{
 		"ip":         clientIP,
 		"rememberMe": req.RememberMe,
 	})
@@ -110,7 +110,7 @@ func (c *AuthController) AdminLogin() {
 		"data": map[string]interface{}{
 			"token": token,
 			"adminInfo": map[string]interface{}{
-				"id":          admin.Id,
+				"id":          admin.ID,
 				"username":    admin.Username,
 				"nickname":    admin.RealName,
 				"role":        role.RoleCode,
@@ -201,7 +201,7 @@ func (c *AuthController) VerifyToken() {
 		"data": map[string]interface{}{
 			"valid": true,
 			"adminInfo": map[string]interface{}{
-				"id":          admin.Id,
+				"id":          admin.ID,
 				"username":    admin.Username,
 				"nickname":    admin.RealName,
 				"role":        role.RoleCode,
@@ -286,7 +286,7 @@ func (c *AuthController) GetAdminProfile() {
 		"timestamp": utils.UnixMilli(),
 		"data": map[string]interface{}{
 			"user": map[string]interface{}{
-				"id":          admin.Id,
+				"id":          admin.ID,
 				"username":    admin.Username,
 				"nickname":    admin.RealName,
 				"role":        role.RoleCode,
@@ -367,7 +367,7 @@ func (c *AuthController) UpdateAdminProfile() {
 		"timestamp": utils.UnixMilli(),
 		"data": map[string]interface{}{
 			"user": map[string]interface{}{
-				"id":       admin.Id,
+				"id":       admin.ID,
 				"username": admin.Username,
 				"nickname": admin.RealName,
 				"email":    admin.Email,

@@ -12,6 +12,55 @@ type UserController struct {
 	web.Controller
 }
 
+// MigrateUserTable 迁移用户表，添加banned字段
+func (c *UserController) MigrateUserTable() {
+	var req struct {
+		AppId string `json:"appId"`
+	}
+
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4001,
+			"msg":       "参数解析失败",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	if req.AppId == "" {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4001,
+			"msg":       "appId不能为空",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	err := models.MigrateUserTableAddBannedField(req.AppId)
+	if err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      5001,
+			"msg":       "迁移失败: " + err.Error(),
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	c.Data["json"] = map[string]interface{}{
+		"code":      2000,
+		"msg":       "迁移成功",
+		"timestamp": utils.UnixMilli(),
+		"data":      nil,
+	}
+	c.ServeJSON()
+}
+
 // GetAllUsers 获取所有用户（对齐云函数getUserList接口）
 func (c *UserController) GetAllUsers() {
 	var req struct {
@@ -264,23 +313,66 @@ func (c *UserController) SetUserDetail() {
 	utils.SuccessResponse(&c.Controller, "success", nil)
 }
 
-// GetUserStats 获取用户统计
+// GetUserStats 获取用户统计（应用级别统计，对齐云函数 getUserStats）
 func (c *UserController) GetUserStats() {
 	var requestData struct {
-		AppId    string `json:"appId"`
-		PlayerId string `json:"playerId"`
+		AppId string `json:"appId"`
 	}
 
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &requestData); err != nil {
-		utils.ErrorResponse(&c.Controller, utils.CodeBadRequest, "参数错误", nil)
+		c.Data["json"] = map[string]interface{}{
+			"code":      4001,
+			"msg":       "参数解析失败",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
 		return
 	}
 
-	stats, err := models.GetUserStats(requestData.AppId, requestData.PlayerId)
+	// 参数校验
+	if requestData.AppId == "" {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4001,
+			"msg":       "参数[appId]错误",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	// 验证应用是否存在
+	app := &models.Application{}
+	if err := app.GetByAppId(requestData.AppId); err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4004,
+			"msg":       "应用不存在或用户表不存在",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	// 获取应用用户统计
+	stats, err := models.GetAppUserStats(requestData.AppId)
 	if err != nil {
-		utils.ErrorResponse(&c.Controller, utils.CodeServerError, "获取用户统计失败", nil)
+		c.Data["json"] = map[string]interface{}{
+			"code":      5001,
+			"msg":       err.Error(),
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
 		return
 	}
 
-	utils.SuccessResponse(&c.Controller, "success", stats)
+	c.Data["json"] = map[string]interface{}{
+		"code":      0,
+		"msg":       "success",
+		"timestamp": utils.UnixMilli(),
+		"data":      stats,
+	}
+	c.ServeJSON()
 }

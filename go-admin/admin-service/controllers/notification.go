@@ -106,7 +106,7 @@ func (c *NotificationController) CreateNotification() {
 
 	// 记录操作日志
 	models.LogAdminOperation(claims.UserID, claims.Username, "CREATE", "NOTIFICATION", map[string]interface{}{
-		"notificationId":    notification.Id,
+		"notificationId":    notification.ID,
 		"notificationTitle": notification.Title,
 	})
 
@@ -142,7 +142,7 @@ func (c *NotificationController) UpdateNotification() {
 	}
 
 	// 设置ID和保留创建者
-	notification.Id = id
+	notification.ID = id
 	notification.CreatedBy = existingNotification.CreatedBy
 
 	if err := models.UpdateNotification(&notification); err != nil {
@@ -152,7 +152,7 @@ func (c *NotificationController) UpdateNotification() {
 
 	// 记录操作日志
 	models.LogAdminOperation(claims.UserID, claims.Username, "UPDATE", "NOTIFICATION", map[string]interface{}{
-		"notificationId":    notification.Id,
+		"notificationId":    notification.ID,
 		"notificationTitle": notification.Title,
 	})
 
@@ -295,7 +295,7 @@ func (c *NotificationController) CreateNotificationTemplate() {
 
 	// 记录操作日志
 	models.LogAdminOperation(claims.UserID, claims.Username, "CREATE", "NOTIFICATION_TEMPLATE", map[string]interface{}{
-		"templateId":   template.Id,
+		"templateId":   template.ID,
 		"templateName": template.Name,
 	})
 

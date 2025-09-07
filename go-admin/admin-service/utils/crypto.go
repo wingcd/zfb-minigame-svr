@@ -155,8 +155,8 @@ func GenerateAppSecret() string {
 
 // GenerateAppId 生成应用ID
 func GenerateAppId() string {
-	// 生成格式为 app_xxxxxxxx 的应用ID
-	return "app_" + GenerateRandomString(8)
+	// 生成格式为 xxxxxxxx 的应用ID
+	return GenerateRandomString(10)
 }
 
 // ValidateAPISign 验证API签名

@@ -349,6 +349,8 @@ func (c *GameDataController) UpdateConfig() {
 	appId := c.GetString("appId")
 	configKey := c.GetString("configKey")
 	configValue := c.GetString("configValue")
+	configType := c.GetString("configType")
+	version := c.GetString("version")
 
 	if appId == "" || configKey == "" || configValue == "" {
 		utils.ErrorResponse(&c.Controller, 1002, "应用ID、配置键和配置值不能为空", nil)
@@ -356,7 +358,7 @@ func (c *GameDataController) UpdateConfig() {
 	}
 
 	// 更新配置
-	err := models.SetConfig(appId, configKey, configValue)
+	err := models.SetConfig(appId, configKey, configValue, configType, version)
 	if err != nil {
 		utils.ErrorResponse(&c.Controller, 1003, "更新配置失败: "+err.Error(), nil)
 		return

@@ -503,7 +503,8 @@ export default {
         
         let response
         if (configDialog.isEdit) {
-          params.id = configDialog.form.id
+          params.appId = selectedAppId.value
+          params.configKey = configDialog.form.configKey
           response = await gameConfigAPI.update(params)
         } else {
           response = await gameConfigAPI.create(params)
@@ -559,7 +560,10 @@ export default {
           }
         )
         
-        const response = await gameConfigAPI.delete(config.id)
+        const response = await gameConfigAPI.delete({
+          appId: selectedAppId.value,
+          configKey: config.configKey
+        })
         if (response.code === 0) {
           ElMessage.success('删除成功')
           loadConfigs()

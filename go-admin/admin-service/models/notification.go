@@ -86,7 +86,7 @@ func GetNotifications(page, pageSize int, notificationType, status string) ([]*N
 // GetNotification 获取单个通知
 func GetNotification(id int64) (*Notification, error) {
 	o := orm.NewOrm()
-	notification := &Notification{BaseModel: BaseModel{Id: id}}
+	notification := &Notification{BaseModel: BaseModel{ID: id}}
 	err := o.Read(notification)
 	return notification, err
 }
@@ -108,7 +108,7 @@ func UpdateNotification(notification *Notification) error {
 // DeleteNotification 删除通知
 func DeleteNotification(id int64) error {
 	o := orm.NewOrm()
-	notification := &Notification{BaseModel: BaseModel{Id: id}}
+	notification := &Notification{BaseModel: BaseModel{ID: id}}
 	_, err := o.Delete(notification)
 	return err
 }

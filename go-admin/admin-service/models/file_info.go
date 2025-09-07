@@ -33,7 +33,7 @@ func SaveFileInfo(fileInfo *FileInfo) error {
 // GetFileInfo 根据ID获取文件信息
 func GetFileInfo(id int64) (*FileInfo, error) {
 	o := orm.NewOrm()
-	fileInfo := &FileInfo{BaseModel: BaseModel{Id: id}}
+	fileInfo := &FileInfo{BaseModel: BaseModel{ID: id}}
 	err := o.Read(fileInfo)
 	return fileInfo, err
 }
@@ -49,7 +49,7 @@ func GetFileInfoByMD5(md5 string) (*FileInfo, error) {
 // DeleteFileInfo 删除文件信息
 func DeleteFileInfo(id int64) error {
 	o := orm.NewOrm()
-	fileInfo := &FileInfo{BaseModel: BaseModel{Id: id}}
+	fileInfo := &FileInfo{BaseModel: BaseModel{ID: id}}
 	_, err := o.Delete(fileInfo)
 	return err
 }

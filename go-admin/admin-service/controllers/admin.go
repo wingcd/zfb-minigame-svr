@@ -51,7 +51,7 @@ func (c *AdminController) UpdateAdmin() {
 	}
 
 	// 更新数据
-	user.Id = id
+	user.ID = id
 	if user.Password != "" {
 		hashedPassword, err := utils.HashPasswordBcrypt(user.Password)
 		if err != nil {
@@ -204,7 +204,7 @@ func (c *AdminController) UpdateUser() {
 	}
 
 	// 更新数据
-	user.Id = id
+	user.ID = id
 	if user.Password != "" {
 		hashedPassword, err := utils.HashPasswordBcrypt(user.Password)
 		if err != nil {
@@ -408,7 +408,7 @@ func (c *AdminController) CreateAdmin() {
 		"msg":       "创建成功",
 		"timestamp": utils.UnixMilli(),
 		"data": map[string]interface{}{
-			"id":        user.Id,
+			"id":        user.ID,
 			"username":  req.Username,
 			"nickname":  req.Nickname,
 			"role":      req.Role,
@@ -988,7 +988,7 @@ func (c *AdminController) UpdateAdminUser() {
 		"msg":       "更新成功",
 		"timestamp": utils.UnixMilli(),
 		"data": map[string]interface{}{
-			"id":       updatedUser.Id,
+			"id":       updatedUser.ID,
 			"username": updatedUser.Username,
 			"email":    updatedUser.Email,
 			"phone":    updatedUser.Phone,

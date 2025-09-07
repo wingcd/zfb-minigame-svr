@@ -70,12 +70,18 @@ func (c *LeaderboardController) GetAllLeaderboards() {
 // CreateLeaderboard 创建排行榜（对齐云函数createLeaderboard接口）
 func (c *LeaderboardController) CreateLeaderboard() {
 	var req struct {
-		AppId       string `json:"appId"`
-		Type        string `json:"type"`
-		Name        string `json:"name"`
-		Description string `json:"description"`
-		ResetType   string `json:"resetType"`
-		MaxEntries  int    `json:"maxEntries"`
+		AppId           string `json:"appId"`
+		LeaderboardType string `json:"leaderboardType"`
+		Name            string `json:"name"`
+		Description     string `json:"description"`
+		ScoreType       string `json:"scoreType"`
+		MaxRank         int    `json:"maxRank"`
+		Category        string `json:"category"`
+		ResetType       string `json:"resetType"`
+		ResetValue      int    `json:"resetValue"`
+		Enabled         bool   `json:"enabled"`
+		UpdateStrategy  int    `json:"updateStrategy"`
+		Sort            int    `json:"sort"`
 	}
 
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
@@ -90,7 +96,7 @@ func (c *LeaderboardController) CreateLeaderboard() {
 	}
 
 	// 参数验证
-	if req.AppId == "" || req.Type == "" || req.Name == "" {
+	if req.AppId == "" || req.LeaderboardType == "" || req.Name == "" {
 		c.Data["json"] = map[string]interface{}{
 			"code":      4001,
 			"msg":       "缺少必要参数",
@@ -101,16 +107,22 @@ func (c *LeaderboardController) CreateLeaderboard() {
 		return
 	}
 
-	leaderboard := &models.Leaderboard{
-		AppId:       req.AppId,
-		Type:        req.Type,
-		Name:        req.Name,
-		Description: req.Description,
-		ResetType:   req.ResetType,
-		MaxEntries:  req.MaxEntries,
+	leaderboard := &models.LeaderboardConfig{
+		AppId:           req.AppId,
+		LeaderboardType: req.LeaderboardType,
+		Name:            req.Name,
+		Description:     req.Description,
+		ScoreType:       req.ScoreType,
+		MaxRank:         req.MaxRank,
+		Category:        req.Category,
+		ResetType:       req.ResetType,
+		ResetValue:      req.ResetValue,
+		Enabled:         req.Enabled,
+		UpdateStrategy:  req.UpdateStrategy,
+		Sort:            req.Sort,
 	}
 
-	if err := models.CreateLeaderboard(leaderboard); err != nil {
+	if err := models.CreateLeaderboardConfig(leaderboard); err != nil {
 		if err.Error() == "排行榜已存在" {
 			c.Data["json"] = map[string]interface{}{
 				"code":      4002,
@@ -134,7 +146,7 @@ func (c *LeaderboardController) CreateLeaderboard() {
 	models.LogAdminOperation(0, "SYSTEM", "CREATE", "LEADERBOARD", map[string]interface{}{
 		"appId":           req.AppId,
 		"leaderboardName": req.Name,
-		"type":            req.Type,
+		"type":            req.LeaderboardType,
 	})
 
 	c.Data["json"] = map[string]interface{}{
@@ -149,12 +161,18 @@ func (c *LeaderboardController) CreateLeaderboard() {
 // UpdateLeaderboard 更新排行榜配置（对齐云函数updateLeaderboard接口）
 func (c *LeaderboardController) UpdateLeaderboard() {
 	var req struct {
-		AppId       string `json:"appId"`
-		Type        string `json:"type"`
-		Name        string `json:"name"`
-		Description string `json:"description"`
-		ResetType   string `json:"resetType"`
-		MaxEntries  int    `json:"maxEntries"`
+		AppId           string `json:"appId"`
+		LeaderboardType string `json:"leaderboardType"`
+		Name            string `json:"name"`
+		Description     string `json:"description"`
+		ScoreType       string `json:"scoreType"`
+		MaxRank         int    `json:"maxRank"`
+		Category        string `json:"category"`
+		ResetType       string `json:"resetType"`
+		ResetValue      int    `json:"resetValue"`
+		Enabled         bool   `json:"enabled"`
+		UpdateStrategy  int    `json:"updateStrategy"`
+		Sort            int    `json:"sort"`
 	}
 
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
@@ -175,14 +193,30 @@ func (c *LeaderboardController) UpdateLeaderboard() {
 	if req.Description != "" {
 		fields["description"] = req.Description
 	}
+	if req.ScoreType != "" {
+		fields["score_type"] = req.ScoreType
+	}
+	if req.MaxRank > 0 {
+		fields["max_rank"] = req.MaxRank
+	}
+	if req.Category != "" {
+		fields["category"] = req.Category
+	}
 	if req.ResetType != "" {
 		fields["reset_type"] = req.ResetType
 	}
-	if req.MaxEntries > 0 {
-		fields["max_entries"] = req.MaxEntries
+	if req.ResetValue > 0 {
+		fields["reset_value"] = req.ResetValue
+	}
+	fields["enabled"] = req.Enabled
+	if req.UpdateStrategy >= 0 {
+		fields["update_strategy"] = req.UpdateStrategy
+	}
+	if req.Sort >= 0 {
+		fields["sort"] = req.Sort
 	}
 
-	if err := models.UpdateLeaderboard(req.AppId, req.Type, fields); err != nil {
+	if err := models.UpdateLeaderboard(req.AppId, req.LeaderboardType, fields); err != nil {
 		c.Data["json"] = map[string]interface{}{
 			"code":      5001,
 			"msg":       "更新排行榜失败: " + err.Error(),
@@ -205,8 +239,8 @@ func (c *LeaderboardController) UpdateLeaderboard() {
 // DeleteLeaderboard 删除排行榜（对齐云函数deleteLeaderboard接口）
 func (c *LeaderboardController) DeleteLeaderboard() {
 	var req struct {
-		AppId string `json:"appId"`
-		Type  string `json:"type"`
+		AppId           string `json:"appId"`
+		LeaderboardType string `json:"leaderboardType"`
 	}
 
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
@@ -220,7 +254,7 @@ func (c *LeaderboardController) DeleteLeaderboard() {
 		return
 	}
 
-	if err := models.DeleteLeaderboard(req.AppId, req.Type); err != nil {
+	if err := models.DeleteLeaderboard(req.AppId, req.LeaderboardType); err != nil {
 		c.Data["json"] = map[string]interface{}{
 			"code":      5001,
 			"msg":       "删除排行榜失败: " + err.Error(),
@@ -243,11 +277,11 @@ func (c *LeaderboardController) DeleteLeaderboard() {
 // GetLeaderboardData 获取排行榜数据
 func (c *LeaderboardController) GetLeaderboardData() {
 	var requestData struct {
-		AppId     string `json:"appId"`
-		Type      string `json:"type"`
-		Page      int    `json:"page"`
-		PageSize  int    `json:"pageSize"`
-		StartRank int    `json:"startRank"`
+		AppId           string `json:"appId"`
+		LeaderboardType string `json:"leaderboardType"`
+		Page            int    `json:"page"`
+		PageSize        int    `json:"pageSize"`
+		StartRank       int    `json:"startRank"`
 	}
 
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &requestData); err != nil {
@@ -263,7 +297,7 @@ func (c *LeaderboardController) GetLeaderboardData() {
 		requestData.PageSize = 20
 	}
 
-	data, total, err := models.GetLeaderboardData(requestData.AppId, requestData.Type, requestData.Page, requestData.PageSize)
+	data, total, err := models.GetLeaderboardData(requestData.AppId, requestData.LeaderboardType, requestData.Page, requestData.PageSize)
 	if err != nil {
 		utils.ErrorResponse(&c.Controller, utils.CodeServerError, "获取排行榜数据失败", nil)
 		return
@@ -283,10 +317,10 @@ func (c *LeaderboardController) GetLeaderboardData() {
 // UpdateLeaderboardScore 更新排行榜分数
 func (c *LeaderboardController) UpdateLeaderboardScore() {
 	var requestData struct {
-		AppId    string `json:"appId"`
-		Type     string `json:"type"`
-		PlayerId string `json:"playerId"`
-		Score    int64  `json:"score"`
+		AppId           string `json:"appId"`
+		LeaderboardType string `json:"leaderboardType"`
+		PlayerId        string `json:"playerId"`
+		Score           int64  `json:"score"`
 	}
 
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &requestData); err != nil {
@@ -294,7 +328,7 @@ func (c *LeaderboardController) UpdateLeaderboardScore() {
 		return
 	}
 
-	if err := models.UpdateLeaderboardScore(requestData.AppId, requestData.Type, requestData.PlayerId, requestData.Score); err != nil {
+	if err := models.UpdateLeaderboardScore(requestData.AppId, requestData.LeaderboardType, requestData.PlayerId, requestData.Score); err != nil {
 		utils.ErrorResponse(&c.Controller, utils.CodeServerError, "更新分数失败", nil)
 		return
 	}
@@ -305,9 +339,9 @@ func (c *LeaderboardController) UpdateLeaderboardScore() {
 // DeleteLeaderboardScore 删除排行榜分数
 func (c *LeaderboardController) DeleteLeaderboardScore() {
 	var requestData struct {
-		AppId    string `json:"appId"`
-		Type     string `json:"type"`
-		PlayerId string `json:"playerId"`
+		AppId           string `json:"appId"`
+		LeaderboardType string `json:"leaderboardType"`
+		PlayerId        string `json:"playerId"`
 	}
 
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &requestData); err != nil {
@@ -315,7 +349,7 @@ func (c *LeaderboardController) DeleteLeaderboardScore() {
 		return
 	}
 
-	if err := models.DeleteLeaderboardScore(requestData.AppId, requestData.Type, requestData.PlayerId); err != nil {
+	if err := models.DeleteLeaderboardScore(requestData.AppId, requestData.LeaderboardType, requestData.PlayerId); err != nil {
 		utils.ErrorResponse(&c.Controller, utils.CodeServerError, "删除分数失败", nil)
 		return
 	}
@@ -326,10 +360,10 @@ func (c *LeaderboardController) DeleteLeaderboardScore() {
 // CommitLeaderboardScore 提交排行榜分数
 func (c *LeaderboardController) CommitLeaderboardScore() {
 	var requestData struct {
-		AppId    string `json:"appId"`
-		Type     string `json:"type"`
-		PlayerId string `json:"playerId"`
-		Score    int64  `json:"score"`
+		AppId           string `json:"appId"`
+		LeaderboardType string `json:"leaderboardType"`
+		PlayerId        string `json:"playerId"`
+		Score           int64  `json:"score"`
 	}
 
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &requestData); err != nil {
@@ -337,7 +371,7 @@ func (c *LeaderboardController) CommitLeaderboardScore() {
 		return
 	}
 
-	if err := models.CommitLeaderboardScore(requestData.AppId, requestData.Type, requestData.PlayerId, requestData.Score); err != nil {
+	if err := models.CommitLeaderboardScore(requestData.AppId, requestData.LeaderboardType, requestData.PlayerId, requestData.Score); err != nil {
 		utils.ErrorResponse(&c.Controller, utils.CodeServerError, "提交分数失败", nil)
 		return
 	}
@@ -348,9 +382,9 @@ func (c *LeaderboardController) CommitLeaderboardScore() {
 // QueryLeaderboardScore 查询排行榜分数
 func (c *LeaderboardController) QueryLeaderboardScore() {
 	var requestData struct {
-		AppId    string `json:"appId"`
-		Type     string `json:"type"`
-		PlayerId string `json:"playerId"`
+		AppId           string `json:"appId"`
+		LeaderboardType string `json:"leaderboardType"`
+		PlayerId        string `json:"playerId"`
 	}
 
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &requestData); err != nil {
@@ -358,7 +392,7 @@ func (c *LeaderboardController) QueryLeaderboardScore() {
 		return
 	}
 
-	score, rank, err := models.QueryLeaderboardScore(requestData.AppId, requestData.Type, requestData.PlayerId)
+	score, rank, err := models.QueryLeaderboardScore(requestData.AppId, requestData.LeaderboardType, requestData.PlayerId)
 	if err != nil {
 		utils.ErrorResponse(&c.Controller, utils.CodeServerError, "查询分数失败", nil)
 		return
@@ -375,8 +409,8 @@ func (c *LeaderboardController) QueryLeaderboardScore() {
 // FixLeaderboardUserInfo 修复排行榜用户信息
 func (c *LeaderboardController) FixLeaderboardUserInfo() {
 	var requestData struct {
-		AppId string `json:"appId"`
-		Type  string `json:"type"`
+		AppId           string `json:"appId"`
+		LeaderboardType string `json:"leaderboardType"`
 	}
 
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &requestData); err != nil {
@@ -384,7 +418,7 @@ func (c *LeaderboardController) FixLeaderboardUserInfo() {
 		return
 	}
 
-	count, err := models.FixLeaderboardUserInfo(requestData.AppId, requestData.Type)
+	count, err := models.FixLeaderboardUserInfo(requestData.AppId, requestData.LeaderboardType)
 	if err != nil {
 		utils.ErrorResponse(&c.Controller, utils.CodeServerError, "修复用户信息失败", nil)
 		return

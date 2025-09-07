@@ -133,7 +133,7 @@ func (c *UploadController) UploadFile() {
 	utils.LogOperation(claims.UserID, "上传文件", "上传文件: "+header.Filename)
 
 	result := map[string]interface{}{
-		"fileId":       fileInfo.Id,
+		"fileId":       fileInfo.ID,
 		"fileName":     fileName,
 		"originalName": header.Filename,
 		"fileSize":     header.Size,

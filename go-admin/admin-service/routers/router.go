@@ -78,6 +78,17 @@ func init() {
 	// 初始化管理员
 	web.Router("/admin/init", &controllers.AdminController{}, "post:InitAdmin")
 
+	// 管理员管理模块
+	web.Router("/admin/getList", &controllers.AdminController{}, "post:GetAdminList")
+	web.Router("/admin/create", &controllers.AdminController{}, "post:CreateAdmin")
+	web.Router("/admin/update", &controllers.AdminController{}, "post:UpdateAdminUser")
+	web.Router("/admin/delete", &controllers.AdminController{}, "post:DeleteAdminUser")
+	web.Router("/admin/resetPassword", &controllers.AdminController{}, "post:ResetAdminPassword")
+	web.Router("/admin/updateStatus", &controllers.AdminController{}, "post:UpdateAdminStatus")
+	web.Router("/admin/getById", &controllers.AdminController{}, "post:GetAdminById")
+	web.Router("/admin/getRolePermissions", &controllers.AdminController{}, "post:GetAdminRolePermissions")
+	web.Router("/admin/getAllRoles", &controllers.AdminController{}, "post:GetAllRoles")
+
 	// 角色管理模块
 	web.Router("/role/getList", &controllers.AdminRoleController{}, "post:GetRoleList")
 	web.Router("/role/create", &controllers.AdminRoleController{}, "post:CreateRole")
@@ -104,15 +115,6 @@ func init() {
 	web.Router("/user/getDetail", &controllers.UserController{}, "post:GetUserDetail")
 	web.Router("/user/setDetail", &controllers.UserController{}, "post:SetUserDetail")
 	web.Router("/user/getStats", &controllers.UserController{}, "post:GetUserStats")
-
-	// 用户管理模块（新路由 - 对齐云函数格式）
-	web.Router("/api/user-management/users", &controllers.UserController{}, "post:GetAllUsers")
-	web.Router("/api/user-management/user/detail", &controllers.UserController{}, "post:GetUserDetail")
-	web.Router("/api/user-management/user/data", &controllers.UserController{}, "post:SetUserDetail")
-	web.Router("/api/user-management/user/ban", &controllers.UserController{}, "post:BanUser")
-	web.Router("/api/user-management/user/unban", &controllers.UserController{}, "post:UnbanUser")
-	web.Router("/api/user-management/user/delete", &controllers.UserController{}, "post:DeleteUser")
-	web.Router("/api/user-management/user/stats", &controllers.UserController{}, "post:GetUserStats")
 	// 排行榜管理模块
 	web.Router("/leaderboard/getAll", &controllers.LeaderboardController{}, "post:GetAllLeaderboards")
 	web.Router("/leaderboard/create", &controllers.LeaderboardController{}, "post:CreateLeaderboard")
@@ -139,7 +141,9 @@ func init() {
 	web.Router("/mail/create", &controllers.MailController{}, "post:CreateMail")
 	web.Router("/mail/update", &controllers.MailController{}, "post:UpdateMail")
 	web.Router("/mail/delete", &controllers.MailController{}, "post:DeleteMail")
+	web.Router("/mail/publish", &controllers.MailController{}, "post:PublishMail")
 	web.Router("/mail/send", &controllers.MailController{}, "post:SendMail")
+	web.Router("/mail/sendBroadcast", &controllers.MailController{}, "post:SendBroadcastMail")
 	web.Router("/mail/getStats", &controllers.MailController{}, "post:GetMailStats")
 	web.Router("/mail/getUserMails", &controllers.MailController{}, "post:GetUserMails")
 	web.Router("/mail/initSystem", &controllers.MailController{}, "post:InitMailSystem")
@@ -149,6 +153,14 @@ func init() {
 	web.Router("/gameConfig/update", &controllers.GameConfigController{}, "post:UpdateGameConfig")
 	web.Router("/gameConfig/delete", &controllers.GameConfigController{}, "post:DeleteGameConfig")
 	web.Router("/gameConfig/get", &controllers.GameConfigController{}, "post:GetGameConfig")
+	web.Router("/gameConfig/getAll", &controllers.GameConfigController{}, "post:GetAllGameConfigs")
+	web.Router("/gameConfig/getById", &controllers.GameConfigController{}, "post:GetGameConfigById")
+	web.Router("/gameConfig/getByKey", &controllers.GameConfigController{}, "post:GetGameConfigByKey")
+	web.Router("/gameConfig/getByAppId", &controllers.GameConfigController{}, "post:GetGameConfigsByAppId")
+	web.Router("/gameConfig/getPublic", &controllers.GameConfigController{}, "post:GetPublicGameConfigs")
+	web.Router("/gameConfig/add", &controllers.GameConfigController{}, "post:AddGameConfig")
+	web.Router("/gameConfig/batchUpdate", &controllers.GameConfigController{}, "post:BatchUpdateGameConfigs")
+	web.Router("/gameConfig/deleteByAppId", &controllers.GameConfigController{}, "post:DeleteGameConfigsByAppId")
 
 	// 游戏数据管理模块（新路由 - 对齐云函数格式）
 	web.Router("/api/game-data/leaderboard", &controllers.GameDataController{}, "post:GetUserDataList")
@@ -176,14 +188,6 @@ func init() {
 		web.NSRouter("/game-data/leaderboard", &controllers.GameDataController{}, "get:GetLeaderboardList"),
 
 		// 用户管理模块
-		web.NSRouter("/user-management/users", &controllers.UserManagementController{}, "get:GetAllUsers"),
-		web.NSRouter("/user-management/user/detail", &controllers.UserManagementController{}, "get:GetUserDetail"),
-		web.NSRouter("/user-management/user/data", &controllers.UserManagementController{}, "put:UpdateUserData"),
-		web.NSRouter("/user-management/user/ban", &controllers.UserManagementController{}, "post:BanUser"),
-		web.NSRouter("/user-management/user/unban", &controllers.UserManagementController{}, "post:UnbanUser"),
-		web.NSRouter("/user-management/user/delete", &controllers.UserManagementController{}, "delete:DeleteUser"),
-		web.NSRouter("/user-management/user/stats", &controllers.UserManagementController{}, "get:GetUserStats"),
-		web.NSRouter("/user-management/stats/registration", &controllers.UserManagementController{}, "get:GetUserRegistrationStats"),
 		web.NSRouter("/game-data/counter", &controllers.GameDataController{}, "get:GetCounterList"),
 		web.NSRouter("/game-data/mail", &controllers.GameDataController{}, "get:GetMailList"),
 		web.NSRouter("/game-data/mail", &controllers.GameDataController{}, "post:SendMail"),

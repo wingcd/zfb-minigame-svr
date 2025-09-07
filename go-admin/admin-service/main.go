@@ -25,6 +25,7 @@ func main() {
 		showHelp       = flag.Bool("help", false, "显示帮助信息")
 		autoInstall    = flag.Bool("install", false, "自动安装")
 		checkStatus    = flag.Bool("status", false, "检查安装状态")
+		migrate        = flag.Bool("migrate", false, "执行数据库迁移")
 		uninstall      = flag.Bool("uninstall", false, "卸载系统")
 		changePassword = flag.Bool("change-password", false, "修改管理员密码")
 		createAdmin    = flag.Bool("create-admin", false, "创建新管理员")
@@ -61,6 +62,16 @@ func main() {
 		if status.InstallTime != "" {
 			fmt.Printf("安装时间: %s\n", status.InstallTime)
 		}
+		os.Exit(0)
+	}
+
+	// 执行数据库迁移
+	if *migrate {
+		fmt.Println("开始执行数据库迁移...")
+		if err := utils.MigrateDatabase(); err != nil {
+			log.Fatalf("数据库迁移失败: %v", err)
+		}
+		fmt.Println("数据库迁移完成！")
 		os.Exit(0)
 	}
 
@@ -206,6 +217,15 @@ func main() {
 		}
 	} else {
 		fmt.Printf("✅ 系统已安装 (数据库: %s)\n", status.DatabaseType)
+
+		// 执行数据库迁移
+		fmt.Print("🔄 检查数据库升级...")
+		if err := utils.MigrateDatabase(); err != nil {
+			fmt.Printf(" ❌ 失败: %v\n", err)
+			log.Printf("数据库迁移失败: %v", err)
+		} else {
+			fmt.Printf(" ✅ 完成\n")
+		}
 	}
 
 	// 读取配置
@@ -229,6 +249,7 @@ func showHelpInfo() {
     -help                显示此帮助信息
     -install             自动安装系统
     -status              检查安装状态
+    -migrate             执行数据库迁移
     -uninstall           卸载系统
     -create-admin        创建新管理员用户
     -change-password     修改管理员密码
@@ -240,12 +261,13 @@ func showHelpInfo() {
                                              # 启动服务
     -install                                # 自动安装
     -status                                 # 检查状态
+    -migrate                                # 执行数据库迁移
     -list-admins                            # 列出管理员用户
     -change-password -username=admin -password=newpass123  # 修改密码
 
 更多信息请访问: https://github.com/your-repo/minigame-server
 
-`)
+`, version, os.Args[0])
 }
 
 // checkAutoInstallConfig 检查是否启用自动安装

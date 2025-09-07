@@ -17,7 +17,7 @@ func (c *AdminRoleController) GetRoleList() {
 	var requestData struct {
 		Page     int    `json:"page"`
 		PageSize int    `json:"pageSize"`
-		Name     string `json:"name"`
+		RoleName string `json:"roleName"`
 	}
 
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &requestData); err != nil {
@@ -39,7 +39,7 @@ func (c *AdminRoleController) GetRoleList() {
 		requestData.PageSize = 20
 	}
 
-	roles, total, err := models.GetRoleList(requestData.Page, requestData.PageSize, requestData.Name)
+	roles, total, err := models.GetRoleList(requestData.Page, requestData.PageSize, requestData.RoleName)
 	if err != nil {
 		c.Data["json"] = map[string]interface{}{
 			"code":      5001,
@@ -126,7 +126,8 @@ func (c *AdminRoleController) UpdateRole() {
 		return
 	}
 
-	if err := role.Update(); err != nil {
+	// 只更新允许更新的字段，不包括ID和CreatedAt
+	if err := role.Update("role_code", "role_name", "description", "permissions", "status"); err != nil {
 		c.Data["json"] = map[string]interface{}{
 			"code":      5001,
 			"msg":       "更新角色失败",
@@ -230,7 +231,7 @@ func (c *AdminRoleController) GetRole() {
 		"msg":       "获取成功",
 		"timestamp": utils.UnixMilli(),
 		"data": map[string]interface{}{
-			"id":          role.Id,
+			"id":          role.ID,
 			"roleName":    role.RoleName,
 			"roleCode":    role.RoleCode,
 			"description": role.Description,

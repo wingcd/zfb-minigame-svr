@@ -74,7 +74,7 @@ func (c *ApplicationController) CreateApplication() {
 		ChannelAppId  string `json:"channelAppId"`
 		ChannelAppKey string `json:"channelAppKey"`
 		Description   string `json:"description"`
-		Status        int    `json:"status"`
+		Status        string `json:"status"`
 	}
 
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
@@ -132,7 +132,7 @@ func (c *ApplicationController) CreateApplication() {
 		"msg":       "创建成功",
 		"timestamp": utils.UnixMilli(),
 		"data": map[string]interface{}{
-			"id":      application.Id,
+			"id":      application.ID,
 			"appId":   application.AppId,
 			"appName": application.AppName,
 		},
@@ -240,23 +240,29 @@ func (c *ApplicationController) UpdateApplication() {
 	}
 
 	// 更新字段
+	fieldsToUpdate := []string{"app_name", "description"}
+
 	application.AppName = request.AppName
 	application.Description = request.Description
 	if request.Platform != "" {
 		application.Platform = request.Platform
+		fieldsToUpdate = append(fieldsToUpdate, "platform")
 	}
 	if request.ChannelAppKey != "" {
 		application.ChannelAppKey = request.ChannelAppKey
+		fieldsToUpdate = append(fieldsToUpdate, "channel_app_key")
 	}
 	if request.ChannelAppId != "" {
 		application.ChannelAppId = request.ChannelAppId
+		fieldsToUpdate = append(fieldsToUpdate, "channel_app_id")
 	}
 	if request.Status != "" {
 		application.Status = request.Status
+		fieldsToUpdate = append(fieldsToUpdate, "status")
 	}
 
 	// 执行更新
-	err = application.Update("appName", "description", "status", "platform", "channelAppId", "channelAppKey")
+	err = application.Update(fieldsToUpdate...)
 	if err != nil {
 		utils.ErrorResponse(&c.Controller, 1003, "更新应用失败: "+err.Error(), nil)
 		return
@@ -270,8 +276,15 @@ func (c *ApplicationController) UpdateApplication() {
 
 // DeleteApplication 删除应用（对齐云函数deleteApp接口）
 func (c *ApplicationController) DeleteApplication() {
+	// JWT验证并获取用户信息
+	claims := utils.ValidateJWT(c.Ctx)
+	if claims == nil {
+		return
+	}
+
 	var req struct {
 		AppId string `json:"appId"`
+		Force bool   `json:"force"` // 是否强制删除（硬删除）
 	}
 
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
@@ -310,8 +323,36 @@ func (c *ApplicationController) DeleteApplication() {
 		return
 	}
 
-	// 删除应用
-	err = models.DeleteApplication(application.Id)
+	// 检查是否为超级管理员
+	isSuperAdmin, err := c.isSuperAdmin(claims.RoleID)
+	if err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      5001,
+			"msg":       "权限验证失败: " + err.Error(),
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	// 检查应用状态
+	isAppActive := application.Status == "active"
+
+	var deleteType string
+	// 根据用户权限、应用状态和请求参数决定删除方式
+	if isSuperAdmin && (req.Force || !isAppActive) {
+		// 超级管理员在以下情况可以进行硬删除：
+		// 1. 明确指定force=true
+		// 2. 应用状态为非活跃（inactive或pending）
+		err = models.HardDeleteApplication(application.ID)
+		deleteType = "HARD_DELETE"
+	} else {
+		// 普通管理员或删除活跃状态应用时进行软删除
+		err = models.DeleteApplication(application.ID)
+		deleteType = "SOFT_DELETE"
+	}
+
 	if err != nil {
 		c.Data["json"] = map[string]interface{}{
 			"code":      5001,
@@ -324,18 +365,46 @@ func (c *ApplicationController) DeleteApplication() {
 	}
 
 	// 记录操作日志
-	models.LogAdminOperation(0, "SYSTEM", "DELETE", "APP", map[string]interface{}{
+	models.LogAdminOperation(claims.UserID, claims.Username, deleteType, "APP", map[string]interface{}{
 		"deletedAppId": req.AppId,
 		"appName":      application.AppName,
+		"force":        req.Force,
+		"isSuperAdmin": isSuperAdmin,
+		"isAppActive":  isAppActive,
+		"appStatus":    application.Status,
 	})
+
+	var message string
+	if deleteType == "HARD_DELETE" {
+		if req.Force {
+			message = "应用已彻底删除（强制删除，包含所有数据表）"
+		} else {
+			message = "应用已彻底删除（应用非活跃状态，自动硬删除）"
+		}
+	} else {
+		message = "应用已停用（软删除）"
+	}
 
 	c.Data["json"] = map[string]interface{}{
 		"code":      0,
-		"msg":       "删除成功",
+		"msg":       message,
 		"timestamp": utils.UnixMilli(),
-		"data":      map[string]interface{}{},
+		"data": map[string]interface{}{
+			"deleteType": deleteType,
+			"appId":      req.AppId,
+		},
 	}
 	c.ServeJSON()
+}
+
+// isSuperAdmin 检查用户是否为超级管理员
+func (c *ApplicationController) isSuperAdmin(roleID int64) (bool, error) {
+	role := &models.AdminRole{}
+	err := role.GetById(roleID)
+	if err != nil {
+		return false, err
+	}
+	return role.RoleCode == "super_admin", nil
 }
 
 // ResetAppSecret 重置应用密钥（对齐云函数resetAppSecret接口）

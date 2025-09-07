@@ -9,9 +9,8 @@ import (
 // AdminRole 管理员角色模型
 type AdminRole struct {
 	BaseModel
-	RoleCode    string `orm:"unique;size(50)" json:"roleCode"` // 对齐云函数的roleCode
-	RoleName    string `orm:"size(50)" json:"roleName"`        // 对齐云函数的roleName
-	Name        string `orm:"unique;size(50)" json:"name"`     // 保持兼容性
+	RoleCode    string `orm:"unique;size(50);column(role_code)" json:"roleCode"` // 角色代码
+	RoleName    string `orm:"unique;size(50);column(role_name)" json:"roleName"` // 角色名称
 	Description string `orm:"size(255)" json:"description"`
 	Permissions string `orm:"type(text)" json:"permissions"`
 	Status      int    `orm:"default(1)" json:"status"`
@@ -38,14 +37,14 @@ func (r *AdminRole) Update(fields ...string) error {
 // GetById 根据ID获取角色
 func (r *AdminRole) GetById(id int64) error {
 	o := orm.NewOrm()
-	r.Id = id
+	r.ID = id
 	return o.Read(r)
 }
 
-// GetByName 根据名称获取角色
-func (r *AdminRole) GetByName(name string) error {
+// GetByRoleName 根据角色名称获取角色
+func (r *AdminRole) GetByRoleName(roleName string) error {
 	o := orm.NewOrm()
-	return o.QueryTable(r.TableName()).Filter("name", name).One(r)
+	return o.QueryTable(r.TableName()).Filter("role_name", roleName).One(r)
 }
 
 // GetByRoleCode 根据角色代码获取角色
@@ -55,12 +54,12 @@ func (r *AdminRole) GetByRoleCode(roleCode string) error {
 }
 
 // GetList 获取角色列表
-func GetRoleList(page, pageSize int, name string) ([]AdminRole, int64, error) {
+func GetRoleList(page, pageSize int, roleName string) ([]AdminRole, int64, error) {
 	o := orm.NewOrm()
 	qs := o.QueryTable("admin_roles").Filter("status", 1)
 
-	if name != "" {
-		qs = qs.Filter("name__icontains", name)
+	if roleName != "" {
+		qs = qs.Filter("role_name__icontains", roleName)
 	}
 
 	total, _ := qs.Count()
@@ -90,14 +89,14 @@ func DeleteRole(id int64) error {
 }
 
 // GetRoles 获取角色列表（别名）
-func GetRoles(page, pageSize int, name string) ([]AdminRole, int64, error) {
-	return GetRoleList(page, pageSize, name)
+func GetRoles(page, pageSize int, roleName string) ([]AdminRole, int64, error) {
+	return GetRoleList(page, pageSize, roleName)
 }
 
 // GetRoleWithPermissions 获取角色及其权限
 func GetRoleWithPermissions(id int64) (*AdminRole, error) {
 	o := orm.NewOrm()
-	role := &AdminRole{BaseModel: BaseModel{Id: id}}
+	role := &AdminRole{BaseModel: BaseModel{ID: id}}
 	err := o.Read(role)
 	return role, err
 }

@@ -16,14 +16,14 @@ type AdminUser struct {
 	Password    string    `orm:"size(255)" json:"-"`
 	Email       string    `orm:"size(100)" json:"email"`
 	Phone       string    `orm:"size(20)" json:"phone"`
-	RealName    string    `orm:"size(50);column(realName)" json:"realName"`
+	RealName    string    `orm:"size(50);column(real_name)" json:"realName"`
 	Avatar      string    `orm:"size(255)" json:"avatar"`
 	Status      int       `orm:"default(1)" json:"status"` // 1:正常 0:禁用
-	LastLoginAt time.Time `orm:"type(datetime);null;column(lastLoginAt)" json:"lastLoginAt"`
-	LastLoginIP string    `orm:"size(50);column(lastLoginIp)" json:"lastLoginIp"`
-	RoleId      int64     `orm:"default(0)" json:"roleId"`
-	Token       string    `orm:"size(128);null" json:"-"`                          // 添加token字段
-	TokenExpire time.Time `orm:"type(datetime);null;column(tokenExpire)" json:"-"` // 添加token过期时间
+	LastLoginAt time.Time `orm:"type(datetime);null;column(last_login_at)" json:"lastLoginAt"`
+	LastLoginIP string    `orm:"size(50);column(last_login_ip)" json:"lastLoginIp"`
+	RoleId      int64     `orm:"default(0);column(role_id)" json:"roleId"`
+	Token       string    `orm:"size(128);null" json:"-"`                           // 添加token字段
+	TokenExpire time.Time `orm:"type(datetime);null;column(token_expire)" json:"-"` // 添加token过期时间
 }
 
 // TableName 指定表名
@@ -56,7 +56,7 @@ func GetAllAdminUsers(page, pageSize int, keyword string) ([]*AdminUser, int64, 
 // GetAdminUserById 根据ID获取管理员
 func GetAdminUserById(id int64) (*AdminUser, error) {
 	o := orm.NewOrm()
-	user := &AdminUser{BaseModel: BaseModel{Id: id}}
+	user := &AdminUser{BaseModel: BaseModel{ID: id}}
 	err := o.QueryTable("admin_users").Filter("id", id).One(user)
 	return user, err
 }
@@ -171,7 +171,7 @@ func AdminLoginWithMD5(username, passwordHash string) (*AdminUser, error) {
 		fmt.Printf("DEBUG: 用户不存在: %v\n", err)
 		return nil, orm.ErrNoRows
 	}
-	fmt.Printf("DEBUG: 找到用户 ID=%d, 状态=%d, 存储的密码=%s\n", userExists.Id, userExists.Status, userExists.Password)
+	fmt.Printf("DEBUG: 找到用户 ID=%d, 状态=%d, 存储的密码=%s\n", userExists.ID, userExists.Status, userExists.Password)
 
 	err = o.QueryTable("admin_users").
 		Filter("username", username).
@@ -199,7 +199,7 @@ func UpdateAdminToken(id int64, token string, tokenExpire time.Time, loginIP str
 // GetAdminRolePermissions 获取管理员角色和权限
 func GetAdminRolePermissions(roleId int64) (*AdminRole, []string, error) {
 	o := orm.NewOrm()
-	role := &AdminRole{BaseModel: BaseModel{Id: roleId}}
+	role := &AdminRole{BaseModel: BaseModel{ID: roleId}}
 	err := o.Read(role)
 	if err != nil {
 		return nil, nil, err
