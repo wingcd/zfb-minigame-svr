@@ -234,14 +234,17 @@ func (c *MailController) CreateMail() {
 	c.ServeJSON()
 }
 
-// UpdateMail 更新邮件
+// UpdateMail 更新邮件（支持动态邮件系统）
 func (c *MailController) UpdateMail() {
 	var requestData struct {
-		ID      int64  `json:"id"`
-		Title   string `json:"title"`
-		Content string `json:"content"`
-		Rewards string `json:"rewards"`
-		Status  int    `json:"status"`
+		AppId      string `json:"appId"`
+		MailId     string `json:"mailId"`
+		Title      string `json:"title"`
+		Content    string `json:"content"`
+		Rewards    string `json:"rewards"`
+		Status     string `json:"status"`
+		TargetType string `json:"targetType"`
+		ExpireDays int    `json:"expireDays"`
 	}
 
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &requestData); err != nil {
@@ -255,18 +258,39 @@ func (c *MailController) UpdateMail() {
 		return
 	}
 
-	mail := &models.Mail{
-		ID:      requestData.ID,
-		Title:   requestData.Title,
-		Content: requestData.Content,
-		Rewards: requestData.Rewards,
-		Status:  requestData.Status,
+	// 参数验证
+	if requestData.AppId == "" || requestData.MailId == "" {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4001,
+			"msg":       "缺少必要参数：appId 和 mailId",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
 	}
 
-	if err := models.UpdateMail(mail); err != nil {
+	// 构造更新的邮件对象
+	mail := &models.MailSystem{
+		AppId:      requestData.AppId,
+		MailId:     requestData.MailId,
+		Title:      requestData.Title,
+		Content:    requestData.Content,
+		Rewards:    requestData.Rewards,
+		Status:     requestData.Status,
+		TargetType: requestData.TargetType,
+		Type:       "system", // 目前只支持系统邮件更新
+	}
+
+	// 设置过期时间
+	if requestData.ExpireDays > 0 {
+		mail.ExpireTime = time.Now().AddDate(0, 0, requestData.ExpireDays)
+	}
+
+	if err := models.UpdateSystemMail(mail); err != nil {
 		c.Data["json"] = map[string]interface{}{
 			"code":      5001,
-			"msg":       "更新邮件失败",
+			"msg":       "更新邮件失败: " + err.Error(),
 			"timestamp": utils.UnixMilli(),
 			"data":      nil,
 		}
@@ -283,10 +307,12 @@ func (c *MailController) UpdateMail() {
 	c.ServeJSON()
 }
 
-// DeleteMail 删除邮件
+// DeleteMail 删除邮件（支持动态邮件系统）
 func (c *MailController) DeleteMail() {
 	var requestData struct {
-		ID int64 `json:"id"`
+		AppId  string `json:"appId"`
+		MailId string `json:"mailId"`
+		Type   string `json:"type"` // "system" 或 "personal"
 	}
 
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &requestData); err != nil {
@@ -300,10 +326,31 @@ func (c *MailController) DeleteMail() {
 		return
 	}
 
-	if err := models.DeleteMail(requestData.ID); err != nil {
+	// 参数验证
+	if requestData.AppId == "" || requestData.MailId == "" {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4001,
+			"msg":       "缺少必要参数：appId 和 mailId",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	var err error
+	if requestData.Type == "system" {
+		// 删除系统邮件
+		err = models.DeleteSystemMail(requestData.AppId, requestData.MailId)
+	} else {
+		// 删除个人邮件（删除用户邮件关系记录）
+		err = models.DeletePersonalMail(requestData.AppId, requestData.MailId)
+	}
+
+	if err != nil {
 		c.Data["json"] = map[string]interface{}{
 			"code":      5001,
-			"msg":       "删除邮件失败",
+			"msg":       "删除邮件失败: " + err.Error(),
 			"timestamp": utils.UnixMilli(),
 			"data":      nil,
 		}
@@ -544,7 +591,7 @@ func (c *MailController) SendBroadcastMail() {
 func createMailTable(appId string, force bool) error {
 	o := orm.NewOrm()
 
-	mail := &models.Mail{}
+	mail := &models.MailSystem{}
 	tableName := mail.GetTableName(appId)
 
 	// 检查表是否已存在

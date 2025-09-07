@@ -201,33 +201,25 @@ func ensurePlayerMailRelations(o orm.Ormer, appId, playerId, mailTableName, rela
 	return err
 }
 
-// MarkMailAsRead 标记邮件为已读
-func MarkMailAsRead(appId, playerId string, mailId int64) error {
-	o := orm.NewOrm()
-	relationTableName := getMailRelationTableName(appId)
-
-	sql := fmt.Sprintf(`
-		UPDATE %s 
-		SET status = 1, updated_at = NOW()
-		WHERE app_id = ? AND player_id = ? AND mail_id = ? AND status = 0
-	`, relationTableName)
-
-	_, err := o.Raw(sql, appId, playerId, mailId).Exec()
-	return err
-}
-
 // ClaimMailReward 领取邮件奖励
-func ClaimMailReward(appId, playerId string, mailId int64) error {
+func ClaimMailReward(appId, playerId, mailId string) error {
 	o := orm.NewOrm()
 	relationTableName := getMailRelationTableName(appId)
 
+	// 先确保用户的邮件关系数据存在
+	mailTableName := getMailTableName(appId)
+	err := ensureUserMailRelations(o, appId, playerId, mailTableName, relationTableName)
+	if err != nil {
+		return err
+	}
+
 	sql := fmt.Sprintf(`
 		UPDATE %s 
-		SET status = 2, updated_at = NOW()
-		WHERE app_id = ? AND player_id = ? AND mail_id = ? AND status IN (0, 1)
+		SET is_claimed = 1, claimed_at = NOW(), updated_at = NOW()
+		WHERE player_id = ? AND mail_id = ? AND is_claimed = 0
 	`, relationTableName)
 
-	result, err := o.Raw(sql, appId, playerId, mailId).Exec()
+	result, err := o.Raw(sql, playerId, mailId).Exec()
 	if err != nil {
 		return err
 	}
@@ -251,7 +243,7 @@ func GetMailUnreadCount(appId, playerId string) (int64, error) {
 	relationTableName := getMailRelationTableName(appId)
 
 	// 首先确保关联记录完整
-	err := ensurePlayerMailRelations(o, appId, playerId, mailTableName, relationTableName)
+	err := ensureUserMailRelations(o, appId, playerId, mailTableName, relationTableName)
 	if err != nil {
 		return 0, err
 	}
@@ -259,14 +251,36 @@ func GetMailUnreadCount(appId, playerId string) (int64, error) {
 	sql := fmt.Sprintf(`
 		SELECT COUNT(*)
 		FROM %s r
-		INNER JOIN %s m ON r.mail_id = m.id
-		WHERE r.app_id = ? AND r.player_id = ? AND r.status = 0
-		  AND (m.expire_at IS NULL OR m.expire_at > NOW())
+		INNER JOIN %s m ON r.mail_id = m.mail_id
+		WHERE r.player_id = ? AND r.is_read = 0
+		  AND (m.expire_time IS NULL OR m.expire_time > NOW())
 	`, relationTableName, mailTableName)
 
 	var count int64
-	err = o.Raw(sql, appId, playerId).QueryRow(&count)
+	err = o.Raw(sql, playerId).QueryRow(&count)
 	return count, err
+}
+
+// MarkMailAsRead 标记邮件为已读
+func MarkMailAsRead(appId, playerId, mailId string) error {
+	o := orm.NewOrm()
+	relationTableName := getMailRelationTableName(appId)
+
+	// 先确保用户的邮件关系数据存在
+	mailTableName := getMailTableName(appId)
+	err := ensureUserMailRelations(o, appId, playerId, mailTableName, relationTableName)
+	if err != nil {
+		return err
+	}
+
+	sql := fmt.Sprintf(`
+		UPDATE %s 
+		SET is_read = 1, updated_at = NOW()
+		WHERE player_id = ? AND mail_id = ? AND is_read = 0
+	`, relationTableName)
+
+	_, err = o.Raw(sql, playerId, mailId).Exec()
+	return err
 }
 
 // CreateMail 创建邮件
@@ -346,23 +360,45 @@ func GetMailStats(appId string) (map[string]interface{}, error) {
 	return stats, nil
 }
 
-// GetUserMails 获取用户邮件
+// GetUserMails 获取用户邮件（支持懒加载）
 func GetUserMails(appId, userId string, page, pageSize int) ([]map[string]interface{}, int64, error) {
 	o := orm.NewOrm()
-	tableName := getMailTableName(appId)
+	mailTableName := getMailTableName(appId)
+	relationTableName := getMailRelationTableName(appId)
 
-	// 获取用户邮件
-	sql := fmt.Sprintf("SELECT * FROM %s WHERE user_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?", tableName)
-	params := []interface{}{userId, pageSize, (page - 1) * pageSize}
+	// 首先为该用户创建缺失的邮件关系数据（懒加载）
+	err := ensureUserMailRelations(o, appId, userId, mailTableName, relationTableName)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// 查询用户的邮件（通过关系表和邮件表联查）
+	sql := fmt.Sprintf(`
+		SELECT m.mail_id, m.title, m.content, m.rewards, m.expire_time, m.created_at,
+		       r.is_read, r.is_claimed, r.claimed_at
+		FROM %s m
+		LEFT JOIN %s r ON m.mail_id = r.mail_id AND r.player_id = ?
+		WHERE r.player_id IS NOT NULL OR r.player_id = ?
+		ORDER BY m.created_at DESC
+		LIMIT ? OFFSET ?
+	`, mailTableName, relationTableName)
+	
+	params := []interface{}{userId, userId, pageSize, (page - 1) * pageSize}
 
 	var results []orm.Params
-	_, err := o.Raw(sql, params...).Values(&results)
+	_, err = o.Raw(sql, params...).Values(&results)
 	if err != nil {
 		return nil, 0, err
 	}
 
 	// 计算总数
-	countSql := fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE user_id = ?", tableName)
+	countSql := fmt.Sprintf(`
+		SELECT COUNT(*)
+		FROM %s m
+		LEFT JOIN %s r ON m.mail_id = r.mail_id AND r.player_id = ?
+		WHERE r.player_id IS NOT NULL
+	`, mailTableName, relationTableName)
+	
 	var total int64
 	err = o.Raw(countSql, userId).QueryRow(&total)
 	if err != nil {
@@ -380,6 +416,42 @@ func GetUserMails(appId, userId string, page, pageSize int) ([]map[string]interf
 	}
 
 	return list, total, nil
+}
+
+// ensureUserMailRelations 确保用户的邮件关系数据存在（懒加载）
+func ensureUserMailRelations(o orm.Ormer, appId, userId, mailTableName, relationTableName string) error {
+	// 查找还没有为该用户创建关系的邮件
+	sql := fmt.Sprintf(`
+		SELECT m.mail_id, m.created_at
+		FROM %s m
+		LEFT JOIN %s r ON m.mail_id = r.mail_id AND r.player_id = ?
+		WHERE r.mail_id IS NULL AND m.expire_time > NOW()
+	`, mailTableName, relationTableName)
+
+	var missingMails []orm.Params
+	_, err := o.Raw(sql, userId).Values(&missingMails)
+	if err != nil {
+		return err
+	}
+
+	// 批量创建缺失的关系数据
+	if len(missingMails) > 0 {
+		insertSql := fmt.Sprintf(`
+			INSERT INTO %s (mail_id, player_id, is_read, is_claimed, created_at, updated_at)
+			VALUES (?, ?, 0, 0, NOW(), NOW())
+		`, relationTableName)
+
+		for _, mail := range missingMails {
+			mailId := mail["mail_id"].(string)
+			_, err = o.Raw(insertSql, mailId, userId).Exec()
+			if err != nil {
+				// 忽略重复插入错误，可能并发导致
+				continue
+			}
+		}
+	}
+
+	return nil
 }
 
 // CreateSystemMail 创建系统邮件配置
@@ -411,10 +483,23 @@ func UpdateSystemMail(mail *MailSystem) error {
 }
 
 // DeleteSystemMail 删除系统邮件
-func DeleteSystemMail(id int64) error {
+func DeleteSystemMail(appId, mailId string) error {
 	o := orm.NewOrm()
-	mail := &MailSystem{ID: id}
-	_, err := o.Delete(mail)
+	mail := &MailSystem{}
+	tableName := mail.GetTableName(appId)
+	
+	sql := fmt.Sprintf("DELETE FROM %s WHERE app_id = ? AND mail_id = ?", tableName)
+	_, err := o.Raw(sql, appId, mailId).Exec()
+	return err
+}
+
+// DeletePersonalMail 删除个人邮件（删除用户邮件关系记录）
+func DeletePersonalMail(appId, mailId string) error {
+	o := orm.NewOrm()
+	relationTableName := getMailRelationTableName(appId)
+	
+	sql := fmt.Sprintf("DELETE FROM %s WHERE app_id = ? AND mail_id = ?", relationTableName)
+	_, err := o.Raw(sql, appId, mailId).Exec()
 	return err
 }
 
@@ -527,27 +612,25 @@ func SendMail(appId, userId, title, content, attachments string) error {
 }
 
 // SendBroadcastMail 发送广播邮件
+// 注意：广播邮件只创建邮件内容，不创建玩家关系数据
+// 玩家关系数据在用户获取邮件列表时懒加载生成
 func SendBroadcastMail(appId, title, content, rewards string) error {
 	o := orm.NewOrm()
-	tableName := getMailTableName(appId)
+	mailTableName := getMailTableName(appId)
 
-	// 检查表是否存在
-	var tableCount int64
-	err := o.Raw("SELECT COUNT(*) FROM information_schema.tables WHERE table_name = ? AND table_schema = DATABASE()", tableName).QueryRow(&tableCount)
-	if err != nil {
-		return err
-	}
-	if tableCount == 0 {
-		return fmt.Errorf("邮件表不存在，请先初始化邮件系统")
-	}
+	// 生成邮件ID
+	mailId := generateMailId()
+	
+	// 设置过期时间（默认30天后过期）
+	expireTime := time.Now().AddDate(0, 0, 30)
 
-	// 广播邮件使用空的user_id表示给所有用户
+	// 只创建邮件内容记录，不创建玩家关系数据
 	sql := fmt.Sprintf(`
-		INSERT INTO %s (app_id, user_id, title, content, rewards, status, created_at, updated_at)
-		VALUES (?, '', ?, ?, ?, 0, NOW(), NOW())
-	`, tableName)
+		INSERT INTO %s (mail_id, title, content, rewards, expire_time, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, NOW(), NOW())
+	`, mailTableName)
 
-	_, err = o.Raw(sql, appId, title, content, rewards).Exec()
+	_, err := o.Raw(sql, mailId, title, content, rewards, expireTime).Exec()
 	return err
 }
 
