@@ -490,6 +490,7 @@ export default {
         
         const params = {
           appId: selectedAppId.value,
+          id: configDialog.form.id,
           configKey: configDialog.form.configKey,
           configValue: configValue,
           configType: configDialog.form.configType,
@@ -529,6 +530,7 @@ export default {
       config.updating = true
       try {
         const response = await gameConfigAPI.update({
+          appId: selectedAppId.value,
           id: config.id,
           isActive: config.isActive
         })

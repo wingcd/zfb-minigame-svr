@@ -376,6 +376,7 @@ func CreateGameConfig(config *GameConfig) error {
 
 type UpdateGameConfigRequest struct {
 	AppId       string      `json:"appId"`
+	ID          int64       `json:"id"`
 	ConfigKey   string      `json:"configKey"`
 	IsActive    bool        `json:"isActive"`
 	ConfigValue interface{} `json:"configValue"`
@@ -427,8 +428,8 @@ func UpdateGameConfigByRequest(requestData *UpdateGameConfigRequest) error {
 	// 添加更新时间
 	setParts = append(setParts, "updated_at = NOW()")
 
-	updateSQL := fmt.Sprintf("UPDATE %s SET %s WHERE config_key = ?", tableName, strings.Join(setParts, ", "))
-	params = append(params, requestData.ConfigKey)
+	updateSQL := fmt.Sprintf("UPDATE %s SET %s WHERE id = ?", tableName, strings.Join(setParts, ", "))
+	params = append(params, requestData.ID)
 	logs.Info("执行 SQL: %s, 参数: %+v", updateSQL, params)
 
 	result, err := o.Raw(updateSQL, params...).Exec()
@@ -441,7 +442,7 @@ func UpdateGameConfigByRequest(requestData *UpdateGameConfigRequest) error {
 	logs.Info("SQL 执行成功，影响行数: %d", rowsAffected)
 
 	if rowsAffected == 0 {
-		logs.Warning("没有找到匹配的配置记录: AppId=%s, ConfigKey=%s", requestData.AppId, requestData.ConfigKey)
+		logs.Warning("没有找到匹配的配置记录: AppId=%s, ID=%d", requestData.AppId, requestData.ID)
 		return fmt.Errorf("没有找到匹配的配置记录")
 	}
 

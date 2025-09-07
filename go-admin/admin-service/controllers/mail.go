@@ -5,6 +5,7 @@ import (
 	"admin-service/utils"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/beego/beego/v2/client/orm"
@@ -127,12 +128,13 @@ func (c *MailController) GetAllMails() {
 // CreateMail 创建邮件
 func (c *MailController) CreateMail() {
 	var requestData struct {
-		AppId      string `json:"appId"`
-		UserId     string `json:"userId"`
-		Title      string `json:"title"`
-		Content    string `json:"content"`
-		Rewards    string `json:"rewards"`
-		ExpireDays int    `json:"expireDays"`
+		AppId      string   `json:"appId"`
+		UserId     string   `json:"userId"`
+		Title      string   `json:"title"`
+		Content    string   `json:"content"`
+		Rewards    []string `json:"rewards"`
+		ExpireDays int      `json:"expireDays"`
+		MailType   int      `json:"mailType"` // 0: 个人邮件, 1: 系统广播邮件
 	}
 
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &requestData); err != nil {
@@ -142,6 +144,7 @@ func (c *MailController) CreateMail() {
 			"timestamp": utils.UnixMilli(),
 			"data":      nil,
 		}
+		fmt.Println("参数错误", err)
 		c.ServeJSON()
 		return
 	}
@@ -158,38 +161,75 @@ func (c *MailController) CreateMail() {
 		return
 	}
 
-	// 设置过期时间
-	var expireAt time.Time
-	if requestData.ExpireDays > 0 {
-		expireAt = time.Now().AddDate(0, 0, requestData.ExpireDays)
-	}
+	// 使用新的邮件系统 - expireAt变量已移除
 
-	mail := &models.Mail{
-		AppId:    requestData.AppId,
-		UserId:   requestData.UserId,
-		Title:    requestData.Title,
-		Content:  requestData.Content,
-		Rewards:  requestData.Rewards,
-		Status:   0, // 未读
-		ExpireAt: expireAt,
-	}
+	// 使用新的邮件系统
+	if requestData.MailType == 1 || requestData.UserId == "" {
+		// 系统广播邮件
+		systemMail := &models.MailSystem{
+			AppId:      requestData.AppId,
+			MailId:     fmt.Sprintf("mail_%d", time.Now().Unix()),
+			Title:      requestData.Title,
+			Content:    requestData.Content,
+			Rewards:    strings.Join(requestData.Rewards, ","),
+			Type:       "system",
+			TargetType: "all",
+			Status:     "draft",
+		}
 
-	if err := models.CreateMail(mail); err != nil {
+		if requestData.ExpireDays > 0 {
+			systemMail.ExpireTime = time.Now().AddDate(0, 0, requestData.ExpireDays)
+		}
+
+		if err := models.CreateSystemMail(systemMail); err != nil {
+			c.Data["json"] = map[string]interface{}{
+				"code":      5001,
+				"msg":       "创建系统邮件失败",
+				"timestamp": utils.UnixMilli(),
+				"data":      nil,
+			}
+			c.ServeJSON()
+			return
+		}
+
+		// 发布邮件给所有用户
+		if err := models.PublishSystemMail(systemMail.MailId, requestData.AppId); err != nil {
+			c.Data["json"] = map[string]interface{}{
+				"code":      5002,
+				"msg":       "发布邮件失败",
+				"timestamp": utils.UnixMilli(),
+				"data":      nil,
+			}
+			c.ServeJSON()
+			return
+		}
+
 		c.Data["json"] = map[string]interface{}{
-			"code":      5001,
-			"msg":       "创建邮件失败",
+			"code":      0,
+			"msg":       "系统邮件创建并发布成功",
+			"timestamp": utils.UnixMilli(),
+			"data":      systemMail,
+		}
+	} else {
+		// 个人邮件 - 使用SendPersonalMail
+		rewards := strings.Join(requestData.Rewards, ",")
+		if err := models.SendPersonalMail(requestData.AppId, requestData.UserId, requestData.Title, requestData.Content, rewards); err != nil {
+			c.Data["json"] = map[string]interface{}{
+				"code":      5001,
+				"msg":       "发送个人邮件失败",
+				"timestamp": utils.UnixMilli(),
+				"data":      nil,
+			}
+			c.ServeJSON()
+			return
+		}
+
+		c.Data["json"] = map[string]interface{}{
+			"code":      0,
+			"msg":       "个人邮件发送成功",
 			"timestamp": utils.UnixMilli(),
 			"data":      nil,
 		}
-		c.ServeJSON()
-		return
-	}
-
-	c.Data["json"] = map[string]interface{}{
-		"code":      0,
-		"msg":       "创建成功",
-		"timestamp": utils.UnixMilli(),
-		"data":      mail,
 	}
 	c.ServeJSON()
 }
@@ -392,7 +432,7 @@ func (c *MailController) GetUserMails() {
 		requestData.PageSize = 20
 	}
 
-	mails, total, err := models.GetUserMails(requestData.AppId, requestData.UserId, requestData.Page, requestData.PageSize)
+	mails, total, err := models.GetPlayerMailList(requestData.AppId, requestData.UserId, requestData.Page, requestData.PageSize)
 	if err != nil {
 		c.Data["json"] = map[string]interface{}{
 			"code":      5001,

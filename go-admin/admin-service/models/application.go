@@ -119,26 +119,41 @@ CREATE TABLE IF NOT EXISTS counter_%s (
   KEY idx_reset_time (reset_time)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='计数器数据表_%s'`, cleanAppId, cleanAppId)
 
-	// 创建邮件表
+	// 创建邮件表（存储邮件内容）
 	mailSQL := fmt.Sprintf(`
 CREATE TABLE IF NOT EXISTS mail_%s (
   id bigint(20) NOT NULL AUTO_INCREMENT,
   app_id varchar(100) NOT NULL COMMENT '应用ID',
-  user_id varchar(100) NOT NULL COMMENT '收件人用户ID',
   title varchar(200) NOT NULL COMMENT '邮件标题',
   content text COMMENT '邮件内容',
   rewards text COMMENT '奖励物品（JSON格式）',
-  status tinyint(1) NOT NULL DEFAULT 0 COMMENT '状态 0:未读 1:已读 2:已领取',
   expire_at datetime DEFAULT NULL COMMENT '过期时间',
   created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   KEY idx_app_id (app_id),
-  KEY idx_user_id (user_id),
-  KEY idx_status (status),
   KEY idx_expire_at (expire_at),
   KEY idx_created_at (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='邮件数据表_%s'`, cleanAppId, cleanAppId)
+
+	// 创建邮件-玩家关联表（存储邮件发送状态）
+	mailPlayerRelationSQL := fmt.Sprintf(`
+CREATE TABLE IF NOT EXISTS mail_player_relation_%s (
+  id bigint(20) NOT NULL AUTO_INCREMENT,
+  app_id varchar(100) NOT NULL COMMENT '应用ID',
+  mail_id bigint(20) NOT NULL COMMENT '邮件ID（关联mail_%s表）',
+  player_id varchar(100) NOT NULL COMMENT '玩家ID',
+  status tinyint(1) NOT NULL DEFAULT 0 COMMENT '状态 0:未读 1:已读 2:已领取',
+  created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_mail_player (mail_id, player_id),
+  KEY idx_app_id (app_id),
+  KEY idx_mail_id (mail_id),
+  KEY idx_player_id (player_id),
+  KEY idx_status (status),
+  KEY idx_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='邮件玩家关联表_%s'`, cleanAppId, cleanAppId, cleanAppId)
 
 	// 创建游戏配置表
 	gameConfigSQL := fmt.Sprintf(`
@@ -185,7 +200,7 @@ CREATE TABLE IF NOT EXISTS user_ban_records (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户封禁记录表'`
 
 	// 执行创建表的SQL
-	sqls := []string{userDataSQL, counterSQL, mailSQL, gameConfigSQL, banRecordsSQL}
+	sqls := []string{userDataSQL, counterSQL, mailSQL, mailPlayerRelationSQL, gameConfigSQL, banRecordsSQL}
 	for _, sql := range sqls {
 		_, err := o.Raw(sql).Exec()
 		if err != nil {
@@ -309,6 +324,7 @@ func (a *Application) dropAppTables() error {
 		fmt.Sprintf("leaderboard_%s", cleanAppId),
 		fmt.Sprintf("counter_%s", cleanAppId),
 		fmt.Sprintf("mail_%s", cleanAppId),
+		fmt.Sprintf("mail_player_relation_%s", cleanAppId),
 		fmt.Sprintf("game_config_%s", cleanAppId),
 	}
 
