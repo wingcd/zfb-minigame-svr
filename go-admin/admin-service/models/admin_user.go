@@ -16,14 +16,14 @@ type AdminUser struct {
 	Password    string    `orm:"size(255)" json:"-"`
 	Email       string    `orm:"size(100)" json:"email"`
 	Phone       string    `orm:"size(20)" json:"phone"`
-	RealName    string    `orm:"size(50)" json:"realName"`
+	RealName    string    `orm:"size(50);column(realName)" json:"realName"`
 	Avatar      string    `orm:"size(255)" json:"avatar"`
 	Status      int       `orm:"default(1)" json:"status"` // 1:正常 0:禁用
-	LastLoginAt time.Time `orm:"type(datetime);null" json:"lastLoginAt"`
+	LastLoginAt time.Time `orm:"type(datetime);null;column(lastLoginAt)" json:"lastLoginAt"`
 	LastLoginIP string    `orm:"size(50);column(lastLoginIp)" json:"lastLoginIp"`
 	RoleId      int64     `orm:"default(0)" json:"roleId"`
-	Token       string    `orm:"size(128);null" json:"-"`      // 添加token字段
-	TokenExpire time.Time `orm:"type(datetime);null" json:"-"` // 添加token过期时间
+	Token       string    `orm:"size(128);null" json:"-"`                          // 添加token字段
+	TokenExpire time.Time `orm:"type(datetime);null;column(tokenExpire)" json:"-"` // 添加token过期时间
 }
 
 // TableName 指定表名
@@ -100,17 +100,17 @@ func DeleteAdminUser(id int64) error {
 // UpdateAdminUserStatus 更新管理员状态
 func UpdateAdminUserStatus(id int64, status string) error {
 	return UpdateAdminUserFields(id, map[string]interface{}{
-		"status":      status,
-		"update_time": time.Now(),
+		"status":    status,
+		"updatedAt": time.Now(),
 	})
 }
 
 // UpdateAdminUserLoginInfo 更新管理员登录信息
 func UpdateAdminUserLoginInfo(id int64, loginIP string) error {
 	return UpdateAdminUserFields(id, map[string]interface{}{
-		"last_login_at": time.Now(),
-		"last_login_ip": loginIP,
-		"update_time":   time.Now(),
+		"lastLoginAt": time.Now(),
+		"lastLoginIp": loginIP,
+		"updatedAt":   time.Now(),
 	})
 }
 
@@ -139,9 +139,9 @@ func GetAdminById(id int64) (*AdminUser, error) {
 // UpdateAdminProfile 更新管理员资料
 func UpdateAdminProfile(id int64, nickname, email string) error {
 	return UpdateAdminUserFields(id, map[string]interface{}{
-		"realName":   nickname,
-		"email":      email,
-		"updateTime": time.Now(),
+		"realName":  nickname,
+		"email":     email,
+		"updatedAt": time.Now(),
 	})
 }
 
@@ -151,8 +151,8 @@ func ChangeAdminPassword(id int64, oldPassword, newPassword string) error {
 	// 暂时简单实现
 	hashedPassword := utils.HashPassword(newPassword)
 	return UpdateAdminUserFields(id, map[string]interface{}{
-		"password":    hashedPassword,
-		"update_time": time.Now(),
+		"password":  hashedPassword,
+		"updatedAt": time.Now(),
 	})
 }
 
@@ -190,9 +190,9 @@ func AdminLoginWithMD5(username, passwordHash string) (*AdminUser, error) {
 func UpdateAdminToken(id int64, token string, tokenExpire time.Time, loginIP string) error {
 	// JWT token不需要存储在数据库中，只更新登录信息
 	return UpdateAdminUserFields(id, map[string]interface{}{
-		"last_login_at": time.Now(),
-		"last_login_ip": loginIP,
-		"update_time":   time.Now(),
+		"lastLoginAt": time.Now(),
+		"lastLoginIp": loginIP,
+		"updatedAt":   time.Now(),
 	})
 }
 

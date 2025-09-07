@@ -60,14 +60,14 @@ func GetFileList(page, pageSize int, filters map[string]interface{}) ([]FileInfo
 	qs := o.QueryTable("file_info")
 
 	// 应用过滤条件
-	if uploadBy, ok := filters["upload_by"].(int64); ok && uploadBy > 0 {
-		qs = qs.Filter("upload_by", uploadBy)
+	if uploadBy, ok := filters["uploadBy"].(int64); ok && uploadBy > 0 {
+		qs = qs.Filter("uploadBy", uploadBy)
 	}
-	if fileType, ok := filters["file_type"].(string); ok && fileType != "" {
-		qs = qs.Filter("file_type", fileType)
+	if fileType, ok := filters["fileType"].(string); ok && fileType != "" {
+		qs = qs.Filter("fileType", fileType)
 	}
-	if isPublic, ok := filters["is_public"].(bool); ok {
-		qs = qs.Filter("is_public", isPublic)
+	if isPublic, ok := filters["isPublic"].(bool); ok {
+		qs = qs.Filter("isPublic", isPublic)
 	}
 
 	// 获取总数
@@ -97,9 +97,9 @@ func BatchDeleteFiles(ids []int64) error {
 // GetUploadStats 获取上传统计信息
 func GetUploadStats() (map[string]interface{}, error) {
 	stats := make(map[string]interface{})
-	stats["total_files"] = 100
-	stats["total_size"] = "1GB"
-	stats["today_upload"] = 10
+	stats["totalFiles"] = 100
+	stats["totalSize"] = "1GB"
+	stats["todayUpload"] = 10
 	return stats, nil
 }
 

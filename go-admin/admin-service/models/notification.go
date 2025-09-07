@@ -139,7 +139,7 @@ func GetNotificationLogs(page, pageSize int, userId int64) ([]*NotificationLog, 
 	qs := o.QueryTable("notification_logs")
 
 	if userId > 0 {
-		qs = qs.Filter("user_id", userId)
+		qs = qs.Filter("playerId", userId)
 	}
 
 	total, _ := qs.Count()
@@ -188,7 +188,7 @@ func MarkAsRead(notificationId, userId int64) error {
 	log := &NotificationLog{}
 	err := o.QueryTable("notification_logs").
 		Filter("notification_id", notificationId).
-		Filter("user_id", userId).
+		Filter("playerId", userId).
 		One(log)
 
 	if err != nil {

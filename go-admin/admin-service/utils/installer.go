@@ -447,8 +447,8 @@ func getMySQLTables() []string {
 		// 管理员表 - 匹配AdminUser模型
 		`CREATE TABLE IF NOT EXISTS admin_users (
 			id BIGINT PRIMARY KEY AUTO_INCREMENT,
-			createTime DATETIME NOT NULL,
-			updateTime DATETIME NOT NULL,
+			createdAt DATETIME NOT NULL,
+			updatedAt DATETIME NOT NULL,
 			username VARCHAR(50) NOT NULL UNIQUE,
 			password VARCHAR(255) NOT NULL,
 			email VARCHAR(100) NOT NULL DEFAULT '',
@@ -469,8 +469,8 @@ func getMySQLTables() []string {
 		// 角色表 - 匹配AdminRole模型
 		`CREATE TABLE IF NOT EXISTS admin_roles (
 			id BIGINT PRIMARY KEY AUTO_INCREMENT,
-			createTime DATETIME NOT NULL,
-			updateTime DATETIME NOT NULL,
+			createdAt DATETIME NOT NULL,
+			updatedAt DATETIME NOT NULL,
 			roleCode VARCHAR(50) NULL,
 			roleName VARCHAR(50) NULL,
 			name VARCHAR(50) NOT NULL UNIQUE,
@@ -478,15 +478,15 @@ func getMySQLTables() []string {
 			permissions TEXT,
 			status INT NOT NULL DEFAULT 1,
 			INDEX idx_name (name),
-			INDEX idx_role_code (roleCode),
+			INDEX idx_roleCode (roleCode),
 			INDEX idx_status (status)
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
 
 		// 应用表
 		`CREATE TABLE IF NOT EXISTS apps (
 			id BIGINT PRIMARY KEY AUTO_INCREMENT,
-			createTime DATETIME NOT NULL,
-			updateTime DATETIME NOT NULL,
+			createdAt DATETIME NOT NULL,
+			updatedAt DATETIME NOT NULL,
 			appId VARCHAR(50) NOT NULL UNIQUE COMMENT '应用ID（唯一）',
 			appName VARCHAR(100) NOT NULL COMMENT '应用名称',
 			description TEXT COMMENT '应用描述',
@@ -504,11 +504,11 @@ func getMySQLTables() []string {
 			dailyActive BIGINT NOT NULL DEFAULT 0 COMMENT '日活跃用户',
 			monthlyActive BIGINT NOT NULL DEFAULT 0 COMMENT '月活跃用户',
 			createdBy VARCHAR(50) NOT NULL DEFAULT '' COMMENT '创建者',
-			INDEX idx_app_id (appId),
+			INDEX idx_appId (appId),
 			INDEX idx_status (status),
 			INDEX idx_category (category),
 			INDEX idx_platform (platform),
-			INDEX idx_created_by (createdBy)
+			INDEX idx_createdBy (createdBy)
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
 
 		// 用户数据表
@@ -517,11 +517,11 @@ func getMySQLTables() []string {
 			appId VARCHAR(50) NOT NULL,
 			playerId VARCHAR(50) NOT NULL,
 			data JSON,
-			createTime DATETIME DEFAULT CURRENT_TIMESTAMP,
-			updateTime DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+			createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 			UNIQUE KEY uk_app_player (appId, playerId),
-			INDEX idx_app_id (appId),
-			INDEX idx_player_id (playerId)
+			INDEX idx_appId (appId),
+			INDEX idx_playerId (playerId)
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
 
 		// 系统配置表
@@ -530,16 +530,16 @@ func getMySQLTables() []string {
 			configKey VARCHAR(100) NOT NULL UNIQUE,
 			configValue TEXT,
 			description VARCHAR(255),
-			createTime DATETIME DEFAULT CURRENT_TIMESTAMP,
-			updateTime DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+			createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 			INDEX idx_key (configKey)
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
 
 		// 管理员操作日志表
 		`CREATE TABLE IF NOT EXISTS admin_operation_logs (
 			id BIGINT PRIMARY KEY AUTO_INCREMENT,
-			createTime DATETIME NOT NULL,
-			updateTime DATETIME NOT NULL,
+			createdAt DATETIME NOT NULL,
+			updatedAt DATETIME NOT NULL,
 			userId BIGINT NOT NULL,
 			username VARCHAR(50) NOT NULL,
 			action VARCHAR(100) NOT NULL,
@@ -547,10 +547,10 @@ func getMySQLTables() []string {
 			params TEXT,
 			ipAddress VARCHAR(45) NOT NULL DEFAULT '',
 			userAgent VARCHAR(500) NOT NULL DEFAULT '',
-			INDEX idx_user_id (userId),
+			INDEX idx_playerId (userId),
 			INDEX idx_username (username),
 			INDEX idx_action (action),
-			INDEX idx_create_time (createTime)
+			INDEX idx_createdAt (createdAt)
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
 	}
 }
@@ -561,8 +561,8 @@ func getSQLiteTables() []string {
 		// 管理员表 - 对齐AdminUser模型
 		`CREATE TABLE IF NOT EXISTS admin_users (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			createTime DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-			updateTime DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			username TEXT NOT NULL UNIQUE,
 			password TEXT NOT NULL,
 			email TEXT NOT NULL DEFAULT '',
@@ -580,8 +580,8 @@ func getSQLiteTables() []string {
 		// 角色表 - 对齐AdminRole模型
 		`CREATE TABLE IF NOT EXISTS admin_roles (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			createTime DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-			updateTime DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			roleCode TEXT NULL,
 			roleName TEXT NULL,
 			name TEXT NOT NULL UNIQUE,
@@ -593,8 +593,8 @@ func getSQLiteTables() []string {
 		// 权限表 - 对齐AdminPermission模型
 		`CREATE TABLE IF NOT EXISTS admin_permissions (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			createTime DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-			updateTime DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			permissionCode TEXT NOT NULL UNIQUE,
 			permissionName TEXT NOT NULL,
 			description TEXT DEFAULT '',
@@ -606,7 +606,7 @@ func getSQLiteTables() []string {
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			roleId INTEGER NOT NULL,
 			permissionId INTEGER NOT NULL,
-			createTime DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			UNIQUE(roleId, permissionId)
 		)`,
 
@@ -615,15 +615,15 @@ func getSQLiteTables() []string {
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			userId INTEGER NOT NULL,
 			roleId INTEGER NOT NULL,
-			createTime DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			UNIQUE(userId, roleId)
 		)`,
 
 		// 应用表 - 对齐MySQL版本
 		`CREATE TABLE IF NOT EXISTS apps (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			createTime DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-			updateTime DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			appId TEXT NOT NULL UNIQUE,
 			appName TEXT NOT NULL,
 			description TEXT,
@@ -649,16 +649,16 @@ func getSQLiteTables() []string {
 			appId TEXT NOT NULL,
 			playerId TEXT NOT NULL,
 			data TEXT,
-			createTime DATETIME DEFAULT CURRENT_TIMESTAMP,
-			updateTime DATETIME DEFAULT CURRENT_TIMESTAMP,
+			createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
 			UNIQUE(appId, playerId)
 		)`,
 
 		// 分数记录表 - 对齐MySQL版本
 		`CREATE TABLE IF NOT EXISTS score_records (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			createTime DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-			updateTime DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			appId TEXT NOT NULL,
 			playerId TEXT NOT NULL,
 			score INTEGER NOT NULL DEFAULT 0,
@@ -677,15 +677,15 @@ func getSQLiteTables() []string {
 			configKey TEXT NOT NULL UNIQUE,
 			configValue TEXT,
 			description TEXT,
-			createTime DATETIME DEFAULT CURRENT_TIMESTAMP,
-			updateTime DATETIME DEFAULT CURRENT_TIMESTAMP
+			createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
 		)`,
 
 		// 操作日志表 - 对齐MySQL版本
 		`CREATE TABLE IF NOT EXISTS operation_logs (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			createTime DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-			updateTime DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			userId INTEGER NOT NULL DEFAULT 0,
 			username TEXT NOT NULL DEFAULT '',
 			action TEXT NOT NULL,
@@ -703,29 +703,29 @@ func getSQLiteTables() []string {
 		`CREATE INDEX IF NOT EXISTS idx_admin_users_email ON admin_users(email)`,
 		`CREATE INDEX IF NOT EXISTS idx_admin_users_status ON admin_users(status)`,
 		`CREATE INDEX IF NOT EXISTS idx_admin_roles_name ON admin_roles(name)`,
-		`CREATE INDEX IF NOT EXISTS idx_admin_roles_role_code ON admin_roles(roleCode)`,
+		`CREATE INDEX IF NOT EXISTS idx_admin_roles_roleCode ON admin_roles(roleCode)`,
 		`CREATE INDEX IF NOT EXISTS idx_admin_roles_status ON admin_roles(status)`,
 		`CREATE INDEX IF NOT EXISTS idx_admin_permissions_permission_code ON admin_permissions(permissionCode)`,
 		`CREATE INDEX IF NOT EXISTS idx_admin_permissions_status ON admin_permissions(status)`,
-		`CREATE INDEX IF NOT EXISTS idx_admin_role_permissions_role_id ON admin_role_permissions(roleId)`,
+		`CREATE INDEX IF NOT EXISTS idx_admin_role_permissions_playerId ON admin_role_permissions(roleId)`,
 		`CREATE INDEX IF NOT EXISTS idx_admin_role_permissions_permission_id ON admin_role_permissions(permissionId)`,
-		`CREATE INDEX IF NOT EXISTS idx_admin_user_roles_user_id ON admin_user_roles(userId)`,
-		`CREATE INDEX IF NOT EXISTS idx_admin_user_roles_role_id ON admin_user_roles(roleId)`,
-		`CREATE INDEX IF NOT EXISTS idx_apps_app_id ON apps(appId)`,
+		`CREATE INDEX IF NOT EXISTS idx_admin_user_roles_playerId ON admin_user_roles(userId)`,
+		`CREATE INDEX IF NOT EXISTS idx_admin_user_roles_playerId ON admin_user_roles(roleId)`,
+		`CREATE INDEX IF NOT EXISTS idx_apps_appId ON apps(appId)`,
 		`CREATE INDEX IF NOT EXISTS idx_apps_status ON apps(status)`,
 		`CREATE INDEX IF NOT EXISTS idx_apps_category ON apps(category)`,
 		`CREATE INDEX IF NOT EXISTS idx_apps_platform ON apps(platform)`,
-		`CREATE INDEX IF NOT EXISTS idx_apps_created_by ON apps(createdBy)`,
-		`CREATE INDEX IF NOT EXISTS idx_user_data_app_id ON user_data(appId)`,
-		`CREATE INDEX IF NOT EXISTS idx_user_data_player_id ON user_data(playerId)`,
-		`CREATE INDEX IF NOT EXISTS idx_score_records_app_id ON score_records(appId)`,
-		`CREATE INDEX IF NOT EXISTS idx_score_records_player_id ON score_records(playerId)`,
+		`CREATE INDEX IF NOT EXISTS idx_apps_createdBy ON apps(createdBy)`,
+		`CREATE INDEX IF NOT EXISTS idx_user_data_appId ON user_data(appId)`,
+		`CREATE INDEX IF NOT EXISTS idx_user_data_playerId ON user_data(playerId)`,
+		`CREATE INDEX IF NOT EXISTS idx_score_records_appId ON score_records(appId)`,
+		`CREATE INDEX IF NOT EXISTS idx_score_records_playerId ON score_records(playerId)`,
 		`CREATE INDEX IF NOT EXISTS idx_score_records_score ON score_records(score)`,
-		`CREATE INDEX IF NOT EXISTS idx_score_records_create_time ON score_records(createTime)`,
-		`CREATE INDEX IF NOT EXISTS idx_system_configs_config_key ON system_configs(configKey)`,
-		`CREATE INDEX IF NOT EXISTS idx_operation_logs_user_id ON operation_logs(userId)`,
+		`CREATE INDEX IF NOT EXISTS idx_score_records_createdAt ON score_records(createdAt)`,
+		`CREATE INDEX IF NOT EXISTS idx_system_configs_configKey ON system_configs(configKey)`,
+		`CREATE INDEX IF NOT EXISTS idx_operation_logs_playerId ON operation_logs(userId)`,
 		`CREATE INDEX IF NOT EXISTS idx_operation_logs_action ON operation_logs(action)`,
-		`CREATE INDEX IF NOT EXISTS idx_operation_logs_create_time ON operation_logs(createTime)`,
+		`CREATE INDEX IF NOT EXISTS idx_operation_logs_createdAt ON operation_logs(createdAt)`,
 	}
 }
 
@@ -798,7 +798,7 @@ func createDefaultRoles(db *sql.DB) error {
 
 		// 插入角色
 		_, err = db.Exec(`
-			INSERT INTO admin_roles (id, createTime, updateTime, roleCode, roleName, name, description, permissions, status) 
+			INSERT INTO admin_roles (id, createdAt, updatedAt, roleCode, roleName, name, description, permissions, status) 
 			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 			role.ID, now, now, role.RoleCode, role.RoleName, role.Name, role.Description, role.Permissions, role.Status)
 
@@ -834,7 +834,7 @@ func createDefaultAdminWithParams(db *sql.DB, username, password string) error {
 	// 插入默认管理员
 	now := time.Now()
 	_, err = db.Exec(`
-		INSERT INTO admin_users (createTime, updateTime, username, password, email, phone, realName, avatar, status, roleId) 
+		INSERT INTO admin_users (createdAt, updatedAt, username, password, email, phone, realName, avatar, status, roleId) 
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		now, now, username, hashedPassword, "admin@example.com", "", "系统管理员", "", 1, 1)
 
@@ -890,7 +890,7 @@ func createDefaultAdmin() error {
 	// 插入默认管理员
 	now := time.Now()
 	_, err = db.Exec(`
-		INSERT INTO admin_users (createTime, updateTime, username, password, email, phone, realName, avatar, status, roleId) 
+		INSERT INTO admin_users (createdAt, updatedAt, username, password, email, phone, realName, avatar, status, roleId) 
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		now, now, username, hashedPassword, "admin@example.com", "", "系统管理员", "", 1, 1)
 
@@ -1004,7 +1004,7 @@ func createAdminWithConfig(config *InstallConfig) error {
 
 	now := time.Now()
 	_, err = db.Exec(`
-		INSERT INTO admin_users (createTime, updateTime, username, password, email, phone, realName, avatar, status, roleId) 
+		INSERT INTO admin_users (createdAt, updatedAt, username, password, email, phone, realName, avatar, status, roleId) 
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		now, now, config.AdminUsername, hashedPassword, config.AdminEmail, "", config.AdminUsername, "", 1, 1)
 
@@ -1138,7 +1138,7 @@ func ChangeAdminPassword(username, oldPassword, newPassword string) error {
 
 	// 更新密码
 	now := time.Now()
-	_, err = db.Exec("UPDATE admin_users SET password = ?, update_time = ? WHERE username = ?",
+	_, err = db.Exec("UPDATE admin_users SET password = ?, updatedAt = ? WHERE username = ?",
 		newPasswordHash, now, username)
 	if err != nil {
 		return fmt.Errorf("更新密码失败: %v", err)
@@ -1175,7 +1175,7 @@ func ResetAdminPassword(username, newPassword string) error {
 
 	// 更新密码
 	now := time.Now()
-	_, err = db.Exec("UPDATE admin_users SET password = ?, update_time = ?, token = NULL, token_expire = NULL WHERE username = ?",
+	_, err = db.Exec("UPDATE admin_users SET password = ?, updatedAt = ?, token = NULL, token_expire = NULL WHERE username = ?",
 		newPasswordHash, now, username)
 	if err != nil {
 		return fmt.Errorf("重置密码失败: %v", err)
@@ -1198,9 +1198,9 @@ func ListAdminUsers() ([]map[string]interface{}, error) {
 
 	// 查询管理员用户
 	rows, err := db.Query(`
-		SELECT id, username, email, phone, real_name, status, last_login_at, last_login_ip, role_id, create_time 
+		SELECT id, username, email, phone, realName, status, lastLoginAt, lastLoginIp, playerId, createdAt 
 		FROM admin_users 
-		ORDER BY create_time DESC
+		ORDER BY createdAt DESC
 	`)
 	if err != nil {
 		return nil, fmt.Errorf("查询管理员用户失败: %v", err)
@@ -1219,30 +1219,30 @@ func ListAdminUsers() ([]map[string]interface{}, error) {
 			lastLoginAt sql.NullTime
 			lastLoginIP string
 			roleID      int64
-			createTime  time.Time
+			createdAt   time.Time
 		)
 
-		err = rows.Scan(&id, &username, &email, &phone, &realName, &status, &lastLoginAt, &lastLoginIP, &roleID, &createTime)
+		err = rows.Scan(&id, &username, &email, &phone, &realName, &status, &lastLoginAt, &lastLoginIP, &roleID, &createdAt)
 		if err != nil {
 			return nil, fmt.Errorf("扫描用户数据失败: %v", err)
 		}
 
 		user := map[string]interface{}{
-			"id":            id,
-			"username":      username,
-			"email":         email,
-			"phone":         phone,
-			"real_name":     realName,
-			"status":        status,
-			"last_login_ip": lastLoginIP,
-			"role_id":       roleID,
-			"create_time":   createTime.Format("2006-01-02 15:04:05"),
+			"id":          id,
+			"username":    username,
+			"email":       email,
+			"phone":       phone,
+			"realName":    realName,
+			"status":      status,
+			"lastLoginIp": lastLoginIP,
+			"playerId":    roleID,
+			"createdAt":   createdAt.Format("2006-01-02 15:04:05"),
 		}
 
 		if lastLoginAt.Valid {
-			user["last_login_at"] = lastLoginAt.Time.Format("2006-01-02 15:04:05")
+			user["lastLoginAt"] = lastLoginAt.Time.Format("2006-01-02 15:04:05")
 		} else {
-			user["last_login_at"] = nil
+			user["lastLoginAt"] = nil
 		}
 
 		users = append(users, user)
@@ -1329,7 +1329,7 @@ func CreateAdminUser(username, password, email, realName string) error {
 	// 插入新管理员
 	now := time.Now()
 	_, err = db.Exec(`
-		INSERT INTO admin_users (createTime, updateTime, username, password, email, phone, realName, avatar, status, roleId) 
+		INSERT INTO admin_users (createdAt, updatedAt, username, password, email, phone, realName, avatar, status, roleId) 
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		now, now, username, hashedPassword, email, "", realName, "", 1, 1)
 

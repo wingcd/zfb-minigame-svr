@@ -126,7 +126,7 @@ func (s *ApplicationService) UpdateApplication(appId, appName, description strin
 	app.Status = status
 	app.UpdatedAt = time.Now()
 
-	_, err = o.Update(app, "appName", "description", "status", "updateTime")
+	_, err = o.Update(app, "appName", "description", "status", "updatedAt")
 	if err != nil {
 		return fmt.Errorf("更新应用失败: %v", err)
 	}
@@ -185,7 +185,7 @@ func (s *ApplicationService) ResetAppSecret(appId string) (string, error) {
 	app.AppSecret = newSecret
 	app.UpdatedAt = time.Now()
 
-	_, err = o.Update(app, "appSecret", "updateTime")
+	_, err = o.Update(app, "appSecret", "updatedAt")
 	if err != nil {
 		return "", fmt.Errorf("重置应用密钥失败: %v", err)
 	}
@@ -206,10 +206,10 @@ func (s *ApplicationService) CreateAppTables(appId string) error {
 			id BIGINT AUTO_INCREMENT PRIMARY KEY,
 			userId VARCHAR(100) NOT NULL,
 			data LONGTEXT,
-			createTime DATETIME DEFAULT CURRENT_TIMESTAMP,
-			updateTime DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-			UNIQUE KEY uk_user_id (userId),
-			KEY idx_update_time (updateTime)
+			createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+			UNIQUE KEY uk_playerId (userId),
+			KEY idx_update_time (updatedAt)
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户数据表'
 	`, cleanAppId)
 
@@ -224,11 +224,11 @@ func (s *ApplicationService) CreateAppTables(appId string) error {
 			count BIGINT DEFAULT 0,
 			resetTime DATETIME DEFAULT NULL,
 			resetInterval INT DEFAULT NULL,
-			createTime DATETIME DEFAULT CURRENT_TIMESTAMP,
-			updateTime DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+			createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 			UNIQUE KEY uk_counter_user (counterName, userId),
 			KEY idx_counter_name (counterName),
-			KEY idx_reset_time (resetTime)
+			KEY idx_resetTime (resetTime)
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='计数器数据表'
 	`, cleanAppId)
 
@@ -242,12 +242,12 @@ func (s *ApplicationService) CreateAppTables(appId string) error {
 			rewards TEXT,
 			status TINYINT DEFAULT 0 COMMENT '0:未读 1:已读 2:已领取',
 			expireAt DATETIME DEFAULT NULL,
-			createTime DATETIME DEFAULT CURRENT_TIMESTAMP,
-			updateTime DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-			KEY idx_user_id (userId),
+			createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+			KEY idx_playerId (userId),
 			KEY idx_status (status),
-			KEY idx_expire_at (expireAt),
-			KEY idx_create_time (createTime)
+			KEY idx_expireTime (expireAt),
+			KEY idx_create_time (createdAt)
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='邮件数据表'
 	`, cleanAppId)
 
@@ -259,9 +259,9 @@ func (s *ApplicationService) CreateAppTables(appId string) error {
 			configValue LONGTEXT,
 			version VARCHAR(50) DEFAULT NULL,
 			description VARCHAR(255) DEFAULT NULL,
-			createTime DATETIME DEFAULT CURRENT_TIMESTAMP,
-			updateTime DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-			UNIQUE KEY uk_config_key (configKey),
+			createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+			UNIQUE KEY uk_configKey (configKey),
 			KEY idx_version (version)
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='游戏配置表'
 	`, cleanAppId)

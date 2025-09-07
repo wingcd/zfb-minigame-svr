@@ -57,7 +57,7 @@ func CreateTestApp(appId string) error {
 
 	// 检查应用是否已存在
 	var count int64
-	err := o.Raw("SELECT COUNT(*) FROM apps WHERE app_id = ?", appId).QueryRow(&count)
+	err := o.Raw("SELECT COUNT(*) FROM apps WHERE appId = ?", appId).QueryRow(&count)
 	if err != nil {
 		return err
 	}
@@ -71,7 +71,7 @@ func CreateTestApp(appId string) error {
 	description := fmt.Sprintf("这是用于测试的应用: %s", appId)
 
 	// 插入应用数据
-	sql := "INSERT INTO apps (app_id, app_name, description, status, create_time, update_time) VALUES (?, ?, ?, ?, NOW(), NOW())"
+	sql := "INSERT INTO apps (appId, app_name, description, status, createdAt, updatedAt) VALUES (?, ?, ?, ?, NOW(), NOW())"
 	_, err = o.Raw(sql, appId, appName, description, 1).Exec()
 	if err != nil {
 		logs.Error("创建测试应用失败:", err)
@@ -83,12 +83,12 @@ func CreateTestApp(appId string) error {
 	createUserTableSQL := fmt.Sprintf(`
 		CREATE TABLE IF NOT EXISTS %s (
 			id BIGINT AUTO_INCREMENT PRIMARY KEY,
-			player_id VARCHAR(100) UNIQUE NOT NULL,
+			playerId VARCHAR(100) UNIQUE NOT NULL,
 			data LONGTEXT,
-			create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-			update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-			INDEX idx_player_id (player_id),
-			INDEX idx_create_time (create_time)
+			createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+			INDEX idx_playerId (playerId),
+			INDEX idx_createdAt (createdAt)
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
 	`, userTableName)
 
@@ -104,14 +104,14 @@ func CreateTestApp(appId string) error {
 		CREATE TABLE IF NOT EXISTS %s (
 			id BIGINT AUTO_INCREMENT PRIMARY KEY,
 			leaderboard_id VARCHAR(100) NOT NULL,
-			player_id VARCHAR(100) NOT NULL,
+			playerId VARCHAR(100) NOT NULL,
 			score BIGINT DEFAULT 0,
-			extra_data TEXT,
-			create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-			update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+			extraData TEXT,
+			createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 			INDEX idx_leaderboard_score (leaderboard_id, score DESC),
-			INDEX idx_player (player_id),
-			UNIQUE KEY uk_leaderboard_player (leaderboard_id, player_id)
+			INDEX idx_player (playerId),
+			UNIQUE KEY uk_leaderboard_player (leaderboard_id, playerId)
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
 	`, leaderboardTableName)
 
@@ -126,17 +126,17 @@ func CreateTestApp(appId string) error {
 	createMailTableSQL := fmt.Sprintf(`
 		CREATE TABLE IF NOT EXISTS %s (
 			id BIGINT AUTO_INCREMENT PRIMARY KEY,
-			player_id VARCHAR(100) NOT NULL,
+			playerId VARCHAR(100) NOT NULL,
 			title VARCHAR(200) NOT NULL,
 			content TEXT,
 			attachments TEXT,
 			is_read TINYINT DEFAULT 0,
 			is_claimed TINYINT DEFAULT 0,
 			expire_time DATETIME,
-			create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-			update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-			INDEX idx_player (player_id),
-			INDEX idx_create_time (create_time)
+			createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+			INDEX idx_player (playerId),
+			INDEX idx_createdAt (createdAt)
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
 	`, mailTableName)
 
@@ -151,12 +151,12 @@ func CreateTestApp(appId string) error {
 	createCounterTableSQL := fmt.Sprintf(`
 		CREATE TABLE IF NOT EXISTS %s (
 			id BIGINT AUTO_INCREMENT PRIMARY KEY,
-			counter_key VARCHAR(100) NOT NULL,
+			counterKey VARCHAR(100) NOT NULL,
 			counter_value BIGINT DEFAULT 0,
 			description TEXT,
-			create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-			update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-			UNIQUE KEY uk_counter_key (counter_key)
+			createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+			UNIQUE KEY uk_counterKey (counterKey)
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
 	`, counterTableName)
 
@@ -176,7 +176,7 @@ func CreateTestUser(appId, playerId string) error {
 
 	// 检查用户是否已存在
 	var count int64
-	err := o.Raw(fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE player_id = ?", tableName), playerId).QueryRow(&count)
+	err := o.Raw(fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE playerId = ?", tableName), playerId).QueryRow(&count)
 	if err != nil {
 		// 表可能不存在，先创建应用
 		if err := CreateTestApp(appId); err != nil {
@@ -213,7 +213,7 @@ func CreateTestUser(appId, playerId string) error {
 	}
 
 	// 插入用户数据
-	sql := fmt.Sprintf("INSERT INTO %s (player_id, data, create_time, update_time) VALUES (?, ?, NOW(), NOW())", tableName)
+	sql := fmt.Sprintf("INSERT INTO %s (playerId, data, createdAt, updatedAt) VALUES (?, ?, NOW(), NOW())", tableName)
 	_, err = o.Raw(sql, playerId, string(userDataJSON)).Exec()
 	if err != nil {
 		logs.Error("创建测试用户失败:", err)
@@ -233,7 +233,7 @@ func CreateTestUser(appId, playerId string) error {
 	}
 
 	for _, lb := range leaderboards {
-		sql := fmt.Sprintf("INSERT INTO %s (leaderboard_id, player_id, score, extra_data, create_time, update_time) VALUES (?, ?, ?, ?, NOW(), NOW()) ON DUPLICATE KEY UPDATE score = VALUES(score), update_time = NOW()", leaderboardTable)
+		sql := fmt.Sprintf("INSERT INTO %s (leaderboard_id, playerId, score, extraData, createdAt, updatedAt) VALUES (?, ?, ?, ?, NOW(), NOW()) ON DUPLICATE KEY UPDATE score = VALUES(score), updatedAt = NOW()", leaderboardTable)
 		o.Raw(sql, lb.LeaderboardId, playerId, lb.Score, lb.ExtraData).Exec()
 	}
 
@@ -252,7 +252,7 @@ func CreateTestUser(appId, playerId string) error {
 	}
 
 	for _, mail := range mails {
-		sql := fmt.Sprintf("INSERT INTO %s (player_id, title, content, attachments, is_read, is_claimed, create_time, update_time) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())", mailTable)
+		sql := fmt.Sprintf("INSERT INTO %s (playerId, title, content, attachments, is_read, is_claimed, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())", mailTable)
 		o.Raw(sql, playerId, mail.Title, mail.Content, mail.Attachments, mail.IsRead, mail.IsClaimed).Exec()
 	}
 
@@ -285,14 +285,14 @@ func CleanupTestApp(appId string) error {
 	}
 
 	// 删除应用记录
-	_, err := o.Raw("DELETE FROM apps WHERE app_id = ?", appId).Exec()
+	_, err := o.Raw("DELETE FROM apps WHERE appId = ?", appId).Exec()
 	if err != nil {
 		logs.Error("删除应用记录失败:", err)
 		return err
 	}
 
 	// 删除相关配置
-	_, err = o.Raw("DELETE FROM game_configs WHERE app_id = ?", appId).Exec()
+	_, err = o.Raw("DELETE FROM game_configs WHERE appId = ?", appId).Exec()
 	if err != nil {
 		logs.Error("删除应用配置失败:", err)
 	}
@@ -311,7 +311,7 @@ func CleanupBanRecord(appId, playerId string) error {
 
 	if appId != "" && playerId != "" {
 		// 根据appId和playerId删除
-		_, err := o.Raw("DELETE FROM user_ban_records WHERE app_id = ? AND player_id = ?", appId, playerId).Exec()
+		_, err := o.Raw("DELETE FROM user_ban_records WHERE appId = ? AND playerId = ?", appId, playerId).Exec()
 		return err
 	} else if playerId != "" {
 		// 根据ID删除（playerId在这里作为记录ID）
@@ -376,7 +376,7 @@ func CreateTestCounters(appId string) error {
 	}
 
 	for _, counter := range counters {
-		sql := fmt.Sprintf("INSERT INTO %s (counter_key, counter_value, description, create_time, update_time) VALUES (?, ?, ?, NOW(), NOW()) ON DUPLICATE KEY UPDATE counter_value = VALUES(counter_value), update_time = NOW()", tableName)
+		sql := fmt.Sprintf("INSERT INTO %s (counterKey, counter_value, description, createdAt, updatedAt) VALUES (?, ?, ?, NOW(), NOW()) ON DUPLICATE KEY UPDATE counter_value = VALUES(counter_value), updatedAt = NOW()", tableName)
 		_, err := o.Raw(sql, counter.Key, counter.Value, counter.Description).Exec()
 		if err != nil {
 			logs.Error("创建测试计数器失败:", err)
@@ -424,7 +424,7 @@ func CreateTestLeaderboards(appId string) error {
 
 			extraData := fmt.Sprintf(`{"rank": %d, "leaderboard": "%s"}`, i+1, lb)
 
-			sql := fmt.Sprintf("INSERT INTO %s (leaderboard_id, player_id, score, extra_data, create_time, update_time) VALUES (?, ?, ?, ?, NOW(), NOW()) ON DUPLICATE KEY UPDATE score = VALUES(score), update_time = NOW()", tableName)
+			sql := fmt.Sprintf("INSERT INTO %s (leaderboard_id, playerId, score, extraData, createdAt, updatedAt) VALUES (?, ?, ?, ?, NOW(), NOW()) ON DUPLICATE KEY UPDATE score = VALUES(score), updatedAt = NOW()", tableName)
 			_, err := o.Raw(sql, lb, player.PlayerId, score, extraData).Exec()
 			if err != nil {
 				logs.Error("创建测试排行榜数据失败:", err)
@@ -487,7 +487,7 @@ func CreateTestMails(appId, playerId string) error {
 			expireTimeStr = mail.ExpireTime.Format("2006-01-02 15:04:05")
 		}
 
-		sql := fmt.Sprintf("INSERT INTO %s (player_id, title, content, attachments, is_read, is_claimed, expire_time, create_time, update_time) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())", tableName)
+		sql := fmt.Sprintf("INSERT INTO %s (playerId, title, content, attachments, is_read, is_claimed, expire_time, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())", tableName)
 		_, err := o.Raw(sql, playerId, mail.Title, mail.Content, mail.Attachments, mail.IsRead, mail.IsClaimed, expireTimeStr).Exec()
 		if err != nil {
 			logs.Error("创建测试邮件失败:", err)

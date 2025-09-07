@@ -201,13 +201,13 @@ func (c *ApplicationController) UpdateApplication() {
 
 	// 解析JSON请求体
 	var request struct {
-		AppId         string      `json:"appId"` // 支持appId参数
-		AppName       string      `json:"appName"`
-		Platform      string      `json:"platform"`
-		ChannelAppId  string      `json:"channelAppId"`  // 添加渠道相关字段
-		ChannelAppKey string      `json:"channelAppKey"` // 添加渠道相关字段
-		Description   string      `json:"description"`
-		Status        interface{} `json:"status"` // 改为interface{}以支持int和string
+		AppId         string `json:"appId"` // 支持appId参数
+		AppName       string `json:"appName"`
+		Platform      string `json:"platform"`
+		ChannelAppId  string `json:"channelAppId"`  // 添加渠道相关字段
+		ChannelAppKey string `json:"channelAppKey"` // 添加渠道相关字段
+		Description   string `json:"description"`
+		Status        string `json:"status"` // 状态
 	}
 
 	// 解析JSON请求体
@@ -251,43 +251,8 @@ func (c *ApplicationController) UpdateApplication() {
 	if request.ChannelAppId != "" {
 		application.ChannelAppId = request.ChannelAppId
 	}
-
-	// 处理状态字段 - 支持int和string类型
-	if request.Status != nil {
-		switch v := request.Status.(type) {
-		case string:
-			if v == "active" || v == "1" {
-				application.Status = "active"
-			} else if v == "inactive" || v == "0" {
-				application.Status = "inactive"
-			} else if v == "pending" {
-				application.Status = "pending"
-			} else {
-				utils.ErrorResponse(&c.Controller, 1002, "状态格式错误", nil)
-				return
-			}
-		case float64: // JSON中的数字会被解析为float64
-			if v == 1 {
-				application.Status = "active"
-			} else if v == 0 {
-				application.Status = "inactive"
-			} else {
-				utils.ErrorResponse(&c.Controller, 1002, "状态格式错误", nil)
-				return
-			}
-		case int:
-			if v == 1 {
-				application.Status = "active"
-			} else if v == 0 {
-				application.Status = "inactive"
-			} else {
-				utils.ErrorResponse(&c.Controller, 1002, "状态格式错误", nil)
-				return
-			}
-		default:
-			utils.ErrorResponse(&c.Controller, 1002, "状态格式错误", nil)
-			return
-		}
+	if request.Status != "" {
+		application.Status = request.Status
 	}
 
 	// 执行更新

@@ -104,7 +104,7 @@
     },
     "standardFields": {
       "listResponse": ["list", "total", "page", "pageSize"],
-      "userResponse": ["id", "playerId", "data", "createTime"],
+      "userResponse": ["id", "playerId", "data", "createdAt"],
       "appResponse": ["id", "appId", "appName", "status"]
     }
   },

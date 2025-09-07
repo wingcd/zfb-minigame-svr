@@ -29,11 +29,11 @@ func GetAllGameConfigs(page, pageSize int, appId, configKey string) ([]*GameConf
 	qs := o.QueryTable("game_configs")
 
 	if appId != "" {
-		qs = qs.Filter("app_id", appId)
+		qs = qs.Filter("appId", appId)
 	}
 
 	if configKey != "" {
-		qs = qs.Filter("config_key__icontains", configKey)
+		qs = qs.Filter("configKey__icontains", configKey)
 	}
 
 	total, _ := qs.Count()
@@ -56,7 +56,7 @@ func GetGameConfigById(id int64) (*GameConfig, error) {
 func GetGameConfigByKey(appId, configKey string) (*GameConfig, error) {
 	o := orm.NewOrm()
 	config := &GameConfig{}
-	err := o.QueryTable("game_configs").Filter("app_id", appId).Filter("config_key", configKey).One(config)
+	err := o.QueryTable("game_configs").Filter("appId", appId).Filter("configKey", configKey).One(config)
 	return config, err
 }
 
@@ -64,7 +64,7 @@ func GetGameConfigByKey(appId, configKey string) (*GameConfig, error) {
 func GetGameConfigsByAppId(appId string) ([]*GameConfig, error) {
 	o := orm.NewOrm()
 	var configs []*GameConfig
-	_, err := o.QueryTable("game_configs").Filter("app_id", appId).Filter("status", 1).All(&configs)
+	_, err := o.QueryTable("game_configs").Filter("appId", appId).Filter("status", 1).All(&configs)
 	return configs, err
 }
 
@@ -72,7 +72,7 @@ func GetGameConfigsByAppId(appId string) ([]*GameConfig, error) {
 func GetPublicGameConfigs(appId string) ([]*GameConfig, error) {
 	o := orm.NewOrm()
 	var configs []*GameConfig
-	_, err := o.QueryTable("game_configs").Filter("app_id", appId).Filter("is_public", 1).Filter("status", 1).All(&configs)
+	_, err := o.QueryTable("game_configs").Filter("appId", appId).Filter("isPublic", 1).Filter("status", 1).All(&configs)
 	return configs, err
 }
 
@@ -110,7 +110,7 @@ func BatchUpdateGameConfigs(appId string, configs map[string]string) error {
 	for key, value := range configs {
 		// 查找现有配置
 		config := &GameConfig{}
-		err := o.QueryTable("game_configs").Filter("app_id", appId).Filter("config_key", key).One(config)
+		err := o.QueryTable("game_configs").Filter("appId", appId).Filter("configKey", key).One(config)
 
 		if err == orm.ErrNoRows {
 			// 不存在则创建
@@ -126,7 +126,7 @@ func BatchUpdateGameConfigs(appId string, configs map[string]string) error {
 		} else if err == nil {
 			// 存在则更新
 			config.ConfigValue = value
-			_, err = tx.Update(config, "config_value", "update_time")
+			_, err = tx.Update(config, "configValue", "updatedAt")
 		}
 
 		if err != nil {
@@ -141,7 +141,7 @@ func BatchUpdateGameConfigs(appId string, configs map[string]string) error {
 // DeleteGameConfigsByAppId 删除应用的所有配置
 func DeleteGameConfigsByAppId(appId string) error {
 	o := orm.NewOrm()
-	_, err := o.QueryTable("game_configs").Filter("app_id", appId).Delete()
+	_, err := o.QueryTable("game_configs").Filter("appId", appId).Delete()
 	return err
 }
 
@@ -151,7 +151,7 @@ func GetGameConfigList(appId string, page, pageSize int, configType, version str
 	qs := o.QueryTable("game_configs")
 
 	if appId != "" {
-		qs = qs.Filter("app_id", appId)
+		qs = qs.Filter("appId", appId)
 	}
 
 	if configType != "" {
@@ -176,7 +176,7 @@ func CreateGameConfig(config *GameConfig) error {
 	// 检查配置是否已存在
 	existing := &GameConfig{}
 	o := orm.NewOrm()
-	err := o.QueryTable("game_configs").Filter("app_id", config.AppId).Filter("config_key", config.ConfigKey).One(existing)
+	err := o.QueryTable("game_configs").Filter("appId", config.AppId).Filter("configKey", config.ConfigKey).One(existing)
 
 	if err == nil {
 		return fmt.Errorf("配置已存在")
@@ -205,7 +205,7 @@ func UpdateGameConfigByKey(appId, configKey string, updates map[string]interface
 
 	// 先查找配置
 	config := &GameConfig{}
-	err := o.QueryTable("game_configs").Filter("app_id", appId).Filter("config_key", configKey).One(config)
+	err := o.QueryTable("game_configs").Filter("appId", appId).Filter("configKey", configKey).One(config)
 	if err != nil {
 		return err
 	}
@@ -234,7 +234,7 @@ func UpdateGameConfigByKey(appId, configKey string, updates map[string]interface
 // DeleteGameConfigByKey 根据AppId和Key删除游戏配置
 func DeleteGameConfigByKey(appId, configKey string) error {
 	o := orm.NewOrm()
-	_, err := o.QueryTable("game_configs").Filter("app_id", appId).Filter("config_key", configKey).Delete()
+	_, err := o.QueryTable("game_configs").Filter("appId", appId).Filter("configKey", configKey).Delete()
 	return err
 }
 
@@ -242,7 +242,7 @@ func DeleteGameConfigByKey(appId, configKey string) error {
 func GetGameConfig(appId, configKey, version string) (*GameConfig, error) {
 	o := orm.NewOrm()
 	config := &GameConfig{}
-	qs := o.QueryTable("game_configs").Filter("app_id", appId).Filter("config_key", configKey)
+	qs := o.QueryTable("game_configs").Filter("appId", appId).Filter("configKey", configKey)
 
 	// 如果有版本要求，可以在这里添加版本过滤逻辑
 	// 目前模型中没有version字段，所以忽略version参数
@@ -254,7 +254,7 @@ func GetGameConfig(appId, configKey, version string) (*GameConfig, error) {
 // GetConfigCount 获取配置数量统计
 func GetConfigCount(appId string) (int64, error) {
 	o := orm.NewOrm()
-	count, err := o.QueryTable("game_configs").Filter("app_id", appId).Count()
+	count, err := o.QueryTable("game_configs").Filter("appId", appId).Count()
 	return count, err
 }
 

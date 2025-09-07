@@ -119,7 +119,7 @@ func (c *CounterController) CreateCounter() {
 			"resetType":   req.ResetType,
 			"resetValue":  req.ResetValue,
 			"description": req.Description,
-			"createTime":  counter.CreatedAt,
+			"createdAt":   counter.CreatedAt,
 		},
 	}
 	c.ServeJSON()
@@ -206,7 +206,7 @@ func (c *CounterController) GetCounter() {
 			if !nextResetTime.IsZero() {
 				// 更新配置中的重置时间
 				err = models.UpdateCounterConfig(req.AppId, req.Key, map[string]interface{}{
-					"next_reset_time": nextResetTime,
+					"next_resetTime": nextResetTime,
 				})
 				if err == nil {
 					currentResetTime = nextResetTime.Format("2006-01-02 15:04:05")

@@ -60,9 +60,9 @@ func AuthMiddleware(ctx *context.Context) {
 
 	// 将用户信息存储到上下文中
 	if claims != nil {
-		ctx.Input.SetData("user_id", claims.UserID)
+		ctx.Input.SetData("playerId", claims.UserID)
 		ctx.Input.SetData("username", claims.Username)
-		ctx.Input.SetData("role_id", claims.RoleID)
+		ctx.Input.SetData("playerId", claims.RoleID)
 		ctx.Input.SetData("role", claims.Role)
 	}
 }
@@ -73,8 +73,8 @@ func LogMiddleware(ctx *context.Context) {
 	logs.Info("Request: %s %s from %s", ctx.Input.Method(), ctx.Request.URL.Path, ctx.Input.IP())
 
 	// 如果是管理员操作，记录操作日志
-	if ctx.Input.GetData("user_id") != nil {
-		userId := ctx.Input.GetData("user_id").(int64)
+	if ctx.Input.GetData("playerId") != nil {
+		userId := ctx.Input.GetData("playerId").(int64)
 		username := ctx.Input.GetData("username").(string)
 
 		// 记录到操作日志表（这里简化处理，实际可以异步记录）

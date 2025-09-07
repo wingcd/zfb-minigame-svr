@@ -12,11 +12,11 @@ import (
 
 // GameUser 游戏用户结构
 type GameUser struct {
-	ID         int64     `orm:"pk;auto" json:"id"`
-	PlayerId   string    `orm:"size(100);unique" json:"playerId"`
-	Data       string    `orm:"type(longtext)" json:"data"`
-	CreateTime time.Time `orm:"auto_now_add;type(datetime)" json:"createTime"`
-	UpdateTime time.Time `orm:"auto_now;type(datetime)" json:"updateTime"`
+	ID        int64     `orm:"pk;auto" json:"id"`
+	PlayerId  string    `orm:"size(100);unique" json:"playerId"`
+	Data      string    `orm:"type(longtext)" json:"data"`
+	CreatedAt time.Time `orm:"auto_now_add;type(datetime)" json:"createdAt"`
+	UpdatedAt time.Time `orm:"auto_now;type(datetime)" json:"updatedAt"`
 	// 解析后的数据
 	PlayerInfo map[string]interface{} `orm:"-" json:"playerInfo"`
 	BanStatus  *UserBanRecord         `orm:"-" json:"banStatus,omitempty"`
@@ -36,8 +36,8 @@ type UserBanRecord struct {
 	UnbanAdminId *int64     `orm:"null" json:"unbanAdminId"`
 	UnbanTime    *time.Time `orm:"null;type(datetime)" json:"unbanTime"`
 	UnbanReason  string     `orm:"type(text)" json:"unbanReason"`
-	CreateTime   time.Time  `orm:"auto_now_add;type(datetime)" json:"createTime"`
-	UpdateTime   time.Time  `orm:"auto_now;type(datetime)" json:"updateTime"`
+	CreatedAt    time.Time  `orm:"auto_now_add;type(datetime)" json:"createdAt"`
+	UpdatedAt    time.Time  `orm:"auto_now;type(datetime)" json:"updatedAt"`
 }
 
 func (u *UserBanRecord) TableName() string {
@@ -48,7 +48,7 @@ func (u *UserBanRecord) TableName() string {
 type UserStats struct {
 	PlayerId         string                 `json:"playerId"`
 	TotalLogins      int64                  `json:"totalLogins"`
-	LastLoginTime    *time.Time             `json:"lastLoginTime"`
+	LastLoginTime    *time.Time             `json:"lastLoginAt"`
 	RegistrationTime time.Time              `json:"registrationTime"`
 	LeaderboardStats []LeaderboardUserStats `json:"leaderboardStats"`
 	MailStats        MailUserStats          `json:"mailStats"`
@@ -111,7 +111,7 @@ func GetAllGameUsers(appId string, page, pageSize int, keyword, status string) (
 	var params []interface{}
 
 	if keyword != "" {
-		whereClause = "WHERE player_id LIKE ?"
+		whereClause = "WHERE playerId LIKE ?"
 		params = append(params, "%"+keyword+"%")
 	}
 
@@ -126,7 +126,7 @@ func GetAllGameUsers(appId string, page, pageSize int, keyword, status string) (
 
 	// 分页查询
 	offset := (page - 1) * pageSize
-	querySql := fmt.Sprintf("SELECT * FROM %s %s ORDER BY create_time DESC LIMIT ? OFFSET ?", tableName, whereClause)
+	querySql := fmt.Sprintf("SELECT * FROM %s %s ORDER BY createdAt DESC LIMIT ? OFFSET ?", tableName, whereClause)
 	params = append(params, pageSize, offset)
 
 	var users []GameUser
@@ -175,7 +175,7 @@ func GetGameUserDetail(appId, playerId string) (*GameUser, error) {
 	tableName := fmt.Sprintf("user_%s", appId)
 
 	var user GameUser
-	sql := fmt.Sprintf("SELECT * FROM %s WHERE player_id = ?", tableName)
+	sql := fmt.Sprintf("SELECT * FROM %s WHERE playerId = ?", tableName)
 	err := o.Raw(sql, playerId).QueryRow(&user)
 	if err != nil {
 		logs.Error("获取用户详情失败:", err)
@@ -204,7 +204,7 @@ func UpdateGameUserData(appId, playerId, data string) error {
 	o := orm.NewOrm()
 	tableName := fmt.Sprintf("user_%s", appId)
 
-	sql := fmt.Sprintf("UPDATE %s SET data = ?, update_time = NOW() WHERE player_id = ?", tableName)
+	sql := fmt.Sprintf("UPDATE %s SET data = ?, updatedAt = NOW() WHERE playerId = ?", tableName)
 	_, err := o.Raw(sql, data, playerId).Exec()
 	if err != nil {
 		logs.Error("更新用户数据失败:", err)
@@ -269,9 +269,9 @@ func UnbanGameUser(appId, playerId string, adminId int64, unbanReason string) er
 	banRecord.UnbanAdminId = &adminId
 	banRecord.UnbanTime = &now
 	banRecord.UnbanReason = unbanReason
-	banRecord.UpdateTime = now
+	banRecord.UpdatedAt = now
 
-	_, err = o.Update(banRecord, "IsActive", "UnbanAdminId", "UnbanTime", "UnbanReason", "UpdateTime")
+	_, err = o.Update(banRecord, "IsActive", "UnbanAdminId", "UnbanTime", "UnbanReason", "UpdatedAt")
 	if err != nil {
 		logs.Error("更新封禁记录失败:", err)
 		return err
@@ -286,9 +286,9 @@ func GetActiveUserBan(appId, playerId string) (*UserBanRecord, error) {
 
 	var record UserBanRecord
 	err := o.QueryTable("user_ban_records").
-		Filter("app_id", appId).
-		Filter("player_id", playerId).
-		Filter("is_active", true).
+		Filter("appId", appId).
+		Filter("playerId", playerId).
+		Filter("isActive", true).
 		One(&record)
 
 	if err == orm.ErrNoRows {
@@ -303,8 +303,8 @@ func GetActiveUserBan(appId, playerId string) (*UserBanRecord, error) {
 	if record.BanType == "temporary" && record.BanEndTime != nil && record.BanEndTime.Before(time.Now()) {
 		// 自动解封
 		record.IsActive = false
-		record.UpdateTime = time.Now()
-		o.Update(&record, "IsActive", "UpdateTime")
+		record.UpdatedAt = time.Now()
+		o.Update(&record, "IsActive", "UpdatedAt")
 		return nil, nil
 	}
 
@@ -320,7 +320,7 @@ func GetUserDataList(appId string, page, pageSize int, keyword string) ([]*GameU
 	params := []interface{}{}
 
 	if keyword != "" {
-		sql += " WHERE player_id LIKE ?"
+		sql += " WHERE playerId LIKE ?"
 		params = append(params, "%"+keyword+"%")
 	}
 
@@ -333,7 +333,7 @@ func GetUserDataList(appId string, page, pageSize int, keyword string) ([]*GameU
 	}
 
 	// 获取分页数据
-	sql += " ORDER BY create_time DESC LIMIT ? OFFSET ?"
+	sql += " ORDER BY createdAt DESC LIMIT ? OFFSET ?"
 	params = append(params, pageSize, (page-1)*pageSize)
 
 	var users []*GameUser
@@ -384,7 +384,7 @@ func GetAllMailList(appId string, page, pageSize int) ([]map[string]interface{},
 	o := orm.NewOrm()
 	tableName := fmt.Sprintf("mail_%s", appId)
 
-	sql := fmt.Sprintf("SELECT * FROM %s ORDER BY create_time DESC LIMIT ? OFFSET ?", tableName)
+	sql := fmt.Sprintf("SELECT * FROM %s ORDER BY createdAt DESC LIMIT ? OFFSET ?", tableName)
 	params := []interface{}{pageSize, (page - 1) * pageSize}
 
 	var results []orm.Params
@@ -419,7 +419,7 @@ func SendMail(appId, playerId, title, content string, attachments string) error 
 	o := orm.NewOrm()
 	tableName := fmt.Sprintf("mail_%s", appId)
 
-	sql := fmt.Sprintf("INSERT INTO %s (player_id, title, content, attachments, create_time, is_read, is_claimed) VALUES (?, ?, ?, ?, NOW(), 0, 0)", tableName)
+	sql := fmt.Sprintf("INSERT INTO %s (playerId, title, content, attachments, createdAt, is_read, is_claimed) VALUES (?, ?, ?, ?, NOW(), 0, 0)", tableName)
 	_, err := o.Raw(sql, playerId, title, content, attachments).Exec()
 
 	return err
@@ -432,7 +432,7 @@ func SendBroadcastMail(appId, title, content string, attachments string) error {
 
 	// 获取所有用户
 	userTableName := fmt.Sprintf("user_%s", appId)
-	sql := fmt.Sprintf("SELECT DISTINCT player_id FROM %s", userTableName)
+	sql := fmt.Sprintf("SELECT DISTINCT playerId FROM %s", userTableName)
 
 	var playerIds []string
 	_, err := o.Raw(sql).QueryRows(&playerIds)
@@ -442,7 +442,7 @@ func SendBroadcastMail(appId, title, content string, attachments string) error {
 
 	// 给每个用户发送邮件
 	for _, playerId := range playerIds {
-		mailSql := fmt.Sprintf("INSERT INTO %s (player_id, title, content, attachments, create_time, is_read, is_claimed) VALUES (?, ?, ?, ?, NOW(), 0, 0)", tableName)
+		mailSql := fmt.Sprintf("INSERT INTO %s (playerId, title, content, attachments, createdAt, is_read, is_claimed) VALUES (?, ?, ?, ?, NOW(), 0, 0)", tableName)
 		_, err = o.Raw(mailSql, playerId, title, content, attachments).Exec()
 		if err != nil {
 			return err
@@ -473,7 +473,7 @@ func SetConfig(appId, key, value string) error {
 // DeleteConfig 删除配置
 func DeleteConfig(appId, key string) error {
 	o := orm.NewOrm()
-	_, err := o.QueryTable("game_configs").Filter("app_id", appId).Filter("config_key", key).Delete()
+	_, err := o.QueryTable("game_configs").Filter("appId", appId).Filter("configKey", key).Delete()
 	return err
 }
 
@@ -489,7 +489,7 @@ func DeleteGameUser(appId, playerId string) error {
 	}
 
 	// 删除用户数据
-	sql := fmt.Sprintf("DELETE FROM %s WHERE player_id = ?", tableName)
+	sql := fmt.Sprintf("DELETE FROM %s WHERE playerId = ?", tableName)
 	_, err = tx.Raw(sql, playerId).Exec()
 	if err != nil {
 		tx.Rollback()
@@ -499,16 +499,16 @@ func DeleteGameUser(appId, playerId string) error {
 
 	// 删除相关的排行榜数据
 	leaderboardTable := fmt.Sprintf("leaderboard_%s", appId)
-	sql = fmt.Sprintf("DELETE FROM %s WHERE player_id = ?", leaderboardTable)
+	sql = fmt.Sprintf("DELETE FROM %s WHERE playerId = ?", leaderboardTable)
 	tx.Raw(sql, playerId).Exec()
 
 	// 删除相关的邮件数据
 	mailTable := fmt.Sprintf("mail_%s", appId)
-	sql = fmt.Sprintf("DELETE FROM %s WHERE player_id = ?", mailTable)
+	sql = fmt.Sprintf("DELETE FROM %s WHERE playerId = ?", mailTable)
 	tx.Raw(sql, playerId).Exec()
 
 	// 删除封禁记录
-	tx.QueryTable("user_ban_records").Filter("app_id", appId).Filter("player_id", playerId).Delete()
+	tx.QueryTable("user_ban_records").Filter("appId", appId).Filter("playerId", playerId).Delete()
 
 	return tx.Commit()
 }
@@ -526,14 +526,14 @@ func GetGameUserStats(appId, playerId string) (*UserStats, error) {
 	if err != nil {
 		return nil, err
 	}
-	stats.RegistrationTime = user.CreateTime
+	stats.RegistrationTime = user.CreatedAt
 
 	// 获取排行榜统计
 	leaderboardTable := fmt.Sprintf("leaderboard_%s", appId)
 	var leaderboardStats []LeaderboardUserStats
 	sql := fmt.Sprintf(`
 		SELECT leaderboard_id, MAX(score) as best_score, COUNT(*) as total_submits
-		FROM %s WHERE player_id = ? GROUP BY leaderboard_id
+		FROM %s WHERE playerId = ? GROUP BY leaderboard_id
 	`, leaderboardTable)
 	o.Raw(sql, playerId).QueryRows(&leaderboardStats)
 	stats.LeaderboardStats = leaderboardStats
@@ -547,7 +547,7 @@ func GetGameUserStats(appId, playerId string) (*UserStats, error) {
 		SUM(CASE WHEN is_read = 1 THEN 1 ELSE 0 END) as total_read,
 		SUM(CASE WHEN is_claimed = 1 THEN 1 ELSE 0 END) as total_claimed,
 		SUM(CASE WHEN is_read = 0 THEN 1 ELSE 0 END) as unread_count
-		FROM %s WHERE player_id = ?
+		FROM %s WHERE playerId = ?
 	`, mailTable)
 	o.Raw(sql, playerId).QueryRow(&mailStats)
 	stats.MailStats = mailStats
@@ -555,9 +555,9 @@ func GetGameUserStats(appId, playerId string) (*UserStats, error) {
 	// 获取封禁历史
 	var banHistory []UserBanRecord
 	o.QueryTable("user_ban_records").
-		Filter("app_id", appId).
-		Filter("player_id", playerId).
-		OrderBy("-create_time").
+		Filter("appId", appId).
+		Filter("playerId", playerId).
+		OrderBy("-createdAt").
 		All(&banHistory)
 	stats.BanHistory = banHistory
 
@@ -570,10 +570,10 @@ func GetUserRegistrationStats(appId string, days int) ([]RegistrationStats, erro
 	tableName := fmt.Sprintf("user_%s", appId)
 
 	sql := fmt.Sprintf(`
-		SELECT DATE(create_time) as date, COUNT(*) as count
+		SELECT DATE(createdAt) as date, COUNT(*) as count
 		FROM %s 
-		WHERE create_time >= DATE_SUB(NOW(), INTERVAL ? DAY)
-		GROUP BY DATE(create_time)
+		WHERE createdAt >= DATE_SUB(NOW(), INTERVAL ? DAY)
+		GROUP BY DATE(createdAt)
 		ORDER BY date DESC
 	`, tableName)
 

@@ -172,11 +172,11 @@ func (c *UploadController) GetFileList() {
 	// 创建过滤条件
 	filters := make(map[string]interface{})
 	if fileType != "" {
-		filters["file_type"] = fileType
+		filters["fileType"] = fileType
 	}
 	if uploadBy != "" {
 		if uploadByInt, err := strconv.ParseInt(uploadBy, 10, 64); err == nil {
-			filters["upload_by"] = uploadByInt
+			filters["uploadBy"] = uploadByInt
 		}
 	}
 

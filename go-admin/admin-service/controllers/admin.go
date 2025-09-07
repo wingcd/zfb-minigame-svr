@@ -247,7 +247,7 @@ func (c *AdminController) DeleteUser() {
 
 // logOperation 记录操作日志
 func (c *AdminController) logOperation(action, module, method, url string, params interface{}, status int, errorMsg string, executeTime int) {
-	userID := c.GetSession("user_id")
+	userID := c.GetSession("playerId")
 	userName := c.GetSession("username")
 
 	var adminID int64
@@ -408,12 +408,12 @@ func (c *AdminController) CreateAdmin() {
 		"msg":       "创建成功",
 		"timestamp": utils.UnixMilli(),
 		"data": map[string]interface{}{
-			"id":         user.Id,
-			"username":   req.Username,
-			"nickname":   req.Nickname,
-			"role":       req.Role,
-			"status":     "active",
-			"createTime": user.CreatedAt,
+			"id":        user.Id,
+			"username":  req.Username,
+			"nickname":  req.Nickname,
+			"role":      req.Role,
+			"status":    "active",
+			"createdAt": user.CreatedAt,
 		},
 	}
 	c.ServeJSON()

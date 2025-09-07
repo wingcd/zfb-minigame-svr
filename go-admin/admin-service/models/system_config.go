@@ -132,9 +132,9 @@ func CreateBackup() (string, error) {
 func GetBackupList() ([]map[string]interface{}, error) {
 	backups := make([]map[string]interface{}, 0)
 	backup := map[string]interface{}{
-		"filename":    "backup_20240101_120000.sql",
-		"size":        "1.2MB",
-		"create_time": "2024-01-01 12:00:00",
+		"filename":  "backup_20240101_120000.sql",
+		"size":      "1.2MB",
+		"createdAt": "2024-01-01 12:00:00",
 	}
 	backups = append(backups, backup)
 	return backups, nil

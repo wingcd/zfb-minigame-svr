@@ -264,7 +264,7 @@ func (tf *TestFramework) ExecuteTestSuite(suite *TestSuite) []*TestResult {
 func (tf *TestFramework) GetTestToken(isAdmin bool) string {
 	// 生成真实的JWT token用于测试
 	if isAdmin {
-		// 生成管理员token (user_id: 1, username: test_admin, role_id: 1)
+		// 生成管理员token (playerId: 1, username: test_admin, playerId: 1)
 		token, err := utils.GenerateJWT(1, "test_admin", 1)
 		if err != nil {
 			fmt.Printf("Failed to generate admin token: %v\n", err)
@@ -273,7 +273,7 @@ func (tf *TestFramework) GetTestToken(isAdmin bool) string {
 		return token
 	}
 
-	// 生成普通用户token (user_id: 2, username: test_user, role_id: 2)
+	// 生成普通用户token (playerId: 2, username: test_user, playerId: 2)
 	token, err := utils.GenerateJWT(2, "test_user", 2)
 	if err != nil {
 		fmt.Printf("Failed to generate user token: %v\n", err)

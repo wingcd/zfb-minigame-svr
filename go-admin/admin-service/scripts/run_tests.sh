@@ -341,8 +341,8 @@ generate_test_report() {
             }
         }
     },
-    "createTime": "2023-10-01 10:00:00",
-    "updateTime": "2023-10-01 15:30:00"
+    "createdAt": "2023-10-01 10:00:00",
+    "updatedAt": "2023-10-01 15:30:00"
 }
         </div>
     </div>

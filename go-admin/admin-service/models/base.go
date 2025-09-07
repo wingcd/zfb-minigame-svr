@@ -20,8 +20,8 @@ var (
 // BaseModel 基础模型
 type BaseModel struct {
 	Id        int64     `orm:"auto" json:"id"`
-	CreatedAt time.Time `orm:"auto_now_add;type(datetime);column(create_time)" json:"createdAt"`
-	UpdatedAt time.Time `orm:"auto_now;type(datetime);column(update_time)" json:"updatedAt"`
+	CreatedAt time.Time `orm:"auto_now_add;type(datetime);column(createdAt)" json:"createdAt"`
+	UpdatedAt time.Time `orm:"auto_now;type(datetime);column(updatedAt)" json:"updatedAt"`
 }
 
 // Response 通用响应结构 - 兼容云函数格式

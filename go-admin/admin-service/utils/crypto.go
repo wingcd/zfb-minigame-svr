@@ -52,7 +52,7 @@ func init() {
 
 // JWTClaims JWT声明
 type JWTClaims struct {
-	UserID   int64  `json:"user_id"`
+	UserID   int64  `json:"playerId"`
 	Username string `json:"username"`
 	RoleID   int64  `json:"role_id"`
 	Role     string `json:"role"`

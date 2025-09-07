@@ -50,8 +50,8 @@ func CreateCounterConfig(config *CounterConfig) error {
 	// 检查是否已存在
 	exist := &CounterConfig{}
 	err := o.QueryTable("counter_config").
-		Filter("app_id", config.AppId).
-		Filter("counter_key", config.CounterKey).
+		Filter("appId", config.AppId).
+		Filter("counterKey", config.CounterKey).
 		One(exist)
 
 	if err == nil {
@@ -77,9 +77,9 @@ func GetCounterConfig(appId, key string) (*CounterConfig, error) {
 	o := orm.NewOrm()
 	config := &CounterConfig{}
 	err := o.QueryTable("counter_config").
-		Filter("app_id", appId).
-		Filter("counter_key", key).
-		Filter("is_active", true).
+		Filter("appId", appId).
+		Filter("counterKey", key).
+		Filter("isActive", true).
 		One(config)
 	return config, err
 }
@@ -87,7 +87,7 @@ func GetCounterConfig(appId, key string) (*CounterConfig, error) {
 // GetCounterConfigList 获取计数器配置列表
 func GetCounterConfigList(appId string, page, pageSize int) ([]*CounterConfig, int64, error) {
 	o := orm.NewOrm()
-	qs := o.QueryTable("counter_config").Filter("app_id", appId).Filter("is_active", true)
+	qs := o.QueryTable("counter_config").Filter("appId", appId).Filter("isActive", true)
 
 	total, _ := qs.Count()
 
@@ -101,11 +101,11 @@ func GetCounterConfigList(appId string, page, pageSize int) ([]*CounterConfig, i
 // GetCounterConfigListWithFilter 获取计数器配置列表（支持筛选）
 func GetCounterConfigListWithFilter(appId string, page, pageSize int, key, resetType string) ([]*CounterConfig, int64, error) {
 	o := orm.NewOrm()
-	qs := o.QueryTable("counter_config").Filter("app_id", appId).Filter("is_active", true)
+	qs := o.QueryTable("counter_config").Filter("appId", appId).Filter("isActive", true)
 
 	// 添加key筛选（模糊搜索）
 	if key != "" {
-		qs = qs.Filter("counter_key__icontains", key)
+		qs = qs.Filter("counterKey__icontains", key)
 	}
 
 	// 添加resetType筛选
@@ -117,7 +117,7 @@ func GetCounterConfigListWithFilter(appId string, page, pageSize int, key, reset
 
 	var configs []*CounterConfig
 	offset := (page - 1) * pageSize
-	_, err := qs.OrderBy("-update_time").Limit(pageSize, offset).All(&configs)
+	_, err := qs.OrderBy("-updatedAt").Limit(pageSize, offset).All(&configs)
 
 	return configs, total, err
 }
@@ -127,11 +127,11 @@ func UpdateCounterConfig(appId, key string, fields map[string]interface{}) error
 	o := orm.NewOrm()
 
 	// 添加更新时间
-	fields["update_time"] = time.Now()
+	fields["updatedAt"] = time.Now()
 
 	_, err := o.QueryTable("counter_config").
-		Filter("app_id", appId).
-		Filter("counter_key", key).
+		Filter("appId", appId).
+		Filter("counterKey", key).
 		Update(fields)
 
 	return err
@@ -143,11 +143,11 @@ func DeleteCounterConfig(appId, key string) error {
 
 	// 软删除配置
 	_, err := o.QueryTable("counter_config").
-		Filter("app_id", appId).
-		Filter("counter_key", key).
+		Filter("appId", appId).
+		Filter("counterKey", key).
 		Update(orm.Params{
-			"is_active":   false,
-			"update_time": time.Now(),
+			"isActive":  false,
+			"updatedAt": time.Now(),
 		})
 
 	if err != nil {
@@ -158,7 +158,7 @@ func DeleteCounterConfig(appId, key string) error {
 	counterData := &CounterData{}
 	tableName := counterData.GetTableName(appId)
 
-	_, err = o.Raw(fmt.Sprintf("DELETE FROM %s WHERE counter_key = ?", tableName), key).Exec()
+	_, err = o.Raw(fmt.Sprintf("DELETE FROM %s WHERE counterKey = ?", tableName), key).Exec()
 	return err
 }
 
@@ -171,21 +171,21 @@ func UpdateCounterValue(appId, key, location string, value int64) error {
 
 	// 检查记录是否存在
 	var existingId int64
-	checkSQL := fmt.Sprintf("SELECT id FROM %s WHERE counter_key = ? AND location = ?", tableName)
+	checkSQL := fmt.Sprintf("SELECT id FROM %s WHERE counterKey = ? AND location = ?", tableName)
 	err := o.Raw(checkSQL, key, location).QueryRow(&existingId)
 
 	if err == orm.ErrNoRows {
 		// 插入新记录
 		insertSQL := fmt.Sprintf(`
-			INSERT INTO %s (counter_key, location, value, create_time, update_time) 
+			INSERT INTO %s (counterKey, location, value, createdAt, updatedAt) 
 			VALUES (?, ?, ?, NOW(), NOW())
 		`, tableName)
 		_, err = o.Raw(insertSQL, key, location, value).Exec()
 	} else if err == nil {
 		// 更新现有记录
 		updateSQL := fmt.Sprintf(`
-			UPDATE %s SET value = ?, update_time = NOW() 
-			WHERE counter_key = ? AND location = ?
+			UPDATE %s SET value = ?, updatedAt = NOW() 
+			WHERE counterKey = ? AND location = ?
 		`, tableName)
 		_, err = o.Raw(updateSQL, value, key, location).Exec()
 	}
@@ -201,7 +201,7 @@ func GetCounterValue(appId, key, location string) (int64, error) {
 	tableName := counterData.GetTableName(appId)
 
 	var value int64
-	querySQL := fmt.Sprintf("SELECT value FROM %s WHERE counter_key = ? AND location = ?", tableName)
+	querySQL := fmt.Sprintf("SELECT value FROM %s WHERE counterKey = ? AND location = ?", tableName)
 	err := o.Raw(querySQL, key, location).QueryRow(&value)
 
 	if err == orm.ErrNoRows {
@@ -219,7 +219,7 @@ func GetCounterAllLocations(appId, key string) (map[string]interface{}, error) {
 	tableName := counterData.GetTableName(appId)
 
 	var results []orm.Params
-	querySQL := fmt.Sprintf("SELECT location, value FROM %s WHERE counter_key = ?", tableName)
+	querySQL := fmt.Sprintf("SELECT location, value FROM %s WHERE counterKey = ?", tableName)
 	_, err := o.Raw(querySQL, key).Values(&results)
 
 	if err != nil {
@@ -255,14 +255,14 @@ func createCounterTable(appId string) error {
 		createSQL := fmt.Sprintf(`
 			CREATE TABLE %s (
 				id BIGINT AUTO_INCREMENT PRIMARY KEY,
-				counter_key VARCHAR(100) NOT NULL,
+				counterKey VARCHAR(100) NOT NULL,
 				location VARCHAR(100) DEFAULT 'default',
 				value BIGINT DEFAULT 0,
-				reset_time DATETIME NULL,
-				create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-				update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-				UNIQUE KEY uk_key_location (counter_key, location),
-				INDEX idx_counter_key (counter_key)
+				resetTime DATETIME NULL,
+				createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+				updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+				UNIQUE KEY uk_key_location (counterKey, location),
+				INDEX idx_counterKey (counterKey)
 			) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
 		`, tableName)
 

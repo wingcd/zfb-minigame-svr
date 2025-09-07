@@ -107,7 +107,7 @@ if !hasPermission(userPermissions, requiredPermission) {
 
 ## 注意事项
 
-1. **超级管理员**：role_code为"super_admin"的角色拥有所有权限
+1. **超级管理员**：roleCode为"super_admin"的角色拥有所有权限
 2. **权限映射**：新增接口时需要在权限映射中添加相应权限要求
 3. **兼容性**：当前对未映射的路径采用兼容模式（允许访问）
 4. **性能**：权限检查会增加少量请求处理时间，但安全性提升显著

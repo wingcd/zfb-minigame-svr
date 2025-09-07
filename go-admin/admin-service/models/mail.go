@@ -10,16 +10,16 @@ import (
 
 // Mail 邮件模型
 type Mail struct {
-	ID         int64     `orm:"pk;auto" json:"id"`
-	AppId      string    `orm:"size(100)" json:"appId"`
-	UserId     string    `orm:"size(100)" json:"userId"`
-	Title      string    `orm:"size(200)" json:"title"`
-	Content    string    `orm:"type(text)" json:"content"`
-	Rewards    string    `orm:"type(text)" json:"rewards"`
-	Status     int       `orm:"default(0)" json:"status"` // 0:未读 1:已读 2:已领取
-	ExpireAt   time.Time `orm:"type(datetime);null" json:"expireAt"`
-	CreateTime time.Time `orm:"auto_now_add;type(datetime)" json:"createTime"`
-	UpdateTime time.Time `orm:"auto_now;type(datetime)" json:"updateTime"`
+	ID        int64     `orm:"pk;auto" json:"id"`
+	AppId     string    `orm:"size(100)" json:"appId"`
+	UserId    string    `orm:"size(100)" json:"userId"`
+	Title     string    `orm:"size(200)" json:"title"`
+	Content   string    `orm:"type(text)" json:"content"`
+	Rewards   string    `orm:"type(text)" json:"rewards"`
+	Status    int       `orm:"default(0)" json:"status"` // 0:未读 1:已读 2:已领取
+	ExpireAt  time.Time `orm:"type(datetime);null" json:"expireAt"`
+	CreatedAt time.Time `orm:"auto_now_add;type(datetime)" json:"createdAt"`
+	UpdatedAt time.Time `orm:"auto_now;type(datetime)" json:"updatedAt"`
 }
 
 // MailConfig 邮件配置模型
@@ -159,7 +159,7 @@ func GetUserMails(appId, userId string, page, pageSize int) ([]map[string]interf
 	tableName := fmt.Sprintf("mail_%s", cleanAppId)
 
 	// 获取用户邮件
-	sql := fmt.Sprintf("SELECT * FROM %s WHERE user_id = ? ORDER BY create_time DESC LIMIT ? OFFSET ?", tableName)
+	sql := fmt.Sprintf("SELECT * FROM %s WHERE playerId = ? ORDER BY createdAt DESC LIMIT ? OFFSET ?", tableName)
 	params := []interface{}{userId, pageSize, (page - 1) * pageSize}
 
 	var results []orm.Params
@@ -169,7 +169,7 @@ func GetUserMails(appId, userId string, page, pageSize int) ([]map[string]interf
 	}
 
 	// 计算总数
-	countSql := fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE user_id = ?", tableName)
+	countSql := fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE playerId = ?", tableName)
 	var total int64
 	err = o.Raw(countSql, userId).QueryRow(&total)
 	if err != nil {
@@ -218,7 +218,7 @@ func GetMailConfigList(appId string, page, pageSize int) ([]*MailConfig, int64, 
 	qs := o.QueryTable("mail_config")
 
 	if appId != "" {
-		qs = qs.Filter("app_id", appId)
+		qs = qs.Filter("appId", appId)
 	}
 
 	total, _ := qs.Count()

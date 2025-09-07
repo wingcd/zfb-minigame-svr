@@ -6,13 +6,13 @@
 
 ### 1. 获取用户列表
 ```http
-GET /api/user-management/users?appId=your_app_id&page=1&pageSize=10&keyword=player123&status=active
+GET /api/user-management/users?appId=your_appId&page=1&pageSize=10&keyword=player123&status=active
 Authorization: Bearer <token>
 ```
 
 ### 2. 获取用户详情
 ```http
-GET /api/user-management/user/detail?appId=your_app_id&playerId=player123
+GET /api/user-management/user/detail?appId=your_appId&playerId=player123
 Authorization: Bearer <token>
 ```
 
@@ -23,7 +23,7 @@ Authorization: Bearer <token>
 Content-Type: application/json
 
 {
-  "appId": "your_app_id",
+  "appId": "your_appId",
   "playerId": "player123",
   "data": {
     "level": 10,
@@ -40,7 +40,7 @@ Authorization: Bearer <token>
 Content-Type: application/json
 
 {
-  "appId": "your_app_id",
+  "appId": "your_appId",
   "playerId": "player123",
   "banType": "temporary",
   "banReason": "违规行为",
@@ -55,7 +55,7 @@ Authorization: Bearer <token>
 Content-Type: application/json
 
 {
-  "appId": "your_app_id",
+  "appId": "your_appId",
   "playerId": "player123",
   "unbanReason": "申诉通过"
 }
@@ -63,19 +63,19 @@ Content-Type: application/json
 
 ### 6. 删除用户（超级管理员专用）
 ```http
-DELETE /api/user-management/user/delete?appId=your_app_id&playerId=player123
+DELETE /api/user-management/user/delete?appId=your_appId&playerId=player123
 Authorization: Bearer <token>
 ```
 
 ### 7. 获取用户统计
 ```http
-GET /api/user-management/user/stats?appId=your_app_id&playerId=player123
+GET /api/user-management/user/stats?appId=your_appId&playerId=player123
 Authorization: Bearer <token>
 ```
 
 ### 8. 获取注册统计
 ```http
-GET /api/user-management/stats/registration?appId=your_app_id&days=7
+GET /api/user-management/stats/registration?appId=your_appId&days=7
 Authorization: Bearer <token>
 ```
 
@@ -107,7 +107,7 @@ Authorization: Bearer <token>
 
 新增数据表：
 - `user_ban_records` - 用户封禁记录表
-- 支持动态用户表 `user_{app_id}`
+- 支持动态用户表 `user_{appId}`
 - 关联排行榜、邮件、计数器数据
 
 ## 权限说明

@@ -82,13 +82,13 @@ func (a *Application) createAppTables() error {
 	userDataSQL := fmt.Sprintf(`
 CREATE TABLE IF NOT EXISTS user_%s (
   id bigint(20) NOT NULL AUTO_INCREMENT,
-  player_id varchar(100) NOT NULL COMMENT '玩家ID',
+  playerId varchar(100) NOT NULL COMMENT '玩家ID',
   data longtext COMMENT '用户数据（JSON格式）',
-  create_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  update_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  createdAt datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updatedAt datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
-  UNIQUE KEY uk_player_id (player_id),
-  KEY idx_update_time (update_time)
+  UNIQUE KEY uk_playerId (playerId),
+  KEY idx_updatedAt (updatedAt)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户数据表_%s'`, cleanAppId, cleanAppId)
 
 	// 排行榜表现在按需创建，不在应用创建时预先创建
@@ -97,50 +97,50 @@ CREATE TABLE IF NOT EXISTS user_%s (
 	counterSQL := fmt.Sprintf(`
 CREATE TABLE IF NOT EXISTS counter_%s (
   id bigint(20) NOT NULL AUTO_INCREMENT,
-  counter_name varchar(100) NOT NULL COMMENT '计数器名称',
-  user_id varchar(100) DEFAULT NULL COMMENT '用户ID（全局计数器为空）',
+  counterName varchar(100) NOT NULL COMMENT '计数器名称',
+  playerId varchar(100) DEFAULT NULL COMMENT '用户ID（全局计数器为空）',
   count bigint(20) NOT NULL DEFAULT 0 COMMENT '计数值',
-  reset_time datetime DEFAULT NULL COMMENT '重置时间',
-  reset_interval int(11) DEFAULT NULL COMMENT '重置间隔（秒）',
-  create_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  update_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  resetTime datetime DEFAULT NULL COMMENT '重置时间',
+  resetInterval int(11) DEFAULT NULL COMMENT '重置间隔（秒）',
+  createdAt datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updatedAt datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
-  UNIQUE KEY uk_counter_user (counter_name, user_id),
-  KEY idx_counter_name (counter_name),
-  KEY idx_reset_time (reset_time)
+  UNIQUE KEY uk_counter_user (counterName, playerId),
+  KEY idx_counterName (counterName),
+  KEY idx_resetTime (resetTime)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='计数器数据表_%s'`, cleanAppId, cleanAppId)
 
 	// 创建邮件表
 	mailSQL := fmt.Sprintf(`
 CREATE TABLE IF NOT EXISTS mail_%s (
   id bigint(20) NOT NULL AUTO_INCREMENT,
-  user_id varchar(100) NOT NULL COMMENT '收件人用户ID',
+  playerId varchar(100) NOT NULL COMMENT '收件人用户ID',
   title varchar(200) NOT NULL COMMENT '邮件标题',
   content text COMMENT '邮件内容',
   rewards text COMMENT '奖励物品（JSON格式）',
   status tinyint(1) NOT NULL DEFAULT 0 COMMENT '状态 0:未读 1:已读 2:已领取',
-  expire_at datetime DEFAULT NULL COMMENT '过期时间',
-  create_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  update_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  expireTime datetime DEFAULT NULL COMMENT '过期时间',
+  createdAt datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updatedAt datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
-  KEY idx_user_id (user_id),
+  KEY idx_playerId (playerId),
   KEY idx_status (status),
-  KEY idx_expire_at (expire_at),
-  KEY idx_create_time (create_time)
+  KEY idx_expireTime (expireAt),
+  KEY idx_createdAt (createdAt)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='邮件数据表_%s'`, cleanAppId, cleanAppId)
 
 	// 创建游戏配置表
 	gameConfigSQL := fmt.Sprintf(`
 CREATE TABLE IF NOT EXISTS game_config_%s (
   id bigint(20) NOT NULL AUTO_INCREMENT,
-  config_key varchar(100) NOT NULL COMMENT '配置键',
-  config_value longtext COMMENT '配置值（JSON格式）',
+  configKey varchar(100) NOT NULL COMMENT '配置键',
+  configValue longtext COMMENT '配置值（JSON格式）',
   version varchar(50) DEFAULT NULL COMMENT '版本号',
   description varchar(255) DEFAULT NULL COMMENT '配置描述',
-  create_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  update_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  createdAt datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updatedAt datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
-  UNIQUE KEY uk_config_key (config_key),
+  UNIQUE KEY uk_configKey (configKey),
   KEY idx_version (version)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='游戏配置表_%s'`, cleanAppId, cleanAppId)
 
@@ -173,7 +173,7 @@ func (a *Application) GetById(id int64) error {
 // GetByAppId 根据AppId获取应用
 func (a *Application) GetByAppId(appId string) error {
 	o := orm.NewOrm()
-	return o.QueryTable(a.TableName()).Filter("app_id", appId).One(a)
+	return o.QueryTable(a.TableName()).Filter("appId", appId).One(a)
 }
 
 // GetList 获取应用列表
@@ -183,7 +183,7 @@ func GetApplicationList(page, pageSize int, keyword string) ([]Application, int6
 
 	if keyword != "" {
 		qs = qs.Filter("app_name__icontains", keyword).
-			Filter("app_id__icontains", keyword)
+			Filter("appId__icontains", keyword)
 	}
 
 	total, _ := qs.Count()
@@ -210,7 +210,7 @@ func DeleteApplication(id int64) error {
 	// 这里可以选择是否删除相关数据表
 	// 为了安全起见，我们只是标记应用为禁用状态
 	app.Status = "inactive" // inactive = 禁用, active = 启用
-	_, err = o.Update(app, "status", "update_time")
+	_, err = o.Update(app, "status", "updatedAt")
 	return err
 }
 

@@ -230,8 +230,8 @@ go test -v ./tests/ -timeout=30m
           "coins": 300,
           "nickname": "测试玩家"
         },
-        "createTime": "2023-10-01 10:00:00",
-        "updateTime": "2023-10-01 15:30:00"
+        "createdAt": "2023-10-01 10:00:00",
+        "updatedAt": "2023-10-01 15:30:00"
       }
     ],
     "total": 100,

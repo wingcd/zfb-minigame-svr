@@ -51,7 +51,7 @@ func (r *AdminRole) GetByName(name string) error {
 // GetByRoleCode 根据角色代码获取角色
 func (r *AdminRole) GetByRoleCode(roleCode string) error {
 	o := orm.NewOrm()
-	return o.QueryTable(r.TableName()).Filter("role_code", roleCode).One(r)
+	return o.QueryTable(r.TableName()).Filter("roleCode", roleCode).One(r)
 }
 
 // GetList 获取角色列表
@@ -77,7 +77,7 @@ func DeleteRole(id int64) error {
 	o := orm.NewOrm()
 
 	// 检查是否有用户使用此角色
-	count, err := o.QueryTable("admin_user_roles").Filter("role_id", id).Count()
+	count, err := o.QueryTable("admin_user_roles").Filter("roleId", id).Count()
 	if err != nil {
 		return err
 	}
@@ -115,7 +115,7 @@ func UpdateRole(role *AdminRole) error {
 // IsRoleInUse 检查角色是否被使用
 func IsRoleInUse(roleId int64) bool {
 	o := orm.NewOrm()
-	count, _ := o.QueryTable("admin_users").Filter("role_id", roleId).Count()
+	count, _ := o.QueryTable("admin_users").Filter("roleId", roleId).Count()
 	return count > 0
 }
 

@@ -393,7 +393,7 @@ func GetSystemTestSuite() *TestSuite {
 					if _, exists := dataMap["backupFile"]; !exists {
 						return false
 					}
-					if _, exists := dataMap["createTime"]; !exists {
+					if _, exists := dataMap["createdAt"]; !exists {
 						return false
 					}
 					return true

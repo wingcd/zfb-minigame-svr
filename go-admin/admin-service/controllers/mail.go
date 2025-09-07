@@ -543,13 +543,13 @@ func createMailTable(appId string, force bool) error {
 			rewards TEXT,
 			status INT DEFAULT 0 COMMENT '0:未读 1:已读 2:已领取',
 			expireAt DATETIME NULL,
-			createTime DATETIME DEFAULT CURRENT_TIMESTAMP,
-			updateTime DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-			INDEX idx_app_id (appId),
-			INDEX idx_user_id (userId),
+			createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+			INDEX idx_appId (appId),
+			INDEX idx_playerId (userId),
 			INDEX idx_status (status),
-			INDEX idx_expire_at (expireAt),
-			INDEX idx_create_time (createTime)
+			INDEX idx_expireTime (expireAt),
+			INDEX idx_createdAt (createdAt)
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='邮件表'
 	`, tableName)
 

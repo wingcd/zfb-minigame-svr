@@ -32,8 +32,8 @@ func PermissionMiddleware(ctx *context.Context) {
 	}
 
 	// 获取用户信息（必须在AuthMiddleware之后执行）
-	userID := ctx.Input.GetData("user_id")
-	roleID := ctx.Input.GetData("role_id")
+	userID := ctx.Input.GetData("playerId")
+	roleID := ctx.Input.GetData("playerId")
 
 	// 如果没有用户信息，说明是不需要认证的接口，直接跳过权限检查
 	if userID == nil || roleID == nil {

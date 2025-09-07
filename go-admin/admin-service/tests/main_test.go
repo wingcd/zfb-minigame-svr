@@ -108,13 +108,13 @@ func createTestTables() error {
 	createApplicationsTable := `
 	CREATE TABLE IF NOT EXISTS apps (
 		id BIGINT AUTO_INCREMENT PRIMARY KEY,
-		app_id VARCHAR(100) UNIQUE NOT NULL,
+		appId VARCHAR(100) UNIQUE NOT NULL,
 		app_name VARCHAR(200) NOT NULL,
 		description TEXT,
 		status TINYINT DEFAULT 1,
-		create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-		update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-		INDEX idx_app_id (app_id),
+		createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+		updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+		INDEX idx_appId (appId),
 		INDEX idx_status (status)
 	) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 	`
@@ -131,8 +131,8 @@ func createTestTables() error {
 		role VARCHAR(50) DEFAULT 'admin',
 		status TINYINT DEFAULT 1,
 		last_login_time DATETIME,
-		create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-		update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+		createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+		updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 		INDEX idx_username (username),
 		INDEX idx_status (status)
 	) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -142,21 +142,21 @@ func createTestTables() error {
 	createBanRecordsTable := `
 	CREATE TABLE IF NOT EXISTS user_ban_records (
 		id VARCHAR(64) PRIMARY KEY,
-		app_id VARCHAR(100) NOT NULL,
-		player_id VARCHAR(100) NOT NULL,
+		appId VARCHAR(100) NOT NULL,
+		playerId VARCHAR(100) NOT NULL,
 		admin_id BIGINT NOT NULL,
 		ban_type VARCHAR(20) NOT NULL,
 		ban_reason TEXT,
 		ban_start_time DATETIME DEFAULT CURRENT_TIMESTAMP,
 		ban_end_time DATETIME NULL,
-		is_active TINYINT DEFAULT 1,
+		isActive TINYINT DEFAULT 1,
 		unban_admin_id BIGINT NULL,
 		unban_time DATETIME NULL,
 		unban_reason TEXT,
-		create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-		update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-		INDEX idx_app_player (app_id, player_id),
-		INDEX idx_active (is_active),
+		createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+		updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+		INDEX idx_app_player (appId, playerId),
+		INDEX idx_active (isActive),
 		INDEX idx_admin (admin_id)
 	) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 	`
@@ -165,17 +165,17 @@ func createTestTables() error {
 	createGameConfigsTable := `
 	CREATE TABLE IF NOT EXISTS game_configs (
 		id BIGINT AUTO_INCREMENT PRIMARY KEY,
-		app_id VARCHAR(100) NOT NULL,
-		config_key VARCHAR(100) NOT NULL,
-		config_value TEXT,
+		appId VARCHAR(100) NOT NULL,
+		configKey VARCHAR(100) NOT NULL,
+		configValue TEXT,
 		config_type VARCHAR(20) DEFAULT 'string',
 		description TEXT,
 		status TINYINT DEFAULT 1,
-		is_public TINYINT DEFAULT 1,
-		create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-		update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-		UNIQUE KEY uk_app_key (app_id, config_key),
-		INDEX idx_app_id (app_id),
+		isPublic TINYINT DEFAULT 1,
+		createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+		updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+		UNIQUE KEY uk_app_key (appId, configKey),
+		INDEX idx_appId (appId),
 		INDEX idx_status (status)
 	) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 	`
@@ -191,10 +191,10 @@ func createTestTables() error {
 		details TEXT,
 		ip VARCHAR(45),
 		user_agent TEXT,
-		create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+		createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
 		INDEX idx_admin (admin_id),
 		INDEX idx_action (action),
-		INDEX idx_create_time (create_time)
+		INDEX idx_createdAt (createdAt)
 	) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 	`
 
@@ -202,13 +202,13 @@ func createTestTables() error {
 	createSystemConfigsTable := `
 	CREATE TABLE IF NOT EXISTS system_configs (
 		id BIGINT AUTO_INCREMENT PRIMARY KEY,
-		config_key VARCHAR(100) UNIQUE NOT NULL,
-		config_value TEXT,
+		configKey VARCHAR(100) UNIQUE NOT NULL,
+		configValue TEXT,
 		config_type VARCHAR(20) DEFAULT 'string',
 		description TEXT,
-		create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-		update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-		INDEX idx_config_key (config_key)
+		createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+		updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+		INDEX idx_configKey (configKey)
 	) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 	`
 
@@ -263,9 +263,9 @@ func (td *TestData) createTestAdmin() error {
 	// 创建普通管理员（简化版密码哈希）
 	adminPassword := "test123456_hashed"
 	adminSQL := `
-	INSERT INTO admins (username, password, nickname, email, role, status, create_time, update_time) 
+	INSERT INTO admins (username, password, nickname, email, role, status, createdAt, updatedAt) 
 	VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW()) 
-	ON DUPLICATE KEY UPDATE password = VALUES(password), update_time = NOW()
+	ON DUPLICATE KEY UPDATE password = VALUES(password), updatedAt = NOW()
 	`
 
 	admins := []struct {
@@ -313,9 +313,9 @@ func (td *TestData) createTestSystemConfigs() error {
 	}
 
 	configSQL := `
-	INSERT INTO system_configs (config_key, config_value, config_type, description, create_time, update_time) 
+	INSERT INTO system_configs (configKey, configValue, config_type, description, createdAt, updatedAt) 
 	VALUES (?, ?, ?, ?, NOW(), NOW()) 
-	ON DUPLICATE KEY UPDATE config_value = VALUES(config_value), update_time = NOW()
+	ON DUPLICATE KEY UPDATE configValue = VALUES(configValue), updatedAt = NOW()
 	`
 
 	for _, config := range configs {

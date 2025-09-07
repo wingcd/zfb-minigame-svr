@@ -14,8 +14,8 @@ type AdminOperationLog struct {
 	Action    string `orm:"size(100)" json:"action"`
 	Resource  string `orm:"size(100)" json:"resource"`
 	Params    string `orm:"type(text)" json:"params"`
-	IpAddress string `orm:"size(45)" json:"ipAddress"`
-	UserAgent string `orm:"size(500)" json:"userAgent"`
+	IpAddress string `orm:"size(45);column(ipAddress)" json:"ipAddress"`
+	UserAgent string `orm:"size(500);column(userAgent)" json:"userAgent"`
 }
 
 func (l *AdminOperationLog) TableName() string {
@@ -42,10 +42,10 @@ func GetOperationLogList(page, pageSize int, username, action string, startTime,
 		qs = qs.Filter("action__icontains", action)
 	}
 	if !startTime.IsZero() {
-		qs = qs.Filter("create_time__gte", startTime)
+		qs = qs.Filter("createdAt__gte", startTime)
 	}
 	if !endTime.IsZero() {
-		qs = qs.Filter("create_time__lte", endTime)
+		qs = qs.Filter("createdAt__lte", endTime)
 	}
 
 	// 获取总数
@@ -54,7 +54,7 @@ func GetOperationLogList(page, pageSize int, username, action string, startTime,
 	// 获取列表
 	var logs []AdminOperationLog
 	offset := (page - 1) * pageSize
-	_, err := qs.OrderBy("-create_time").Limit(pageSize, offset).All(&logs)
+	_, err := qs.OrderBy("-createdAt").Limit(pageSize, offset).All(&logs)
 
 	return logs, total, err
 }
@@ -66,8 +66,8 @@ func GetOperationLogStats(startTime, endTime time.Time) (map[string]interface{},
 
 	// 总操作次数
 	totalCount, err := o.QueryTable("admin_operation_logs").
-		Filter("create_time__gte", startTime).
-		Filter("create_time__lte", endTime).
+		Filter("createdAt__gte", startTime).
+		Filter("createdAt__lte", endTime).
 		Count()
 	if err != nil {
 		return nil, err
@@ -76,7 +76,7 @@ func GetOperationLogStats(startTime, endTime time.Time) (map[string]interface{},
 
 	// 按模块统计
 	var moduleStats []orm.Params
-	_, err = o.Raw("SELECT action as module, COUNT(*) as count FROM admin_operation_logs WHERE create_time BETWEEN ? AND ? GROUP BY action ORDER BY count DESC", startTime, endTime).Values(&moduleStats)
+	_, err = o.Raw("SELECT action as module, COUNT(*) as count FROM admin_operation_logs WHERE createdAt BETWEEN ? AND ? GROUP BY action ORDER BY count DESC", startTime, endTime).Values(&moduleStats)
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +84,7 @@ func GetOperationLogStats(startTime, endTime time.Time) (map[string]interface{},
 
 	// 按管理员统计
 	var adminStats []orm.Params
-	_, err = o.Raw("SELECT username, COUNT(*) as count FROM admin_operation_logs WHERE create_time BETWEEN ? AND ? GROUP BY username ORDER BY count DESC LIMIT 10", startTime, endTime).Values(&adminStats)
+	_, err = o.Raw("SELECT username, COUNT(*) as count FROM admin_operation_logs WHERE createdAt BETWEEN ? AND ? GROUP BY username ORDER BY count DESC LIMIT 10", startTime, endTime).Values(&adminStats)
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +98,7 @@ func GetOperationsByDate(date string) (int64, error) {
 	o := orm.NewOrm()
 	var count int64
 	// 使用DATE函数来比较日期
-	err := o.Raw("SELECT COUNT(*) FROM admin_operation_logs WHERE DATE(create_time) = ?", date).QueryRow(&count)
+	err := o.Raw("SELECT COUNT(*) FROM admin_operation_logs WHERE DATE(createdAt) = ?", date).QueryRow(&count)
 	return count, err
 }
 
@@ -108,23 +108,23 @@ func GetOperationLogs(page, pageSize int, adminId, action, startDate, endDate st
 	qs := o.QueryTable("admin_operation_logs")
 
 	if adminId != "" && adminId != "0" {
-		qs = qs.Filter("user_id", adminId)
+		qs = qs.Filter("playerId", adminId)
 	}
 	if action != "" {
 		qs = qs.Filter("action__icontains", action)
 	}
 	if startDate != "" {
-		qs = qs.Filter("create_time__gte", startDate)
+		qs = qs.Filter("createdAt__gte", startDate)
 	}
 	if endDate != "" {
-		qs = qs.Filter("create_time__lte", endDate)
+		qs = qs.Filter("createdAt__lte", endDate)
 	}
 
 	total, _ := qs.Count()
 
 	var logs []*AdminOperationLog
 	offset := (page - 1) * pageSize
-	_, err := qs.OrderBy("-create_time").Limit(pageSize, offset).All(&logs)
+	_, err := qs.OrderBy("-createdAt").Limit(pageSize, offset).All(&logs)
 
 	return logs, total, err
 }

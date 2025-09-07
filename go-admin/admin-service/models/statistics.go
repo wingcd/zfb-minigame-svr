@@ -51,7 +51,7 @@ type RecentActivity struct {
 	Username    string    `json:"username"`
 	Action      string    `json:"action"`
 	Description string    `json:"description"`
-	CreateTime  time.Time `json:"createTime"`
+	CreatedAt   time.Time `json:"createdAt"`
 }
 
 // UserGrowth 用户增长数据
@@ -92,10 +92,10 @@ func GetTopApps(limit int) ([]TopApp, error) {
 	// 这里应该根据实际业务逻辑统计热门应用
 	// 目前返回应用列表作为示例
 	sql := `
-		SELECT app_id, app_name, 0 as user_count, 0 as access_count 
+		SELECT appId, app_name, 0 as user_count, 0 as access_count 
 		FROM apps 
 		WHERE status = 1 
-		ORDER BY create_time DESC 
+		ORDER BY createdAt DESC 
 		LIMIT ?
 	`
 	_, err := o.Raw(sql, limit).QueryRows(&apps)
@@ -109,9 +109,9 @@ func GetRecentActivity(limit int) ([]RecentActivity, error) {
 	var activities []RecentActivity
 
 	sql := `
-		SELECT id, user_id, username, action, resource as description, create_time as create_time
+		SELECT id, playerId, username, action, resource as description, createdAt as createdAt
 		FROM admin_operation_logs 
-		ORDER BY create_time DESC 
+		ORDER BY createdAt DESC 
 		LIMIT ?
 	`
 	_, err := o.Raw(sql, limit).QueryRows(&activities)

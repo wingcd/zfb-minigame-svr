@@ -174,7 +174,7 @@ func (c *PermissionController) CreateRole() {
 		"roleName":    roleName,
 		"description": description,
 		"permissions": permissions,
-		"createTime":  role.CreatedAt,
+		"createdAt":   role.CreatedAt,
 	}
 
 	utils.SuccessResponse(&c.Controller, "创建成功", result)

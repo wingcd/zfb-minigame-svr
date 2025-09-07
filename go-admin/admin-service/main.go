@@ -132,8 +132,8 @@ func main() {
 			}
 
 			lastLoginAt := "从未登录"
-			if user["last_login_at"] != nil {
-				lastLoginAt = user["last_login_at"].(string)
+			if user["lastLoginAt"] != nil {
+				lastLoginAt = user["lastLoginAt"].(string)
 			}
 
 			fmt.Printf("%-5v %-15s %-25s %-15s %-15s %-8s %-20s %-20s %-10v\n",
@@ -141,11 +141,11 @@ func main() {
 				user["username"],
 				user["email"],
 				user["phone"],
-				user["real_name"],
+				user["realName"],
 				status,
 				lastLoginAt,
-				user["last_login_ip"],
-				user["role_id"])
+				user["lastLoginIp"],
+				user["roleId"])
 		}
 		fmt.Println("=" + strings.Repeat("=", 120))
 		os.Exit(0)

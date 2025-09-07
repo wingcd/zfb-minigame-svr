@@ -57,7 +57,7 @@ func (s *AuthService) ChangePassword(userId int64, oldPassword, newPassword stri
 	user.Password = utils.HashPassword(newPassword)
 	user.UpdatedAt = time.Now()
 
-	_, err = o.Update(user, "password", "updateTime")
+	_, err = o.Update(user, "password", "updatedAt")
 	if err != nil {
 		return fmt.Errorf("修改密码失败: %v", err)
 	}
