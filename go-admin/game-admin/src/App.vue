@@ -258,14 +258,8 @@ const visibleRoutes = computed(() => {
 const menuItems = computed(() => {
   const items = []
   const groups = new Map()
-  
-  // 处理所有可见路由
+  // 处理所有可见路由（已经过权限过滤）
   visibleRoutes.value.forEach(route => {
-    // 检查权限
-    if (route.meta?.permissions && !hasAnyPermission(route.meta.permissions)) {
-      return
-    }
-    
     if (route.meta?.group) {
       // 有分组的路由
       const groupKey = route.meta.group
@@ -328,7 +322,10 @@ const handleChangePassword = async () => {
     
     passwordLoading.value = true
     
-    const response = await adminAPI.changePassword(passwordForm)
+    const response = await adminAPI.resetPassword({
+      newPassword: passwordForm.newPassword,
+      id: adminInfo.value.id
+    })
     
     if (response.code === 0) {
       ElMessage.success('密码修改成功，请重新登录')

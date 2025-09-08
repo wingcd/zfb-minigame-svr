@@ -187,48 +187,56 @@ func (c *PermissionController) UpdateRole() {
 		return
 	}
 
-	// 获取角色代码（从路径参数或请求体）
-	roleCode := c.Ctx.Input.Param(":code")
-	if roleCode == "" {
-		roleCode = c.GetString("roleCode")
+	// 通过JSON解析请求参数
+	var requestData struct {
+		ID          int64    `json:"id"`
+		RoleCode    string   `json:"roleCode"`
+		RoleName    string   `json:"roleName"`
+		Description string   `json:"description"`
+		Permissions []string `json:"permissions"`
+		Status      int      `json:"status"`
 	}
 
-	if roleCode == "" {
-		utils.ErrorResponse(&c.Controller, 4001, "角色代码不能为空", nil)
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &requestData); err != nil {
+		utils.ErrorResponse(&c.Controller, 4001, "参数解析失败", nil)
 		return
 	}
 
-	// 获取参数
-	roleName := c.GetString("roleName")
-	description := c.GetString("description")
-	permissionsStr := c.GetString("permissions")
-	status := c.GetString("status")
+	// 验证必需参数
+	if requestData.ID <= 0 && requestData.RoleCode == "" {
+		utils.ErrorResponse(&c.Controller, 4001, "角色ID或角色代码不能为空", nil)
+		return
+	}
+
+	// 将权限数组转换为JSON字符串
+	var permissionsStr string
+	if len(requestData.Permissions) > 0 {
+		permissionsBytes, err := json.Marshal(requestData.Permissions)
+		if err != nil {
+			utils.ErrorResponse(&c.Controller, 4001, "权限列表格式错误", nil)
+			return
+		}
+		permissionsStr = string(permissionsBytes)
+	}
 
 	// 检查是否为系统预设角色
 	systemRoles := []string{"super_admin", "admin", "operator", "viewer"}
 	for _, sysRole := range systemRoles {
-		if roleCode == sysRole {
+		if requestData.RoleCode == sysRole {
 			utils.ErrorResponse(&c.Controller, 4005, "不能修改系统预设角色", nil)
 			return
 		}
 	}
 
 	// 验证权限列表（如果提供）
-	if permissionsStr != "" {
-		var permissions []string
-		err := json.Unmarshal([]byte(permissionsStr), &permissions)
-		if err != nil {
-			utils.ErrorResponse(&c.Controller, 4001, "权限列表格式错误", nil)
-			return
-		}
-
+	if len(requestData.Permissions) > 0 {
 		validPermissions := []string{
 			"admin_manage", "role_manage", "app_manage", "user_manage",
 			"leaderboard_manage", "mail_manage", "stats_view", "system_config",
 			"counter_manage",
 		}
 
-		for _, permission := range permissions {
+		for _, permission := range requestData.Permissions {
 			valid := false
 			for _, validPerm := range validPermissions {
 				if permission == validPerm {
@@ -245,37 +253,44 @@ func (c *PermissionController) UpdateRole() {
 
 	// 获取现有角色
 	role := &models.AdminRole{}
-	err := role.GetByRoleCode(roleCode)
+	var err error
+
+	// 优先通过ID获取，其次通过RoleCode获取
+	if requestData.ID > 0 {
+		err = role.GetById(requestData.ID)
+	} else if requestData.RoleCode != "" {
+		err = role.GetByRoleCode(requestData.RoleCode)
+	}
+
 	if err != nil {
 		utils.ErrorResponse(&c.Controller, 4004, "角色不存在", nil)
 		return
 	}
 
 	// 更新字段
-	if roleName != "" {
-		role.RoleName = roleName
+	if requestData.RoleName != "" {
+		role.RoleName = requestData.RoleName
 	}
-	if description != "" {
-		role.Description = description
+	if requestData.Description != "" {
+		role.Description = requestData.Description
 	}
 	if permissionsStr != "" {
 		role.Permissions = permissionsStr
 	}
-	if status != "" {
-		statusInt, _ := strconv.Atoi(status)
-		role.Status = statusInt
+	if requestData.Status > 0 {
+		role.Status = requestData.Status
 	}
 	role.UpdatedAt = time.Now()
 
-	// 更新角色
-	err = models.UpdateRole(role)
+	// 更新角色到数据库
+	err = role.Update("role_name", "description", "permissions", "status", "updated_at")
 	if err != nil {
 		utils.ErrorResponse(&c.Controller, 5001, "更新角色失败: "+err.Error(), nil)
 		return
 	}
 
 	// 记录操作日志
-	utils.LogOperation(claims.UserID, "更新角色", "更新角色: "+roleCode)
+	utils.LogOperation(claims.UserID, "更新角色", "更新角色: "+role.RoleCode)
 
 	utils.SuccessResponse(&c.Controller, "更新成功", nil)
 }

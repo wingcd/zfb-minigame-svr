@@ -443,7 +443,7 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { mailAPI, appAPI } from '../services/api.js'
-import { hasPermission, PERMISSIONS } from '../utils/auth.js'
+import { hasPermission, PERMISSIONS, getAdminInfo } from '../utils/auth.js'
 import { appList, getAppName, selectedAppId } from '../utils/appStore.js'
 
 export default {
@@ -569,17 +569,14 @@ export default {
     
     // 获取邮件统计
     const getMailStats = async () => {
-      // 如果邮件系统未初始化，跳过统计获取
-      if (!mailSystemInitialized.value) {
-        return
-      }
-      
       try {
         const result = await mailAPI.getStats({
           appId: selectedAppId.value
         })
         if (result.code === 0) {
           mailStats.value = result.data
+          // 如果成功获取统计，说明邮件系统已经初始化
+          mailSystemInitialized.value = true
         } else {
           // 如果获取统计失败，可能是系统未初始化
           if (result.msg && result.msg.includes('集合')) {
@@ -703,6 +700,7 @@ export default {
         }
         
         const data = { ...mailDialog.form }
+        data.createBy = getAdminInfo().id
         
         let result
         if (mailDialog.isEdit) {

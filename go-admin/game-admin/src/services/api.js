@@ -203,7 +203,7 @@ const unifiedAPI = {
     getList: (params) => api.post('/admin/getList', params || {}),
     create: (params) => api.post('/admin/create', params),
     delete: (params) => api.post('/admin/delete', params),
-    resetPassword: (params) => api.post('/admin/resetPwd', params),
+    resetPassword: (params) => api.post('/admin/resetPassword', params),
     update: (params) => api.post('/admin/update', params),
     init: (params) => api.post('/admin/init', params || {})
   },
@@ -278,7 +278,8 @@ const unifiedAPI = {
     getRecentActivity: (params) => api.post('/stat/getRecentActivity', params || {}),    
     userGrowth: (params) => api.post('/stat/getUserGrowth', params || {}),
     getAppStats: (params) => api.post('/stat/getAppStats', params || {}),
-    leaderboardStats: (params) => api.post('/stat/getLeaderboardStats', params || {})
+    leaderboardStats: (params) => api.post('/stat/getLeaderboardStats', params || {}),
+    getPlatformDistribution: (params) => api.post('/stat/getPlatformDistribution', params || {})
   },
   
   // 邮件相关
@@ -287,7 +288,7 @@ const unifiedAPI = {
     create: (data) => api.post('/mail/create', data),
     update: (data) => api.post('/mail/update', data),
     delete: (params) => api.post('/mail/delete', params),
-    publish: (mailData) => api.post('/mail/send', mailData),
+    publish: (mailData) => api.post('/mail/publish', mailData),
     getStats: (params) => api.post('/mail/getStats', params || {}),
     getUserMails: (params) => api.post('/mail/getUserMails', params),
     initSystem: (params) => api.post('/mail/initSystem', params || {})

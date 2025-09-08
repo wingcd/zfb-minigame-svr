@@ -4,6 +4,7 @@ import (
 	"admin-service/models"
 	"admin-service/utils"
 	"encoding/json"
+	"time"
 
 	"github.com/beego/beego/v2/server/web"
 )
@@ -96,6 +97,11 @@ func (c *AuthController) AdminLogin() {
 		permissions = []string{}
 	}
 
+	// 更新登录时间
+	models.UpdateAdminUserFields(admin.ID, map[string]interface{}{
+		"lastLoginAt": time.Now(),
+	})
+
 	// 记录登录日志
 	models.LogAdminOperation(admin.ID, admin.Username, "LOGIN_SUCCESS", "AUTH", map[string]interface{}{
 		"ip":         clientIP,
@@ -112,7 +118,7 @@ func (c *AuthController) AdminLogin() {
 			"adminInfo": map[string]interface{}{
 				"id":          admin.ID,
 				"username":    admin.Username,
-				"nickname":    admin.RealName,
+				"nickname":    admin.Nickname,
 				"role":        role.RoleCode,
 				"roleName":    role.RoleName,
 				"permissions": permissions,
@@ -203,7 +209,7 @@ func (c *AuthController) VerifyToken() {
 			"adminInfo": map[string]interface{}{
 				"id":          admin.ID,
 				"username":    admin.Username,
-				"nickname":    admin.RealName,
+				"nickname":    admin.Nickname,
 				"role":        role.RoleCode,
 				"roleName":    role.RoleName,
 				"permissions": permissions,
@@ -288,7 +294,7 @@ func (c *AuthController) GetAdminProfile() {
 			"user": map[string]interface{}{
 				"id":          admin.ID,
 				"username":    admin.Username,
-				"nickname":    admin.RealName,
+				"nickname":    admin.Nickname,
 				"role":        role.RoleCode,
 				"roleName":    role.RoleName,
 				"permissions": permissions,
@@ -305,10 +311,10 @@ func (c *AuthController) GetAdminProfile() {
 // UpdateProfile 更新用户资料（对齐云函数updateProfile接口）
 func (c *AuthController) UpdateAdminProfile() {
 	var req struct {
-		Token    string `json:"token"`
-		Email    string `json:"email"`
-		Phone    string `json:"phone"`
-		RealName string `json:"realName"`
+		Token string `json:"token"`
+		Email string `json:"email"`
+		Phone string `json:"phone"`
+		Role  string `json:"role"`
 	}
 
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
@@ -343,8 +349,8 @@ func (c *AuthController) UpdateAdminProfile() {
 	if req.Phone != "" {
 		updateFields["phone"] = req.Phone
 	}
-	if req.RealName != "" {
-		updateFields["realName"] = req.RealName
+	if req.Role != "" {
+		updateFields["role"] = req.Role
 	}
 
 	if err := models.UpdateAdminUserFields(claims.UserID, updateFields); err != nil {
@@ -369,7 +375,7 @@ func (c *AuthController) UpdateAdminProfile() {
 			"user": map[string]interface{}{
 				"id":       admin.ID,
 				"username": admin.Username,
-				"nickname": admin.RealName,
+				"nickname": admin.Role,
 				"email":    admin.Email,
 				"phone":    admin.Phone,
 			},

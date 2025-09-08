@@ -253,3 +253,41 @@ func (c *StatsController) GetLeaderboardStats() {
 	}
 	c.ServeJSON()
 }
+
+// GetPlatformDistribution 获取平台分布统计
+func (c *StatsController) GetPlatformDistribution() {
+	var requestData struct {
+		AppId string `json:"appId"`
+	}
+
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &requestData); err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4001,
+			"msg":       "参数错误",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	distribution, err := models.GetPlatformDistribution()
+	if err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      5001,
+			"msg":       "获取平台分布统计失败",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	c.Data["json"] = map[string]interface{}{
+		"code":      0,
+		"msg":       "获取成功",
+		"timestamp": utils.UnixMilli(),
+		"data":      distribution,
+	}
+	c.ServeJSON()
+}

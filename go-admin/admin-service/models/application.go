@@ -16,7 +16,6 @@ type Application struct {
 	Description   string `orm:"type(text);column(description)" json:"description"`         // 应用描述
 	ChannelAppId  string `orm:"size(100);column(channel_app_id)" json:"channelAppId"`      // 渠道应用ID
 	ChannelAppKey string `orm:"size(100);column(channel_app_key)" json:"channelAppKey"`    // 渠道应用密钥
-	AppSecret     string `orm:"size(100);column(app_secret)" json:"appSecret"`             // 应用密钥
 	Category      string `orm:"size(50);default('game');column(category)" json:"category"` // 应用分类: game/tool/social
 	Platform      string `orm:"size(50);column(platform)" json:"platform"`                 // 平台: alipay/wechat/baidu
 	Status        string `orm:"size(20);default('active');column(status)" json:"status"`   // 状态: active/inactive/pending
@@ -38,7 +37,7 @@ func (a *Application) TableName() string {
 func (a *Application) Insert() error {
 	o := orm.NewOrm()
 
-	// 生成AppId和AppSecret（如果没有设置）
+	// 生成AppId（如果没有设置）
 	if a.AppId == "" {
 		a.AppId = utils.GenerateAppId()
 	}

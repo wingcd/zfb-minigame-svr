@@ -148,11 +148,6 @@ func GenerateRandomString(length int) string {
 	return hex.EncodeToString(bytes)[:length]
 }
 
-// GenerateAppSecret 生成应用密钥
-func GenerateAppSecret() string {
-	return GenerateRandomString(32)
-}
-
 // GenerateAppId 生成应用ID
 func GenerateAppId() string {
 	// 生成格式为 xxxxxxxx 的应用ID

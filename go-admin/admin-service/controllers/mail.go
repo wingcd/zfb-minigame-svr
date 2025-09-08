@@ -134,6 +134,7 @@ func (c *MailController) GetAllMails() {
 // CreateMail 创建邮件
 func (c *MailController) CreateMail() {
 	var requestData struct {
+		CreateBy   int64    `json:"createBy"`
 		AppId      string   `json:"appId"`
 		UserId     string   `json:"userId"`
 		Title      string   `json:"title"`
@@ -183,6 +184,21 @@ func (c *MailController) CreateMail() {
 			Status:     "draft",
 			CreatedBy:  "admin", // 默认创建者为admin
 		}
+
+		// 设置创建者
+		// 查询用户
+		user, err := models.GetAdminUserById(requestData.CreateBy)
+		if err != nil {
+			c.Data["json"] = map[string]interface{}{
+				"code":      5001,
+				"msg":       "查询用户失败",
+				"timestamp": utils.UnixMilli(),
+				"data":      nil,
+			}
+			c.ServeJSON()
+			return
+		}
+		systemMail.CreatedBy = user.Username
 
 		if requestData.ExpireDays > 0 {
 			expireTime := time.Now().AddDate(0, 0, requestData.ExpireDays)

@@ -16,7 +16,8 @@ type AdminUser struct {
 	Password    string    `orm:"size(255)" json:"-"`
 	Email       string    `orm:"size(100)" json:"email"`
 	Phone       string    `orm:"size(20)" json:"phone"`
-	RealName    string    `orm:"size(50);column(real_name)" json:"realName"`
+	Role        string    `orm:"size(50);column(role)" json:"role"`
+	Nickname    string    `orm:"size(50);column(nickname)" json:"nickname"`
 	Avatar      string    `orm:"size(255)" json:"avatar"`
 	Status      int       `orm:"default(1)" json:"status"` // 1:正常 0:禁用
 	LastLoginAt time.Time `orm:"type(datetime);null;column(last_login_at)" json:"lastLoginAt"`
@@ -37,10 +38,10 @@ func GetAllAdminUsers(page, pageSize int, keyword string) ([]*AdminUser, int64, 
 	qs := o.QueryTable("admin_users")
 
 	if keyword != "" {
-		qs = qs.Filter("username__icontains", keyword)
 		cond := orm.NewCondition()
 		cond = cond.Or("username__icontains", keyword).
-			Or("realName__icontains", keyword).
+			Or("role__icontains", keyword).
+			Or("nickname__icontains", keyword).
 			Or("email__icontains", keyword)
 		qs = qs.SetCond(cond)
 	}
@@ -139,7 +140,7 @@ func GetAdminById(id int64) (*AdminUser, error) {
 // UpdateAdminProfile 更新管理员资料
 func UpdateAdminProfile(id int64, nickname, email string) error {
 	return UpdateAdminUserFields(id, map[string]interface{}{
-		"realName":  nickname,
+		"nickname":  nickname,
 		"email":     email,
 		"updatedAt": time.Now(),
 	})

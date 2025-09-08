@@ -108,7 +108,7 @@
         <el-form-item label="角色代码" prop="roleCode">
           <el-input 
             v-model="roleForm.roleCode" 
-            :disabled="editingRole"
+            :disabled="!!editingRole"
             placeholder="请输入角色代码（英文）"
           />
         </el-form-item>
@@ -123,7 +123,7 @@
             v-model="roleForm.description" 
             type="textarea"
             placeholder="请输入角色描述"
-            rows="3"
+            :rows="3"
           />
         </el-form-item>
         <el-form-item label="权限" prop="permissions">
@@ -131,7 +131,7 @@
             <el-checkbox 
               v-for="permission in allPermissions" 
               :key="permission.code"
-              :label="permission.code"
+              :value="permission.code"
             >
               {{ permission.name }}
             </el-checkbox>

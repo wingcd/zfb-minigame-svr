@@ -50,7 +50,7 @@ func (r *AdminRole) GetByRoleName(roleName string) error {
 // GetByRoleCode 根据角色代码获取角色
 func (r *AdminRole) GetByRoleCode(roleCode string) error {
 	o := orm.NewOrm()
-	return o.QueryTable(r.TableName()).Filter("roleCode", roleCode).One(r)
+	return o.QueryTable(r.TableName()).Filter("role_code", roleCode).One(r)
 }
 
 // GetList 获取角色列表

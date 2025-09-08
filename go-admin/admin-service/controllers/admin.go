@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"strconv"
 
+	"github.com/beego/beego/v2/client/orm"
 	"github.com/beego/beego/v2/server/web"
 )
 
@@ -71,7 +72,14 @@ func (c *AdminController) GetAdmin() {
 
 // UpdateAdmin 更新管理员信息 (API命名空间使用)
 func (c *AdminController) UpdateAdmin() {
-	var req UpdateAdminRequest
+	var req struct {
+		ID     int64  `json:"id"`
+		Email  string `json:"email"`
+		Phone  string `json:"phone"`
+		Role   string `json:"role"`
+		RoleId int64  `json:"roleId"`
+	}
+
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
 		c.Data["json"] = map[string]interface{}{
 			"code":      4001,
@@ -119,7 +127,10 @@ func (c *AdminController) UpdateAdmin() {
 
 // DeleteAdmin 删除管理员 (API命名空间使用)
 func (c *AdminController) DeleteAdmin() {
-	var req DeleteAdminRequest
+	var req struct {
+		ID int64 `json:"id"`
+	}
+
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
 		c.Data["json"] = map[string]interface{}{
 			"code":      4001,
@@ -149,7 +160,11 @@ func (c *AdminController) DeleteAdmin() {
 
 // ResetPassword 重置管理员密码 (API命名空间使用)
 func (c *AdminController) ResetPassword() {
-	var req ResetPasswordRequest
+	var req struct {
+		ID          int64  `json:"id"`
+		NewPassword string `json:"newPassword"`
+	}
+
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
 		c.Data["json"] = map[string]interface{}{
 			"code":      4001,
@@ -160,22 +175,52 @@ func (c *AdminController) ResetPassword() {
 		c.ServeJSON()
 		return
 	}
-	if err := utils.ParseJSON(&c.Controller, &req); err != nil {
-		utils.Error(&c.Controller, utils.CodeInvalidParam, "参数解析失败")
+
+	if req.ID <= 0 {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4001,
+			"msg":       "无效的管理员ID",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	if len(req.NewPassword) < 6 {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4001,
+			"msg":       "密码长度至少6位",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
 		return
 	}
 
 	// 检查用户是否存在
 	_, err := models.GetAdminUserById(req.ID)
 	if err != nil {
-		utils.Error(&c.Controller, utils.CodeNotFound, "用户不存在")
+		c.Data["json"] = map[string]interface{}{
+			"code":      4004,
+			"msg":       "用户不存在",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
 		return
 	}
 
 	// 加密新密码
 	hashedPassword, err := utils.HashPasswordBcrypt(req.NewPassword)
 	if err != nil {
-		utils.Error(&c.Controller, utils.CodeError, "密码加密失败")
+		c.Data["json"] = map[string]interface{}{
+			"code":      5001,
+			"msg":       "密码加密失败",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
 		return
 	}
 
@@ -183,27 +228,78 @@ func (c *AdminController) ResetPassword() {
 	if err := models.UpdateAdminUserFields(req.ID, map[string]interface{}{
 		"password": hashedPassword,
 	}); err != nil {
-		utils.Error(&c.Controller, utils.CodeError, "密码重置失败")
+		c.Data["json"] = map[string]interface{}{
+			"code":      5001,
+			"msg":       "密码重置失败",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
 		return
 	}
 
 	c.logOperation("重置管理员密码", "admin", "POST", "/api/admins/"+strconv.FormatInt(req.ID, 10)+"/reset-password", nil, 1, "", 0)
-	utils.Success(&c.Controller, "密码重置成功")
+	c.Data["json"] = map[string]interface{}{
+		"code":      0,
+		"msg":       "密码重置成功",
+		"timestamp": utils.UnixMilli(),
+		"data":      nil,
+	}
+	c.ServeJSON()
 }
 
 // GetUsers 获取管理员列表
 func (c *AdminController) GetUsers() {
-	page := utils.GetIntParam(&c.Controller, "page", 1)
-	pageSize := utils.GetIntParam(&c.Controller, "page_size", 20)
-	keyword := utils.GetStringParam(&c.Controller, "keyword")
+	var req struct {
+		Page     int    `json:"page"`
+		PageSize int    `json:"page_size"`
+		Keyword  string `json:"keyword"`
+	}
 
-	users, total, err := models.GetAllAdminUsers(page, pageSize, keyword)
-	if err != nil {
-		utils.Error(&c.Controller, utils.CodeError, "获取数据失败")
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4001,
+			"msg":       "参数解析失败",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
 		return
 	}
 
-	utils.PageSuccess(&c.Controller, users, total, page, pageSize)
+	// 设置默认值
+	if req.Page <= 0 {
+		req.Page = 1
+	}
+	if req.PageSize <= 0 {
+		req.PageSize = 20
+	}
+
+	users, total, err := models.GetAllAdminUsers(req.Page, req.PageSize, req.Keyword)
+	if err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      5001,
+			"msg":       "获取数据失败",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	c.Data["json"] = map[string]interface{}{
+		"code":      0,
+		"msg":       "获取成功",
+		"timestamp": utils.UnixMilli(),
+		"data": map[string]interface{}{
+			"list":       users,
+			"total":      total,
+			"page":       req.Page,
+			"pageSize":   req.PageSize,
+			"totalPages": (total + int64(req.PageSize) - 1) / int64(req.PageSize),
+		},
+	}
+	c.ServeJSON()
 }
 
 // AddUser 添加管理员
@@ -249,27 +345,73 @@ func (c *AdminController) AddUser() {
 
 // UpdateUser 更新管理员
 func (c *AdminController) UpdateUser() {
-	id, _ := strconv.ParseInt(c.Ctx.Input.Param(":id"), 10, 64)
+	var req struct {
+		ID       int64  `json:"id"`
+		Username string `json:"username"`
+		Password string `json:"password"`
+		Role     string `json:"role"`
+		Email    string `json:"email"`
+		Phone    string `json:"phone"`
+		RoleId   int64  `json:"roleId"`
+		Status   int    `json:"status"`
+	}
 
-	var user models.AdminUser
-	if err := utils.ParseJSON(&c.Controller, &user); err != nil {
-		utils.Error(&c.Controller, utils.CodeInvalidParam, "参数解析失败")
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4001,
+			"msg":       "参数解析失败",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	if req.ID <= 0 {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4001,
+			"msg":       "无效的管理员ID",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
 		return
 	}
 
 	// 检查用户是否存在
-	existUser, err := models.GetAdminUserById(id)
+	existUser, err := models.GetAdminUserById(req.ID)
 	if err != nil {
-		utils.Error(&c.Controller, utils.CodeNotFound, "用户不存在")
+		c.Data["json"] = map[string]interface{}{
+			"code":      4004,
+			"msg":       "用户不存在",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
 		return
 	}
 
-	// 更新数据
-	user.ID = id
-	if user.Password != "" {
-		hashedPassword, err := utils.HashPasswordBcrypt(user.Password)
+	// 构建更新的用户对象
+	user := models.AdminUser{
+		Username: req.Username,
+		Role:     req.Role,
+		Email:    req.Email,
+		Phone:    req.Phone,
+		RoleId:   req.RoleId,
+		Status:   req.Status,
+	}
+
+	// 处理密码
+	if req.Password != "" {
+		hashedPassword, err := utils.HashPasswordBcrypt(req.Password)
 		if err != nil {
-			utils.Error(&c.Controller, utils.CodeError, "密码加密失败")
+			c.Data["json"] = map[string]interface{}{
+				"code":      5001,
+				"msg":       "密码加密失败",
+				"timestamp": utils.UnixMilli(),
+				"data":      nil,
+			}
+			c.ServeJSON()
 			return
 		}
 		user.Password = hashedPassword
@@ -278,32 +420,86 @@ func (c *AdminController) UpdateUser() {
 	}
 
 	if err := models.UpdateAdminUser(&user); err != nil {
-		utils.Error(&c.Controller, utils.CodeError, "更新失败")
+		c.Data["json"] = map[string]interface{}{
+			"code":      5001,
+			"msg":       "更新失败",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
 		return
 	}
 
-	c.logOperation("更新管理员", "admin", "PUT", "/admin/users/"+strconv.FormatInt(id, 10), user, 1, "", 0)
-	utils.Success(&c.Controller, "更新成功")
+	c.logOperation("更新管理员", "admin", "PUT", "/admin/users/"+strconv.FormatInt(req.ID, 10), user, 1, "", 0)
+	c.Data["json"] = map[string]interface{}{
+		"code":      0,
+		"msg":       "更新成功",
+		"timestamp": utils.UnixMilli(),
+		"data":      nil,
+	}
+	c.ServeJSON()
 }
 
 // DeleteUser 删除管理员
 func (c *AdminController) DeleteUser() {
-	id, _ := strconv.ParseInt(c.Ctx.Input.Param(":id"), 10, 64)
+	var req struct {
+		ID int64 `json:"id"`
+	}
+
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4001,
+			"msg":       "参数解析失败",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	if req.ID <= 0 {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4001,
+			"msg":       "无效的管理员ID",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
 
 	// 检查用户是否存在
-	_, err := models.GetAdminUserById(id)
+	_, err := models.GetAdminUserById(req.ID)
 	if err != nil {
-		utils.Error(&c.Controller, utils.CodeNotFound, "用户不存在")
+		c.Data["json"] = map[string]interface{}{
+			"code":      4004,
+			"msg":       "用户不存在",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
 		return
 	}
 
-	if err := models.DeleteAdminUser(id); err != nil {
-		utils.Error(&c.Controller, utils.CodeError, "删除失败")
+	if err := models.DeleteAdminUser(req.ID); err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      5001,
+			"msg":       "删除失败",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
 		return
 	}
 
-	c.logOperation("删除管理员", "admin", "DELETE", "/admin/users/"+strconv.FormatInt(id, 10), nil, 1, "", 0)
-	utils.Success(&c.Controller, "删除成功")
+	c.logOperation("删除管理员", "admin", "DELETE", "/admin/users/"+strconv.FormatInt(req.ID, 10), nil, 1, "", 0)
+	c.Data["json"] = map[string]interface{}{
+		"code":      0,
+		"msg":       "删除成功",
+		"timestamp": utils.UnixMilli(),
+		"data":      nil,
+	}
+	c.ServeJSON()
 }
 
 // logOperation 记录操作日志
@@ -344,6 +540,7 @@ type CreateAdminRequest struct {
 	Role     string `json:"role"`
 	Email    string `json:"email"`
 	Phone    string `json:"phone"`
+	RoleName string `json:"roleName"`
 }
 
 // CreateAdmin 创建管理员（对齐云函数createAdmin接口）
@@ -391,16 +588,10 @@ func (c *AdminController) CreateAdmin() {
 		req.Role = "viewer"
 	}
 
-	// 验证角色是否有效
-	validRoles := []string{"super_admin", "admin", "operator", "viewer"}
-	validRole := false
-	for _, role := range validRoles {
-		if req.Role == role {
-			validRole = true
-			break
-		}
-	}
-	if !validRole {
+	// 验证角色是否有效， role表中查询roleCode
+	role := &models.AdminRole{}
+	err := role.GetByRoleCode(req.Role)
+	if err != nil {
 		c.Data["json"] = map[string]interface{}{
 			"code":      4001,
 			"msg":       "无效的角色",
@@ -412,8 +603,8 @@ func (c *AdminController) CreateAdmin() {
 	}
 
 	// 检查用户名是否已存在
-	existUser, _ := models.GetAdminUserByUsername(req.Username)
-	if existUser != nil {
+	_, err = models.GetAdminUserByUsername(req.Username)
+	if err != nil && err != orm.ErrNoRows {
 		c.Data["json"] = map[string]interface{}{
 			"code":      4002,
 			"msg":       "用户名已存在",
@@ -437,7 +628,8 @@ func (c *AdminController) CreateAdmin() {
 	user := &models.AdminUser{
 		Username: req.Username,
 		Password: passwordHash,
-		RealName: req.Nickname,
+		Role:     req.RoleName,
+		Nickname: req.Nickname,
 		Email:    req.Email,
 		Phone:    req.Phone,
 		Status:   1, // 活跃状态
@@ -891,14 +1083,11 @@ func (c *AdminController) GetAdminList() {
 	c.ServeJSON()
 }
 
-// DeleteAdminRequest 删除管理员请求结构
-type DeleteAdminRequest struct {
-	ID int64 `json:"id"`
-}
-
 // DeleteAdminUser 删除管理员（对齐云函数deleteAdmin接口）
 func (c *AdminController) DeleteAdminUser() {
-	var req DeleteAdminRequest
+	var req struct {
+		ID int64 `json:"id"`
+	}
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
 		c.Data["json"] = map[string]interface{}{
 			"code":      4001,
@@ -960,18 +1149,15 @@ func (c *AdminController) DeleteAdminUser() {
 	c.ServeJSON()
 }
 
-// UpdateAdminRequest 更新管理员请求结构
-type UpdateAdminRequest struct {
-	ID       int64  `json:"id"`
-	Email    string `json:"email"`
-	Phone    string `json:"phone"`
-	RealName string `json:"realName"`
-	RoleId   int64  `json:"roleId"`
-}
-
 // UpdateAdminUser 更新管理员信息（对齐云函数updateAdmin接口）
 func (c *AdminController) UpdateAdminUser() {
-	var req UpdateAdminRequest
+	var req struct {
+		ID     int64  `json:"id"`
+		Email  string `json:"email"`
+		Phone  string `json:"phone"`
+		Role   string `json:"role"`
+		RoleId int64  `json:"roleId"`
+	}
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
 		c.Data["json"] = map[string]interface{}{
 			"code":      4001,
@@ -1015,8 +1201,8 @@ func (c *AdminController) UpdateAdminUser() {
 	if req.Phone != "" {
 		updateFields["phone"] = req.Phone
 	}
-	if req.RealName != "" {
-		updateFields["realName"] = req.RealName
+	if req.Role != "" {
+		updateFields["role"] = req.Role
 	}
 	if req.RoleId > 0 {
 		updateFields["roleId"] = req.RoleId
@@ -1053,22 +1239,19 @@ func (c *AdminController) UpdateAdminUser() {
 			"username": updatedUser.Username,
 			"email":    updatedUser.Email,
 			"phone":    updatedUser.Phone,
-			"realName": updatedUser.RealName,
+			"role":     updatedUser.Role,
 			"roleId":   updatedUser.RoleId,
 		},
 	}
 	c.ServeJSON()
 }
 
-// ResetAdminPasswordRequest 重置密码请求结构
-type ResetAdminPasswordRequest struct {
-	ID          int64  `json:"id"`
-	NewPassword string `json:"new_password"`
-}
-
 // ResetAdminPassword 重置管理员密码（对齐云函数resetPassword接口）
 func (c *AdminController) ResetAdminPassword() {
-	var req ResetAdminPasswordRequest
+	var req struct {
+		ID          int64  `json:"id"`
+		NewPassword string `json:"newPassword"`
+	}
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
 		c.Data["json"] = map[string]interface{}{
 			"code":      4001,

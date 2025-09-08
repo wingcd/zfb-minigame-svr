@@ -33,7 +33,7 @@ func main() {
 		adminUsername  = flag.String("username", "", "管理员用户名")
 		newPassword    = flag.String("password", "", "新密码")
 		adminEmail     = flag.String("email", "", "管理员邮箱")
-		adminRealName  = flag.String("realname", "", "管理员真实姓名")
+		nickName       = flag.String("nickName", "", "管理员真实姓名")
 	)
 	flag.Parse()
 
@@ -152,7 +152,7 @@ func main() {
 				user["username"],
 				user["email"],
 				user["phone"],
-				user["realName"],
+				user["role"],
 				status,
 				lastLoginAt,
 				user["lastLoginIp"],
@@ -166,7 +166,7 @@ func main() {
 	if *createAdmin {
 		if *adminUsername == "" || *newPassword == "" {
 			fmt.Println("❌ 创建管理员需要指定用户名和密码")
-			fmt.Println("使用方法: -create-admin -username=用户名 -password=密码 [-email=邮箱] [-realname=真实姓名]")
+			fmt.Println("使用方法: -create-admin -username=用户名 -password=密码 [-email=邮箱] [-nickName=真实姓名]")
 			os.Exit(1)
 		}
 
@@ -178,12 +178,12 @@ func main() {
 			email = *adminUsername + "@example.com"
 		}
 
-		realName := *adminRealName
-		if realName == "" {
-			realName = *adminUsername
+		role := *nickName
+		if role == "" {
+			role = *adminUsername
 		}
 
-		if err := utils.CreateAdminUser(*adminUsername, *newPassword, email, realName); err != nil {
+		if err := utils.CreateAdminUser(*adminUsername, *newPassword, email, role); err != nil {
 			log.Fatalf("创建管理员失败: %v", err)
 		}
 
@@ -191,7 +191,7 @@ func main() {
 		fmt.Printf("   用户名: %s\n", *adminUsername)
 		fmt.Printf("   密码: %s\n", *newPassword)
 		fmt.Printf("   邮箱: %s\n", email)
-		fmt.Printf("   真实姓名: %s\n", realName)
+		fmt.Printf("   真实姓名: %s\n", role)
 		os.Exit(0)
 	}
 

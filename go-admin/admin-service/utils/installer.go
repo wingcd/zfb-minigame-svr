@@ -608,7 +608,8 @@ func getMySQLTables() []string {
 			password VARCHAR(255) NOT NULL,
 			email VARCHAR(100) NOT NULL DEFAULT '',
 			phone VARCHAR(20) NOT NULL DEFAULT '',
-			real_name VARCHAR(50) NOT NULL DEFAULT '',
+			role VARCHAR(50) NOT NULL DEFAULT '',
+			nickname VARCHAR(50) NOT NULL DEFAULT '',
 			avatar VARCHAR(255) NOT NULL DEFAULT '',
 			status INT NOT NULL DEFAULT 1,
 			last_login_at DATETIME NULL,
@@ -646,7 +647,6 @@ func getMySQLTables() []string {
 			description TEXT COMMENT '应用描述',
 			channel_app_id VARCHAR(100) NOT NULL DEFAULT '' COMMENT '渠道应用ID',
 			channel_app_key VARCHAR(100) NOT NULL DEFAULT '' COMMENT '渠道应用密钥',
-			app_secret VARCHAR(100) NOT NULL DEFAULT '' COMMENT '应用密钥',
 			category VARCHAR(50) NOT NULL DEFAULT 'game' COMMENT '应用分类: game/tool/social',
 			platform VARCHAR(50) NOT NULL DEFAULT '' COMMENT '平台: alipay/wechat/baidu',
 			status VARCHAR(20) NOT NULL DEFAULT 'active' COMMENT '状态: active/inactive/pending',
@@ -756,7 +756,8 @@ func getSQLiteTables() []string {
 			password TEXT NOT NULL,
 			email TEXT NOT NULL DEFAULT '',
 			phone TEXT NOT NULL DEFAULT '',
-			real_name TEXT NOT NULL DEFAULT '',
+			role TEXT NOT NULL DEFAULT '',
+			nickname TEXT NOT NULL DEFAULT '',
 			avatar TEXT NOT NULL DEFAULT '',
 			status INTEGER NOT NULL DEFAULT 1,
 			last_login_at DATETIME NULL,
@@ -817,7 +818,6 @@ func getSQLiteTables() []string {
 			description TEXT,
 			channel_app_id TEXT NOT NULL DEFAULT '',
 			channel_app_key TEXT NOT NULL DEFAULT '',
-			app_secret TEXT NOT NULL DEFAULT '',
 			category TEXT NOT NULL DEFAULT 'game',
 			platform TEXT NOT NULL DEFAULT '',
 			status TEXT NOT NULL DEFAULT 'active',
@@ -1051,7 +1051,7 @@ func createDefaultAdminWithParams(db *sql.DB, username, password string) error {
 	// 插入默认管理员
 	now := time.Now()
 	_, err = db.Exec(`
-		INSERT INTO admin_users (created_at, updated_at, username, password, email, phone, real_name, avatar, status, role_id) 
+		INSERT INTO admin_users (created_at, updated_at, username, password, email, phone, role, avatar, status, role_id) 
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		now, now, username, hashedPassword, "admin@example.com", "", "系统管理员", "", 1, 1)
 
@@ -1107,9 +1107,9 @@ func createDefaultAdmin() error {
 	// 插入默认管理员
 	now := time.Now()
 	_, err = db.Exec(`
-		INSERT INTO admin_users (created_at, updated_at, username, password, email, phone, real_name, avatar, status, role_id) 
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		now, now, username, hashedPassword, "admin@example.com", "", "系统管理员", "", 1, 1)
+		INSERT INTO admin_users (created_at, updated_at, username, password, email, phone, role, nickname, avatar, status, role_id) 
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		now, now, username, hashedPassword, "admin@example.com", "", "系统管理员", "系统管理员", "", 1, 1)
 
 	if err != nil {
 		return err
@@ -1221,9 +1221,9 @@ func createAdminWithConfig(config *InstallConfig) error {
 
 	now := time.Now()
 	_, err = db.Exec(`
-		INSERT INTO admin_users (created_at, updated_at, username, password, email, phone, real_name, avatar, status, role_id) 
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		now, now, config.AdminUsername, hashedPassword, config.AdminEmail, "", config.AdminUsername, "", 1, 1)
+		INSERT INTO admin_users (created_at, updated_at, username, password, email, phone, role, nickname, avatar, status, role_id) 
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		now, now, config.AdminUsername, hashedPassword, config.AdminEmail, "", config.AdminUsername, config.AdminUsername, "", 1, 1)
 
 	return err
 }
@@ -1415,7 +1415,7 @@ func ListAdminUsers() ([]map[string]interface{}, error) {
 
 	// 查询管理员用户
 	rows, err := db.Query(`
-		SELECT id, username, email, phone, real_name, status, last_login_at, last_login_ip, role_id, created_at 
+		SELECT id, username, email, phone, role, status, last_login_at, last_login_ip, role_id, created_at 
 		FROM admin_users 
 		ORDER BY created_at DESC
 	`)
@@ -1431,7 +1431,7 @@ func ListAdminUsers() ([]map[string]interface{}, error) {
 			username    string
 			email       string
 			phone       string
-			realName    string
+			role        string
 			status      int
 			lastLoginAt sql.NullTime
 			lastLoginIP string
@@ -1439,7 +1439,7 @@ func ListAdminUsers() ([]map[string]interface{}, error) {
 			createdAt   time.Time
 		)
 
-		err = rows.Scan(&id, &username, &email, &phone, &realName, &status, &lastLoginAt, &lastLoginIP, &roleID, &createdAt)
+		err = rows.Scan(&id, &username, &email, &phone, &role, &status, &lastLoginAt, &lastLoginIP, &roleID, &createdAt)
 		if err != nil {
 			return nil, fmt.Errorf("扫描用户数据失败: %v", err)
 		}
@@ -1449,7 +1449,7 @@ func ListAdminUsers() ([]map[string]interface{}, error) {
 			"username":    username,
 			"email":       email,
 			"phone":       phone,
-			"realName":    realName,
+			"role":        role,
 			"status":      status,
 			"lastLoginIp": lastLoginIP,
 			"roleId":      roleID,
@@ -1494,7 +1494,7 @@ func ChangeAdminPasswordCLI(username, newPassword string) error {
 }
 
 // CreateAdminUser 创建新管理员用户
-func CreateAdminUser(username, password, email, realName string) error {
+func CreateAdminUser(username, password, email, role string) error {
 	log.Printf("开始创建管理员用户: %s", username)
 
 	// 参数验证
@@ -1539,16 +1539,16 @@ func CreateAdminUser(username, password, email, realName string) error {
 	if email == "" {
 		email = username + "@example.com"
 	}
-	if realName == "" {
-		realName = username
+	if role == "" {
+		role = username
 	}
 
 	// 插入新管理员
 	now := time.Now()
 	_, err = db.Exec(`
-		INSERT INTO admin_users (created_at, updated_at, username, password, email, phone, real_name, avatar, status, role_id) 
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		now, now, username, hashedPassword, email, "", realName, "", 1, 1)
+		INSERT INTO admin_users (created_at, updated_at, username, password, email, phone, role, nickname, avatar, status, role_id) 
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		now, now, username, hashedPassword, email, "", role, role, "", 1, 1)
 
 	if err != nil {
 		return fmt.Errorf("创建管理员失败: %v", err)

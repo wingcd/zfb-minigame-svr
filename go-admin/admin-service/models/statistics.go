@@ -1,6 +1,8 @@
 package models
 
 import (
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/beego/beego/v2/client/orm"
@@ -61,12 +63,49 @@ type UserGrowth struct {
 	TotalUsers int64  `json:"totalUsers"`
 }
 
+// PlatformDistribution 平台分布数据
+type PlatformDistribution struct {
+	Platform string `json:"platform"`
+	Name     string `json:"name"`
+	Count    int64  `json:"count"`
+	Value    int64  `json:"value"` // 用于图表显示
+}
+
 // GetDashboardStats 获取仪表板统计数据
 func GetDashboardStats() (*DashboardStats, error) {
+	o := orm.NewOrm()
 	stats := &DashboardStats{}
 
-	// 获取总用户数（这里返回模拟数据，实际应该统计所有应用的用户）
-	stats.TotalUsers = 0
+	// 获取总用户数（统计所有应用的用户）
+	var totalUsers int64 = 0
+
+	// 获取所有激活的应用
+	var apps []Application
+	_, err := o.QueryTable("apps").Filter("status", "active").All(&apps)
+	if err == nil {
+		// 遍历所有应用，统计各应用的用户数据
+		for _, app := range apps {
+			// 清理应用ID，确保表名安全
+			cleanAppId := strings.ReplaceAll(app.AppId, "-", "_")
+			cleanAppId = strings.ReplaceAll(cleanAppId, ".", "_")
+			userTableName := fmt.Sprintf("user_%s", cleanAppId)
+
+			// 检查用户表是否存在
+			exists, err := checkTableExists(userTableName)
+			if err != nil || !exists {
+				continue // 跳过不存在的表
+			}
+
+			// 统计该应用的用户数
+			var appUsers int64
+			sql := fmt.Sprintf("SELECT COUNT(*) FROM %s", userTableName)
+			err = o.Raw(sql).QueryRow(&appUsers)
+			if err == nil {
+				totalUsers += appUsers
+			}
+		}
+	}
+	stats.TotalUsers = totalUsers
 
 	// 获取总应用数
 	totalApps, _ := GetTotalApplications()
@@ -87,20 +126,38 @@ func GetDashboardStats() (*DashboardStats, error) {
 // GetTopApps 获取热门应用
 func GetTopApps(limit int) ([]TopApp, error) {
 	o := orm.NewOrm()
-	var apps []TopApp
+	var apps []Application
 
-	// 这里应该根据实际业务逻辑统计热门应用
-	// 目前返回应用列表作为示例
-	sql := `
-		SELECT app_id as appId, app_name, 0 as user_count, 0 as access_count 
-		FROM apps 
-		WHERE status = 'active' 
-		ORDER BY created_at DESC 
-		LIMIT ?
-	`
-	_, err := o.Raw(sql, limit).QueryRows(&apps)
+	// 获取所有激活的应用
+	_, err := o.QueryTable("apps").Filter("status", "active").OrderBy("-created_at").Limit(limit).All(&apps)
+	if err != nil {
+		return nil, err
+	}
 
-	return apps, err
+	var topApps []TopApp
+	for _, app := range apps {
+		// 清理应用ID，确保表名安全
+		cleanAppId := strings.ReplaceAll(app.AppId, "-", "_")
+		cleanAppId = strings.ReplaceAll(cleanAppId, ".", "_")
+		userTableName := fmt.Sprintf("user_%s", cleanAppId)
+
+		// 统计该应用的用户数
+		var userCount int64 = 0
+		exists, err := checkTableExists(userTableName)
+		if err == nil && exists {
+			sql := fmt.Sprintf("SELECT COUNT(*) FROM %s", userTableName)
+			o.Raw(sql).QueryRow(&userCount)
+		}
+
+		topApps = append(topApps, TopApp{
+			AppId:       app.AppId,
+			AppName:     app.AppName,
+			UserCount:   userCount,
+			AccessCount: 0, // 访问次数暂时设为0，如果需要可以后续添加统计
+		})
+	}
+
+	return topApps, nil
 }
 
 // GetRecentActivity 获取最近活动
@@ -154,18 +211,115 @@ func GetDataTrends(appId, trendType string, days int) ([]DataTrend, error) {
 
 // GetUserGrowth 获取用户增长数据
 func GetUserGrowth(appId string, days int) ([]UserGrowth, error) {
+	o := orm.NewOrm()
 	var growth []UserGrowth
 
+	// 获取所有激活的应用
+	var apps []Application
+	_, err := o.QueryTable("apps").Filter("status", "active").All(&apps)
+	if err != nil {
+		return growth, err
+	}
+
+	// 根据时间范围生成数据
 	for i := days - 1; i >= 0; i-- {
-		date := time.Now().AddDate(0, 0, -i).Format("2006-01-02")
+		date := time.Now().AddDate(0, 0, -i)
+		dateStr := date.Format("2006-01-02")
+
+		var newUsers int64 = 0
+		var totalUsers int64 = 0
+
+		// 遍历所有应用，统计各应用的用户数据
+		for _, app := range apps {
+			// 清理应用ID，确保表名安全
+			cleanAppId := strings.ReplaceAll(app.AppId, "-", "_")
+			cleanAppId = strings.ReplaceAll(cleanAppId, ".", "_")
+			userTableName := fmt.Sprintf("user_%s", cleanAppId)
+
+			// 检查用户表是否存在
+			exists, err := checkTableExists(userTableName)
+			if err != nil || !exists {
+				continue // 跳过不存在的表
+			}
+
+			// 统计当日新增用户数
+			var dailyNew int64
+			sql := fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE DATE(created_at) = ?", userTableName)
+			err = o.Raw(sql, dateStr).QueryRow(&dailyNew)
+			if err == nil {
+				newUsers += dailyNew
+			}
+
+			// 统计累计用户数（截至当日）
+			var dailyTotal int64
+			sql = fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE DATE(created_at) <= ?", userTableName)
+			err = o.Raw(sql, dateStr).QueryRow(&dailyTotal)
+			if err == nil {
+				totalUsers += dailyTotal
+			}
+		}
+
 		growth = append(growth, UserGrowth{
-			Date:       date,
-			NewUsers:   0,
-			TotalUsers: 0,
+			Date:       dateStr,
+			NewUsers:   newUsers,
+			TotalUsers: totalUsers,
 		})
 	}
 
 	return growth, nil
+}
+
+// GetPlatformDistribution 获取平台分布统计
+func GetPlatformDistribution() ([]PlatformDistribution, error) {
+	o := orm.NewOrm()
+	var distribution []PlatformDistribution
+
+	sql := `
+		SELECT 
+			platform,
+			COUNT(*) as count
+		FROM apps 
+		WHERE status = 'active' AND platform != ''
+		GROUP BY platform
+		ORDER BY count DESC
+	`
+
+	type platformResult struct {
+		Platform string `json:"platform"`
+		Count    int64  `json:"count"`
+	}
+
+	var results []platformResult
+	_, err := o.Raw(sql).QueryRows(&results)
+	if err != nil {
+		return distribution, err
+	}
+
+	// 转换为前端需要的格式，添加中文名称
+	platformNames := map[string]string{
+		"wechat":  "微信小程序",
+		"alipay":  "支付宝小程序",
+		"douyin":  "抖音小程序",
+		"baidu":   "百度小程序",
+		"ios":     "iOS应用",
+		"android": "Android应用",
+	}
+
+	for _, result := range results {
+		name := platformNames[result.Platform]
+		if name == "" {
+			name = result.Platform // 如果没有匹配的中文名，使用原始值
+		}
+
+		distribution = append(distribution, PlatformDistribution{
+			Platform: result.Platform,
+			Name:     name,
+			Count:    result.Count,
+			Value:    result.Count, // ECharts需要value字段
+		})
+	}
+
+	return distribution, nil
 }
 
 // ExportData 导出数据

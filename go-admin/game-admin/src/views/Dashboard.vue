@@ -155,7 +155,7 @@
                   :timestamp="activity.timestamp"
                   :type="getActivityType(activity.type)">
                   <div class="activity-content">
-                    <div class="activity-title">{{ activity.title }}</div>
+                    <div class="activity-title">{{ activity.action }}</div>
                     <div class="activity-desc">{{ activity.description }}</div>
                   </div>
                 </el-timeline-item>
@@ -329,6 +329,106 @@ export default {
       await nextTick()
       userTrendChartInstance = echarts.init(userTrendChart.value)
       
+      // 获取真实的用户增长数据
+      await loadUserGrowthData()
+    }
+    
+    // 加载用户增长数据
+    const loadUserGrowthData = async () => {
+      try {
+        const days = timeRange.value === 'today' ? 1 : (timeRange.value === 'week' ? 7 : 30)
+        const result = await statsAPI.userGrowth({ days })
+        
+        console.log('用户增长API返回数据:', result.data)
+        console.log('用户增长API返回数据详细:', JSON.stringify(result.data, null, 2))
+        
+        // 检查返回数据的结构
+        let growthData = null
+        if (Array.isArray(result.data)) {
+          // 直接返回数组的情况
+          growthData = result.data
+          console.log('API直接返回数组数据')
+        } else if (result.data && result.data.code === 0 && Array.isArray(result.data.data)) {
+          // 返回包含code和data字段的对象的情况
+          growthData = result.data.data
+          console.log('API返回标准格式数据')
+        }
+        
+        if (growthData && Array.isArray(growthData) && growthData.length > 0) {
+          console.log('处理前的用户增长数据:', growthData)
+          
+          const dates = growthData.map(item => {
+            const date = new Date(item.date)
+            return `${date.getMonth() + 1}/${date.getDate()}`
+          })
+          const values = growthData.map(item => item.totalUsers)
+          
+          console.log('处理后的日期数据:', dates)
+          console.log('处理后的用户数据:', values)
+          
+          const option = {
+            title: {
+              text: '用户增长趋势',
+              textStyle: { fontSize: 14 }
+            },
+            tooltip: {
+              trigger: 'axis',
+              formatter: function(params) {
+                const data = params[0]
+                const originalData = growthData[data.dataIndex]
+                return `${data.axisValueLabel}<br/>
+                        累计用户: ${originalData.totalUsers}<br/>
+                        新增用户: ${originalData.newUsers}`
+              }
+            },
+            xAxis: {
+              type: 'category',
+              data: dates
+            },
+            yAxis: {
+              type: 'value',
+              name: '用户数'
+            },
+            series: [{
+              name: '累计用户',
+              data: values,
+              type: 'line',
+              smooth: true,
+              itemStyle: {
+                color: '#409eff'
+              },
+              areaStyle: {
+                color: {
+                  type: 'linear',
+                  x: 0, y: 0, x2: 0, y2: 1,
+                  colorStops: [{
+                    offset: 0, color: 'rgba(64, 158, 255, 0.3)'
+                  }, {
+                    offset: 1, color: 'rgba(64, 158, 255, 0.1)'
+                  }]
+                }
+              }
+            }]
+          }
+          
+          console.log('使用真实数据渲染用户增长图表')
+          userTrendChartInstance?.setOption(option)
+        } else {
+          // 如果获取数据失败，使用默认数据
+          console.log('API数据无效，使用默认数据')
+          console.log('growthData:', growthData)
+          console.log('Array.isArray(result.data):', Array.isArray(result.data))
+          console.log('result.data长度:', Array.isArray(result.data) ? result.data.length : 'N/A')
+          loadDefaultUserTrendChart()
+        }
+      } catch (error) {
+        console.error('获取用户增长数据失败:', error)
+        loadDefaultUserTrendChart()
+      }
+    }
+    
+    // 加载默认用户趋势图表
+    const loadDefaultUserTrendChart = () => {
       const option = {
         title: {
           text: '用户增长趋势',
@@ -354,32 +454,152 @@ export default {
         }]
       }
       
-      userTrendChartInstance.setOption(option)
+      userTrendChartInstance?.setOption(option)
     }
     
     // 初始化平台分布图表
     const initPlatformChart = async () => {
-      if (!platformChart.value) return
+      if (!platformChart.value) {
+        console.error('平台分布图表DOM元素未找到')
+        return
+      }
       
+      console.log('开始初始化平台分布图表...')
       await nextTick()
       platformChartInstance = echarts.init(platformChart.value)
+      console.log('平台分布图表实例已创建:', platformChartInstance)
       
+      // 获取真实的平台分布数据
+      await loadPlatformDistributionData()
+    }
+    
+    // 加载平台分布数据
+    const loadPlatformDistributionData = async () => {
+      try {
+        const result = await statsAPI.getPlatformDistribution({})
+        console.log('平台分布API返回数据:', result.data)
+        console.log('平台分布API返回数据详细:', JSON.stringify(result.data, null, 2))
+        
+        console.log('检查result结构:', {
+          hasData: !!result.data,
+          dataType: typeof result.data,
+          isArray: Array.isArray(result.data),
+          hasCode: result.data && 'code' in result.data,
+          code: result.data && result.data.code,
+          hasNestedData: result.data && result.data.data,
+          nestedDataType: result.data && typeof result.data.data,
+          nestedDataLength: result.data && result.data.data && result.data.data.length
+        })
+        
+        // 处理可能的数据结构
+        let distributionData = null
+        if (result.data && result.data.code === 0 && result.data.data && result.data.data.length > 0) {
+          distributionData = result.data.data
+        } else if (Array.isArray(result.data) && result.data.length > 0) {
+          distributionData = result.data
+        }
+        
+        console.log('最终使用的distributionData:', distributionData)
+        
+        if (distributionData && distributionData.length > 0) {
+          
+          // 为不同平台设置不同的颜色
+          const platformColors = {
+            'wechat': '#1AAD19',   // 微信绿
+            'alipay': '#1677FF',   // 支付宝蓝
+            'douyin': '#FE2C55',   // 抖音红
+            'baidu': '#2932E1',    // 百度蓝
+            'ios': '#007AFF',      // iOS蓝
+            'android': '#3DDC84'   // Android绿
+          }
+          
+          const chartData = distributionData.map((item, index) => ({
+            value: item.value,
+            name: item.name,
+            itemStyle: {
+              color: platformColors[item.platform] || `hsl(${index * 60}, 70%, 50%)`
+            }
+          }))
+          
+          console.log('处理后的图表数据:', chartData)
+          console.log('处理后的图表数据详细:', JSON.stringify(chartData, null, 2))
+          
+          const option = {
+            title: {
+              text: '平台分布',
+              textStyle: { fontSize: 14 }
+            },
+            tooltip: {
+              trigger: 'item',
+              formatter: '{a} <br/>{b}: {c} ({d}%)'
+            },
+            legend: {
+              orient: 'horizontal',
+              bottom: '10px',
+              left: 'center',
+              itemGap: 20,
+              textStyle: {
+                fontSize: 12
+              },
+              data: distributionData.map(item => item.name)
+            },
+            series: [{
+              name: '平台分布',
+              type: 'pie',
+              radius: ['35%', '60%'],
+              center: ['50%', '45%'],
+              avoidLabelOverlap: false,
+              data: chartData,
+              emphasis: {
+                itemStyle: {
+                  shadowBlur: 10,
+                  shadowOffsetX: 0,
+                  shadowColor: 'rgba(0, 0, 0, 0.5)'
+                }
+              },
+              label: {
+                show: false,
+                position: 'center'
+              },
+              labelLine: {
+                show: false
+              }
+            }]
+          }
+          
+          console.log('ECharts配置选项:', option)
+          platformChartInstance?.setOption(option)
+          console.log('图表实例状态:', platformChartInstance ? '已初始化' : '未初始化')
+        } else {
+          // 如果获取数据失败，使用默认数据
+          loadDefaultPlatformChart()
+        }
+      } catch (error) {
+        console.error('获取平台分布数据失败:', error)
+        loadDefaultPlatformChart()
+      }
+    }
+    
+    // 加载默认平台分布图表
+    const loadDefaultPlatformChart = () => {
       const option = {
         title: {
           text: '平台分布',
           textStyle: { fontSize: 14 }
         },
         tooltip: {
-          trigger: 'item'
+          trigger: 'item',
+          formatter: '{a} <br/>{b}: {c} ({d}%)'
         },
         series: [{
+          name: '平台分布',
           type: 'pie',
           radius: '50%',
           data: [
-            { value: 40, name: '微信小程序' },
-            { value: 30, name: '支付宝小程序' },
-            { value: 20, name: '抖音小程序' },
-            { value: 10, name: '其他' }
+            { value: 40, name: '微信小程序', itemStyle: { color: '#1AAD19' } },
+            { value: 30, name: '支付宝小程序', itemStyle: { color: '#1677FF' } },
+            { value: 20, name: '抖音小程序', itemStyle: { color: '#FE2C55' } },
+            { value: 10, name: '其他', itemStyle: { color: '#909399' } }
           ],
           emphasis: {
             itemStyle: {
@@ -391,7 +611,7 @@ export default {
         }]
       }
       
-      platformChartInstance.setOption(option)
+      platformChartInstance?.setOption(option)
     }
     
     // 工具函数
@@ -436,8 +656,13 @@ export default {
     }
     
     // 事件处理
-    const handleTimeRangeChange = () => {
-      refreshData()
+    const handleTimeRangeChange = async () => {
+      await refreshData()
+      // 时间范围变化时也要重新加载图表数据
+      if (userTrendChartInstance) {
+        await loadUserGrowthData()
+      }
+      // 平台分布不随时间变化，不需要重新加载
     }
     
     const refreshData = async () => {
@@ -453,18 +678,19 @@ export default {
       }
     }
     
-    const refreshUserTrend = () => {
+    const refreshUserTrend = async () => {
       // 刷新用户趋势图表数据
       if (userTrendChartInstance) {
-        // 这里可以重新获取数据并更新图表
-        console.log('刷新用户趋势图表')
+        await loadUserGrowthData()
+        ElMessage.success('用户增长趋势数据已刷新')
       }
     }
     
-    const refreshPlatformStats = () => {
+    const refreshPlatformStats = async () => {
       // 刷新平台统计图表数据
       if (platformChartInstance) {
-        console.log('刷新平台统计图表')
+        await loadPlatformDistributionData()
+        ElMessage.success('平台分布数据已刷新')
       }
     }
     
@@ -535,7 +761,9 @@ export default {
       goToUserManagement,
       goToLeaderboardManagement,
       viewAppDetail,
-      exportData
+      exportData,
+      loadUserGrowthData,
+      loadPlatformDistributionData
     }
   }
 }

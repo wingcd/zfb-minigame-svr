@@ -102,7 +102,6 @@ func init() {
 	web.Router("/app/create", &controllers.ApplicationController{}, "post:CreateApplication")
 	web.Router("/app/update", &controllers.ApplicationController{}, "post:UpdateApplication")
 	web.Router("/app/delete", &controllers.ApplicationController{}, "post:DeleteApplication")
-	web.Router("/app/resetSecret", &controllers.ApplicationController{}, "post:ResetAppSecret")
 	web.Router("/app/init", &controllers.ApplicationController{}, "post:CreateApplication")
 	web.Router("/app/query", &controllers.ApplicationController{}, "post:GetApplication")
 	web.Router("/app/getDetail", &controllers.ApplicationController{}, "post:GetApplication")
@@ -136,6 +135,7 @@ func init() {
 	web.Router("/stat/getUserGrowth", &controllers.StatsController{}, "post:GetUserGrowth")
 	web.Router("/stat/getAppStats", &controllers.StatsController{}, "post:GetAppStats")
 	web.Router("/stat/getLeaderboardStats", &controllers.StatsController{}, "post:GetLeaderboardStats")
+	web.Router("/stat/getPlatformDistribution", &controllers.StatsController{}, "post:GetPlatformDistribution")
 	// 邮件管理模块
 	web.Router("/mail/getAll", &controllers.MailController{}, "post:GetAllMails")
 	web.Router("/mail/create", &controllers.MailController{}, "post:CreateMail")
@@ -181,7 +181,6 @@ func init() {
 		web.NSRouter("/applications/:id", &controllers.ApplicationController{}, "get:GetApplication"),
 		web.NSRouter("/applications/:id", &controllers.ApplicationController{}, "put:UpdateApplication"),
 		web.NSRouter("/applications/:id", &controllers.ApplicationController{}, "delete:DeleteApplication"),
-		web.NSRouter("/applications/:id/reset-secret", &controllers.ApplicationController{}, "post:ResetAppSecret"),
 
 		// 游戏数据管理
 		web.NSRouter("/game-data/user-data", &controllers.GameDataController{}, "get:GetUserDataList"),

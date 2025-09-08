@@ -1,5 +1,7 @@
 import { authAPI } from '../services/api.js'
 
+var adminInfo = null
+
 // 获取token
 export function getToken() {
   return localStorage.getItem('admin_token')
@@ -14,17 +16,23 @@ export function setToken(token) {
 export function removeToken() {
   localStorage.removeItem('admin_token')
   localStorage.removeItem('admin_info')
+  adminInfo = null // 清理缓存
 }
 
 // 获取管理员信息
 export function getAdminInfo() {
-  const adminInfo = localStorage.getItem('admin_info')
-  return adminInfo ? JSON.parse(adminInfo) : null
+  if(adminInfo) {
+    return adminInfo
+  }
+  const adminInfoStr = localStorage.getItem('admin_info')
+  adminInfo = adminInfoStr ? JSON.parse(adminInfoStr) : null
+  return adminInfo
 }
 
 // 设置管理员信息
-export function setAdminInfo(adminInfo) {
-  localStorage.setItem('admin_info', JSON.stringify(adminInfo))
+export function setAdminInfo(info) {
+  adminInfo = info
+  localStorage.setItem('admin_info', JSON.stringify(info))
 }
 
 // 检查是否已登录
@@ -153,13 +161,14 @@ export function logout() {
   window.location.href = '/login'
 }
 
-// 权限常量
+// 权限常量（与后端保持一致）
 export const PERMISSIONS = {
   ADMIN_MANAGE: 'admin_manage',        // 管理员管理
   ROLE_MANAGE: 'role_manage',          // 角色管理
   APP_MANAGE: 'app_manage',            // 应用管理
   USER_MANAGE: 'user_manage',          // 用户管理
   LEADERBOARD_MANAGE: 'leaderboard_manage', // 排行榜管理
+  COUNTER_MANAGE: 'counter_manage',    // 计数器管理
   MAIL_MANAGE: 'mail_manage',          // 邮件管理
   STATS_VIEW: 'stats_view',            // 统计查看
   SYSTEM_CONFIG: 'system_config'       // 系统配置

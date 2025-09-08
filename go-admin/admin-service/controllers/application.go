@@ -52,12 +52,38 @@ func (c *ApplicationController) GetApplications() {
 		return
 	}
 
+	// 创建安全的应用列表响应，排除敏感字段
+	safeAppList := make([]map[string]interface{}, len(applications))
+	for i, app := range applications {
+		safeAppList[i] = map[string]interface{}{
+			"id":           app.ID,
+			"appId":        app.AppId,
+			"appName":      app.AppName,
+			"description":  app.Description,
+			"channelAppId": app.ChannelAppId,
+			// ChannelAppKey 敏感信息，不返回给客户端
+			"category":      app.Category,
+			"platform":      app.Platform,
+			"status":        app.Status,
+			"version":       app.Version,
+			"minVersion":    app.MinVersion,
+			"settings":      app.Settings,
+			"userCount":     app.UserCount,
+			"scoreCount":    app.ScoreCount,
+			"dailyActive":   app.DailyActive,
+			"monthlyActive": app.MonthlyActive,
+			"createdBy":     app.CreatedBy,
+			"createdAt":     app.CreatedAt,
+			"updatedAt":     app.UpdatedAt,
+		}
+	}
+
 	c.Data["json"] = map[string]interface{}{
 		"code":      0,
 		"msg":       "获取成功",
 		"timestamp": utils.UnixMilli(),
 		"data": map[string]interface{}{
-			"list":     applications,
+			"list":     safeAppList,
 			"total":    total,
 			"page":     req.Page,
 			"pageSize": req.PageSize,
@@ -103,8 +129,8 @@ func (c *ApplicationController) CreateApplication() {
 	application := &models.Application{
 		AppName:       req.AppName,
 		Platform:      req.Platform,
-		ChannelAppKey: req.ChannelAppId,
-		AppSecret:     req.ChannelAppKey,
+		ChannelAppId:  req.ChannelAppId,
+		ChannelAppKey: req.ChannelAppKey,
 		Description:   req.Description,
 		Status:        "active", // 默认状态为活跃
 	}
@@ -182,11 +208,34 @@ func (c *ApplicationController) GetApplication() {
 		return
 	}
 
+	// 创建安全的响应数据，排除敏感字段
+	safeAppData := map[string]interface{}{
+		"id":           application.ID,
+		"appId":        application.AppId,
+		"appName":      application.AppName,
+		"description":  application.Description,
+		"channelAppId": application.ChannelAppId,
+		// ChannelAppKey 敏感信息，不返回给客户端
+		"category":      application.Category,
+		"platform":      application.Platform,
+		"status":        application.Status,
+		"version":       application.Version,
+		"minVersion":    application.MinVersion,
+		"settings":      application.Settings,
+		"userCount":     application.UserCount,
+		"scoreCount":    application.ScoreCount,
+		"dailyActive":   application.DailyActive,
+		"monthlyActive": application.MonthlyActive,
+		"createdBy":     application.CreatedBy,
+		"createdAt":     application.CreatedAt,
+		"updatedAt":     application.UpdatedAt,
+	}
+
 	c.Data["json"] = map[string]interface{}{
 		"code":      0,
 		"msg":       "获取成功",
 		"timestamp": utils.UnixMilli(),
-		"data":      application,
+		"data":      safeAppData,
 	}
 	c.ServeJSON()
 }
@@ -405,63 +454,4 @@ func (c *ApplicationController) isSuperAdmin(roleID int64) (bool, error) {
 		return false, err
 	}
 	return role.RoleCode == "super_admin", nil
-}
-
-// ResetAppSecret 重置应用密钥（对齐云函数resetAppSecret接口）
-func (c *ApplicationController) ResetAppSecret() {
-	var req struct {
-		AppId string `json:"appId"`
-	}
-
-	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
-		c.Data["json"] = map[string]interface{}{
-			"code":      4001,
-			"msg":       "参数解析失败",
-			"timestamp": utils.UnixMilli(),
-			"data":      nil,
-		}
-		c.ServeJSON()
-		return
-	}
-
-	if req.AppId == "" {
-		c.Data["json"] = map[string]interface{}{
-			"code":      4001,
-			"msg":       "应用ID不能为空",
-			"timestamp": utils.UnixMilli(),
-			"data":      nil,
-		}
-		c.ServeJSON()
-		return
-	}
-
-	// 获取应用信息
-	application := &models.Application{}
-	err := application.GetByAppId(req.AppId)
-	if err != nil {
-		c.Data["json"] = map[string]interface{}{
-			"code":      4004,
-			"msg":       "应用不存在",
-			"timestamp": utils.UnixMilli(),
-			"data":      nil,
-		}
-		c.ServeJSON()
-		return
-	}
-
-	// 记录操作日志
-	models.LogAdminOperation(0, "SYSTEM", "RESET_SECRET", "APP", map[string]interface{}{
-		"appId":   req.AppId,
-		"appName": application.AppName,
-	})
-
-	c.Data["json"] = map[string]interface{}{
-		"code":      0,
-		"msg":       "重置成功",
-		"timestamp": utils.UnixMilli(),
-		"data": map[string]interface{}{
-			"appSecret": application.AppSecret,
-		},
-	}
-	c.ServeJSON()
 }

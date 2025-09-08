@@ -22,6 +22,8 @@
             <el-option label="微信小程序" value="wechat"></el-option>
             <el-option label="支付宝小程序" value="alipay"></el-option>
             <el-option label="抖音小程序" value="douyin"></el-option>
+            <el-option label="iOS应用" value="ios"></el-option>
+            <el-option label="Android应用" value="android"></el-option>
           </el-select>
         </el-form-item>
         <el-form-item>
@@ -156,6 +158,8 @@
             <el-option label="微信小程序" value="wechat"></el-option>
             <el-option label="支付宝小程序" value="alipay"></el-option>
             <el-option label="抖音小程序" value="douyin"></el-option>
+            <el-option label="iOS应用" value="ios"></el-option>
+            <el-option label="Android应用" value="android"></el-option>
           </el-select>
         </el-form-item>
         <el-form-item label="渠道应用ID" prop="channelAppId">
@@ -315,13 +319,8 @@ export default {
       ],
       platform: [
         { required: true, message: '请选择平台', trigger: 'change' }
-      ],
-      channelAppId: [
-        { required: true, message: '请输入渠道应用ID', trigger: 'blur' }
-      ],
-      channelAppKey: [
-        { required: true, message: '请输入渠道应用密钥', trigger: 'blur' }
       ]
+      // channelAppId 和 channelAppKey 为可选字段，不设置验证规则
     }
     
     // 获取应用列表

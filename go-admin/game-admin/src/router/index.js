@@ -74,7 +74,7 @@ const routes = [
       title: '计数器管理',
       requiresAuth: true,
       icon: 'Timer',
-      permissions: ['leaderboard_manage'],
+      permissions: ['counter_manage'],
       group: 'game',
       groupTitle: '游戏管理',
       groupIcon: 'Grid'
@@ -215,10 +215,52 @@ router.beforeEach(async (to, from, next) => {
 
     // 检查权限（如果路由定义了权限要求）
     if (to.meta.permissions) {
-      const { hasAnyPermission } = await import('../utils/auth.js')
+      const { hasAnyPermission, getAdminInfo } = await import('../utils/auth.js')
+      
+      // 先检查管理员信息是否存在
+      const adminInfo = getAdminInfo()
+      if (!adminInfo) {
+        console.warn('管理员信息不存在，重新登录')
+        ElMessage.warning('登录信息异常，请重新登录')
+        next('/login')
+        return
+      }
+      
+      // 临时调试信息
+      console.log('当前用户信息:', adminInfo)
+      console.log('需要的权限:', to.meta.permissions)
+      console.log('用户权限:', adminInfo.permissions)
+      console.log('用户角色:', adminInfo.role)
+      
+      // 超级管理员跳过权限检查
+      if (adminInfo.role === 'super_admin') {
+        console.log('超级管理员，跳过权限检查')
+        next()
+        return
+      }
+      
       if (!hasAnyPermission(to.meta.permissions)) {
-        ElMessage.error('权限不足，无法访问该页面')
-        next('/')
+        // 防止无限重定向：记录重定向次数
+        const redirectCount = (to.query._redirectCount ? parseInt(to.query._redirectCount) : 0) + 1
+        
+        if (redirectCount > 2) {
+          // 重定向次数过多，可能是权限配置问题
+          ElMessage.error('权限配置异常，请联系管理员')
+          console.error('权限检查失败，用户信息:', adminInfo, '需要权限:', to.meta.permissions)
+          next('/login')
+          return
+        }
+        
+        ElMessage.error(`权限不足，无法访问该页面。需要权限: ${to.meta.permissions.join(', ')}`)
+        
+        if (to.path !== '/') {
+          // 重定向到首页，并携带重定向计数
+          next({ path: '/', query: { _redirectCount: redirectCount.toString() } })
+        } else {
+          // 如果已经在首页还没权限，说明权限配置有问题
+          ElMessage.error('没有可访问的页面，请联系管理员')
+          next('/login')
+        }
         return
       }
     }

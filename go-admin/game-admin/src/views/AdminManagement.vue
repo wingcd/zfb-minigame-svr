@@ -26,6 +26,7 @@
           <el-select 
             v-model="searchForm.role" 
             placeholder="请选择角色"
+            style="width: 150px"
             clearable
           >
             <el-option 
@@ -40,6 +41,7 @@
           <el-select 
             v-model="searchForm.status" 
             placeholder="请选择状态"
+            style="width: 150px"
             clearable
           >
             <el-option label="启用" :value="1" />
@@ -65,7 +67,7 @@
         <el-table-column label="角色" width="120">
           <template #default="{ row }">
             <el-tag :type="getRoleTagType(row.role)">
-              {{ row.roleInfo?.roleName || row.role }}
+              {{ row.role }}
             </el-tag>
           </template>
         </el-table-column>
@@ -78,8 +80,8 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="lastLoginTime" label="最后登录" width="160" />
-        <el-table-column prop="createTime" label="创建时间" width="160" />
+        <el-table-column prop="lastLoginAt" label="最后登录" width="160" />
+        <el-table-column prop="createdAt" label="创建时间" width="160" />
         <el-table-column 
           label="操作" 
           width="180"
@@ -142,7 +144,7 @@
         <el-form-item label="用户名" prop="username">
           <el-input 
             v-model="adminForm.username" 
-            :disabled="editingAdmin"
+            :disabled="!!editingAdmin"
             placeholder="请输入用户名"
           />
         </el-form-item>
@@ -375,11 +377,14 @@ const handleSubmit = async () => {
     let response
     if (editingAdmin.value) {
       response = await adminAPI.update({
-        id: editingAdmin.value._id,
+        id: editingAdmin.value.id,
         ...adminForm
       })
     } else {
-      response = await adminAPI.create(adminForm)
+      response = await adminAPI.create({
+        ...adminForm,
+        roleName: roleOptions.value.find(role => role.roleCode === adminForm.role)?.roleName
+      })
     }
     
     if (response.code === 0) {
@@ -412,7 +417,7 @@ const handleResetPassword = async (admin) => {
     )
     
     const response = await adminAPI.resetPassword({
-      id: admin._id,
+      id: admin.id,
       newPassword
     })
     
@@ -442,7 +447,9 @@ const handleDelete = async (admin) => {
       }
     )
     
-    const response = await adminAPI.delete(admin._id)
+    const response = await adminAPI.delete({
+      id: admin.id
+    })
     
     if (response.code === 0) {
       ElMessage.success('删除成功')
@@ -466,7 +473,7 @@ const getRoleTagType = (role) => {
     'operator': 'primary',
     'viewer': 'info'
   }
-  return typeMap[role] || 'default'
+  return typeMap[role] || 'info'
 }
 
 onMounted(() => {
