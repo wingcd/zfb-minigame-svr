@@ -45,12 +45,18 @@ func (c *MailController) InitMailSystem() {
 		return
 	}
 
-	// 创建邮件表
-	err := createMailTable(requestData.AppId, requestData.Force)
-	if err != nil {
+	// 邮件表已在应用创建时创建，这里只需要验证表是否存在
+	mail := &models.MailSystem{}
+	tableName := mail.GetTableName(requestData.AppId)
+
+	// 检查邮件表是否存在
+	o := orm.NewOrm()
+	var count int64
+	err := o.Raw("SELECT COUNT(*) FROM information_schema.tables WHERE table_name = ? AND table_schema = DATABASE()", tableName).QueryRow(&count)
+	if err != nil || count == 0 {
 		c.Data["json"] = map[string]interface{}{
 			"code":      5001,
-			"msg":       "邮件系统初始化失败: " + err.Error(),
+			"msg":       "邮件表不存在，请先创建应用",
 			"timestamp": utils.UnixMilli(),
 			"data":      nil,
 		}
@@ -175,13 +181,16 @@ func (c *MailController) CreateMail() {
 			Type:       "system",
 			TargetType: "all",
 			Status:     "draft",
+			CreatedBy:  "admin", // 默认创建者为admin
 		}
 
 		if requestData.ExpireDays > 0 {
-			systemMail.ExpireTime = time.Now().AddDate(0, 0, requestData.ExpireDays)
+			expireTime := time.Now().AddDate(0, 0, requestData.ExpireDays)
+			systemMail.ExpireTime = &expireTime
 		}
 
 		if err := models.CreateSystemMail(systemMail); err != nil {
+			fmt.Printf("DEBUG: CreateSystemMail failed: %v\n", err)
 			c.Data["json"] = map[string]interface{}{
 				"code":      5001,
 				"msg":       "创建系统邮件失败",
@@ -193,7 +202,8 @@ func (c *MailController) CreateMail() {
 		}
 
 		// 发布邮件给所有用户
-		if err := models.PublishSystemMail(systemMail.MailId, requestData.AppId); err != nil {
+		if err := models.PublishSystemMail(systemMail.ID, requestData.AppId); err != nil {
+			fmt.Printf("DEBUG: PublishSystemMail failed: %v\n", err)
 			c.Data["json"] = map[string]interface{}{
 				"code":      5002,
 				"msg":       "发布邮件失败",
@@ -280,11 +290,13 @@ func (c *MailController) UpdateMail() {
 		Status:     requestData.Status,
 		TargetType: requestData.TargetType,
 		Type:       "system", // 目前只支持系统邮件更新
+		CreatedBy:  "admin",  // 默认创建者为admin
 	}
 
 	// 设置过期时间
 	if requestData.ExpireDays > 0 {
-		mail.ExpireTime = time.Now().AddDate(0, 0, requestData.ExpireDays)
+		expireTime := time.Now().AddDate(0, 0, requestData.ExpireDays)
+		mail.ExpireTime = &expireTime
 	}
 
 	if err := models.UpdateSystemMail(mail); err != nil {
@@ -338,13 +350,28 @@ func (c *MailController) DeleteMail() {
 		return
 	}
 
-	var err error
-	if requestData.Type == "system" {
-		// 删除系统邮件
-		err = models.DeleteSystemMail(requestData.AppId, requestData.MailId)
-	} else {
-		// 删除个人邮件（删除用户邮件关系记录）
-		err = models.DeletePersonalMail(requestData.AppId, requestData.MailId)
+	var err = models.DeleteSystemMail(requestData.AppId, requestData.MailId)
+	if err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      5001,
+			"msg":       "删除邮件失败: " + err.Error(),
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	err = models.DeletePersonalMail(requestData.AppId, requestData.MailId)
+	if err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      5001,
+			"msg":       "删除邮件失败: " + err.Error(),
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
 	}
 
 	if err != nil {
@@ -420,6 +447,7 @@ func (c *MailController) GetMailStats() {
 	}
 
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &requestData); err != nil {
+		fmt.Println("参数错误", err)
 		c.Data["json"] = map[string]interface{}{
 			"code":      4001,
 			"msg":       "参数错误",
@@ -432,6 +460,7 @@ func (c *MailController) GetMailStats() {
 
 	stats, err := models.GetMailStats(requestData.AppId)
 	if err != nil {
+		fmt.Println("获取邮件统计失败", err)
 		c.Data["json"] = map[string]interface{}{
 			"code":      5001,
 			"msg":       "获取邮件统计失败",
@@ -567,7 +596,7 @@ func (c *MailController) SendBroadcastMail() {
 		return
 	}
 
-	if err := models.SendBroadcastMail(requestData.AppId, requestData.Title, requestData.Content, requestData.Attachments); err != nil {
+	if err := models.SendBroadcastMail(requestData.AppId, requestData.Title, requestData.Content, requestData.Attachments, 7); err != nil {
 		c.Data["json"] = map[string]interface{}{
 			"code":      5001,
 			"msg":       "发送广播邮件失败",
@@ -585,65 +614,4 @@ func (c *MailController) SendBroadcastMail() {
 		"data":      nil,
 	}
 	c.ServeJSON()
-}
-
-// createMailTable 创建邮件表
-func createMailTable(appId string, force bool) error {
-	o := orm.NewOrm()
-
-	mail := &models.MailSystem{}
-	tableName := mail.GetTableName(appId)
-
-	// 检查表是否已存在
-	var count int64
-	err := o.Raw("SELECT COUNT(*) FROM information_schema.tables WHERE table_name = ? AND table_schema = DATABASE()", tableName).QueryRow(&count)
-	if err != nil {
-		return fmt.Errorf("检查表是否存在时出错: %v", err)
-	}
-
-	// 如果表已存在且不是强制模式
-	if count > 0 && !force {
-		// 检查表中是否有数据
-		var dataCount int64
-		err = o.Raw(fmt.Sprintf("SELECT COUNT(*) FROM %s", tableName)).QueryRow(&dataCount)
-		if err == nil && dataCount > 0 {
-			return fmt.Errorf("邮件系统已初始化，如需重新初始化请设置 force=true")
-		}
-	}
-
-	// 如果是强制模式，先删除现有表
-	if force && count > 0 {
-		_, err = o.Raw(fmt.Sprintf("DROP TABLE IF EXISTS %s", tableName)).Exec()
-		if err != nil {
-			return fmt.Errorf("删除现有表失败: %v", err)
-		}
-	}
-
-	// 创建邮件表
-	createTableSQL := fmt.Sprintf(`
-		CREATE TABLE IF NOT EXISTS %s (
-			id BIGINT PRIMARY KEY AUTO_INCREMENT,
-			app_id VARCHAR(100) NOT NULL,
-			user_id VARCHAR(100) NOT NULL,
-			title VARCHAR(200) NOT NULL,
-			content TEXT,
-			rewards TEXT,
-			status INT DEFAULT 0 COMMENT '0:未读 1:已读 2:已领取',
-			expire_at DATETIME NULL,
-			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-			INDEX idx_app_id (app_id),
-			INDEX idx_user_id (user_id),
-			INDEX idx_status (status),
-			INDEX idx_expire_at (expire_at),
-			INDEX idx_created_at (created_at)
-		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='邮件表'
-	`, tableName)
-
-	_, err = o.Raw(createTableSQL).Exec()
-	if err != nil {
-		return fmt.Errorf("创建邮件表失败: %v", err)
-	}
-
-	return nil
 }

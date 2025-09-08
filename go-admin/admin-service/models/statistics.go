@@ -92,10 +92,10 @@ func GetTopApps(limit int) ([]TopApp, error) {
 	// 这里应该根据实际业务逻辑统计热门应用
 	// 目前返回应用列表作为示例
 	sql := `
-		SELECT appId, app_name, 0 as user_count, 0 as access_count 
+		SELECT app_id as appId, app_name, 0 as user_count, 0 as access_count 
 		FROM apps 
-		WHERE status = 1 
-		ORDER BY createdAt DESC 
+		WHERE status = 'active' 
+		ORDER BY created_at DESC 
 		LIMIT ?
 	`
 	_, err := o.Raw(sql, limit).QueryRows(&apps)

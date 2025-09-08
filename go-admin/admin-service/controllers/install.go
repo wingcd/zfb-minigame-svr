@@ -380,6 +380,7 @@ func (c *InstallController) ChangePassword() {
 
 // ResetPasswordRequest 重置密码请求
 type ResetPasswordRequest struct {
+	ID          int64  `json:"id"`
 	Username    string `json:"username"`
 	NewPassword string `json:"newPassword"`
 	Force       bool   `json:"force"` // 是否强制重置（不验证原密码）
@@ -398,6 +399,14 @@ func (c *InstallController) ResetPassword() {
 	}
 
 	// 验证参数
+	if req.ID == 0 {
+		c.Data["json"] = InstallResponse{
+			Code:    400,
+			Message: "ID不能为空",
+		}
+		c.ServeJSON()
+		return
+	}
 	if req.Username == "" {
 		c.Data["json"] = InstallResponse{
 			Code:    400,

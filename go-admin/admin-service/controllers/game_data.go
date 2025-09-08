@@ -273,6 +273,7 @@ func (c *GameDataController) SendBroadcastMail() {
 	content := c.GetString("content")
 	rewards := c.GetString("rewards")
 	userIds := c.GetStrings("userIds")
+	expireDayInt, _ := c.GetInt("expireDay", 7)
 
 	if appId == "" || title == "" || content == "" || len(userIds) == 0 {
 		utils.ErrorResponse(&c.Controller, 1002, "应用ID、标题、内容和用户列表不能为空", nil)
@@ -280,7 +281,7 @@ func (c *GameDataController) SendBroadcastMail() {
 	}
 
 	// 发送广播邮件
-	err := models.SendBroadcastMail(appId, title, content, rewards)
+	err := models.SendBroadcastMail(appId, title, content, rewards, expireDayInt)
 	if err != nil {
 		utils.ErrorResponse(&c.Controller, 1003, "发送广播邮件失败: "+err.Error(), nil)
 		return

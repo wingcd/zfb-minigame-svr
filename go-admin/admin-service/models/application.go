@@ -123,36 +123,51 @@ CREATE TABLE IF NOT EXISTS counter_%s (
 	mailSQL := fmt.Sprintf(`
 CREATE TABLE IF NOT EXISTS mail_%s (
   id bigint(20) NOT NULL AUTO_INCREMENT,
-  app_id varchar(100) NOT NULL COMMENT '应用ID',
   title varchar(200) NOT NULL COMMENT '邮件标题',
   content text COMMENT '邮件内容',
-  rewards text COMMENT '奖励物品（JSON格式）',
-  expire_at datetime DEFAULT NULL COMMENT '过期时间',
-  created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  type varchar(50) NOT NULL DEFAULT 'system' COMMENT '邮件类型: system/activity/reward',
+  sender varchar(100) NOT NULL DEFAULT 'system' COMMENT '发送者',
+  targets text COMMENT '目标用户（JSON数组，all表示全体）',
+  target_type varchar(50) NOT NULL DEFAULT 'all' COMMENT '目标类型: all/specific/condition',
+  send_condition text COMMENT '发送条件（JSON）',
+  rewards text COMMENT '奖励列表（JSON数组）',
+  status varchar(50) NOT NULL DEFAULT 'draft' COMMENT '状态: draft/sent/expired',
+  send_time datetime DEFAULT NULL COMMENT '发送时间',
+  expire_time datetime DEFAULT NULL COMMENT '过期时间',
+  read_count int NOT NULL DEFAULT 0 COMMENT '已读数量',
+  total_count int NOT NULL DEFAULT 0 COMMENT '总发送数量',
+  created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  created_by varchar(100) DEFAULT NULL COMMENT '创建者',
   PRIMARY KEY (id),
-  KEY idx_app_id (app_id),
-  KEY idx_expire_at (expire_at),
-  KEY idx_created_at (created_at)
+  KEY idx_type (type),
+  KEY idx_status (status),
+  KEY idx_target_type (target_type),
+  KEY idx_expire_time (expire_time),
+  KEY idx_send_time (send_time),
+  KEY idx_create_time (created_at),
+  KEY idx_created_by (created_by)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='邮件数据表_%s'`, cleanAppId, cleanAppId)
 
 	// 创建邮件-玩家关联表（存储邮件发送状态）
 	mailPlayerRelationSQL := fmt.Sprintf(`
 CREATE TABLE IF NOT EXISTS mail_player_relation_%s (
   id bigint(20) NOT NULL AUTO_INCREMENT,
-  app_id varchar(100) NOT NULL COMMENT '应用ID',
   mail_id bigint(20) NOT NULL COMMENT '邮件ID（关联mail_%s表）',
   player_id varchar(100) NOT NULL COMMENT '玩家ID',
   status tinyint(1) NOT NULL DEFAULT 0 COMMENT '状态 0:未读 1:已读 2:已领取',
-  created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  received_at datetime DEFAULT NULL COMMENT '接收时间',
+  read_at datetime DEFAULT NULL COMMENT '阅读时间',
+  claim_at datetime DEFAULT NULL COMMENT '领取时间',
+  created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (id),
   UNIQUE KEY uk_mail_player (mail_id, player_id),
-  KEY idx_app_id (app_id),
   KEY idx_mail_id (mail_id),
   KEY idx_player_id (player_id),
   KEY idx_status (status),
-  KEY idx_created_at (created_at)
+  KEY idx_received_at (received_at),
+  KEY idx_create_time (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='邮件玩家关联表_%s'`, cleanAppId, cleanAppId, cleanAppId)
 
 	// 创建游戏配置表

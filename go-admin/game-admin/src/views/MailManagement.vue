@@ -11,13 +11,13 @@
           创建邮件
         </el-button>
         <el-button @click="refreshMails">刷新</el-button>
-        <el-button 
+        <!-- <el-button 
           type="warning" 
           @click="initMailSystem"
           v-if="hasPermission(PERMISSIONS.MAIL_MANAGE) && !mailSystemInitialized"
         >
           初始化邮件系统
-        </el-button>
+        </el-button> -->
       </div>
     </div>
 
@@ -147,11 +147,6 @@
             <div class="mail-title">{{ scope.row.title }}</div>
             <div class="mail-id">ID: {{ scope.row.mailId }}</div>
           </div>
-        </template>
-      </el-table-column>
-      <el-table-column prop="appId" label="游戏" width="150">
-        <template #default="scope">
-          <span>{{ getAppName(scope.row.appId) }}</span>
         </template>
       </el-table-column>
       <el-table-column prop="type" label="类型" width="100">
@@ -355,7 +350,7 @@
       <div v-if="detailDialog.mail">
         <el-descriptions border :column="2">
           <el-descriptions-item label="邮件标题">{{ detailDialog.mail.title }}</el-descriptions-item>
-          <el-descriptions-item label="邮件ID">{{ detailDialog.mail.mailId }}</el-descriptions-item>
+          <el-descriptions-item label="邮件ID">{{ detailDialog.mail.id }}</el-descriptions-item>
           <el-descriptions-item label="游戏">{{ getAppName(detailDialog.mail.appId) }}</el-descriptions-item>
           <el-descriptions-item label="类型">{{ getTypeText(detailDialog.mail.type) }}</el-descriptions-item>
           <el-descriptions-item label="目标类型">{{ getTargetTypeText(detailDialog.mail.targetType) }}</el-descriptions-item>
@@ -580,7 +575,9 @@ export default {
       }
       
       try {
-        const result = await mailAPI.getStats()
+        const result = await mailAPI.getStats({
+          appId: selectedAppId.value
+        })
         if (result.code === 0) {
           mailStats.value = result.data
         } else {
@@ -719,13 +716,7 @@ export default {
           
           // 如果需要立即发布
           if (publish && !mailDialog.isEdit) {
-            const mailId = result.data?.mailId
-            if (mailId) {
-              await publishMail({ 
-                mailId, 
-                title: mailDialog.form.title 
-              })
-            }
+            await publishMail(mailDialog.form)
           }
           
           mailDialog.visible = false
@@ -745,7 +736,16 @@ export default {
         const title = mail.title || '该邮件'
         await ElMessageBox.confirm(`确定要发布邮件 "${title}" 吗？发布后不可修改内容。`, '确认发布')
         
-        const result = await mailAPI.publish(mail.mailId)
+        // 准备发布数据，根据新的API要求
+        const publishData = {
+          appId: selectedAppId.value,
+          title: mail.title,
+          content: mail.content,
+          rewards: mail.rewards ? mail.rewards.map(r => `${r.type}:${r.amount}:${r.name}`).join(',') : '',
+          expireDays: 7 // 默认7天过期
+        }
+        
+        const result = await mailAPI.publish(publishData)
         
         if (result.code === 0) {
           ElMessage.success('邮件发布成功')
@@ -767,7 +767,7 @@ export default {
         await ElMessageBox.confirm(`确定要下线邮件 "${mail.title}" 吗？`, '确认下线')
         
         const result = await mailAPI.update({
-          mailId: mail.mailId,
+          mailId: mail.id,
           status: 'expired'
         })
         
@@ -794,7 +794,10 @@ export default {
           { type: 'warning' }
         )
         
-        const result = await mailAPI.delete(mail.mailId)
+        const result = await mailAPI.delete({
+          appId: selectedAppId.value,
+          mailId: mail.id
+        })
         
         if (result.code === 0) {
           ElMessage.success('删除成功')
@@ -846,7 +849,7 @@ export default {
         
         // 更新邮件状态为已发布，并重置发布时间
         const result = await mailAPI.update({
-          mailId: mail.mailId,
+          mailId: mail.id,
           status: 'active',
           publishTime: new Date().toISOString().replace('T', ' ').substring(0, 19),
           // 重新设置过期时间（7天后）
@@ -875,7 +878,7 @@ export default {
     
     const viewMailStats = async (mail) => {
       try {
-        const result = await mailAPI.getStats({ mailId: mail.mailId })
+        const result = await mailAPI.getStats({ mailId: mail.id })
         if (result.code === 0) {
           statsDialog.stats = result.data.stats
           statsDialog.visible = true
@@ -986,7 +989,14 @@ export default {
         
         for (const mail of draftMails) {
           try {
-            const result = await mailAPI.publish(mail.mailId)
+            const publishData = {
+              appId: selectedAppId.value,
+              title: mail.title,
+              content: mail.content,
+              rewards: mail.rewards ? mail.rewards.map(r => `${r.type}:${r.amount}:${r.name}`).join(',') : '',
+              expireDays: 7
+            }
+            const result = await mailAPI.publish(publishData)
             if (result.code === 0) {
               successCount++
             } else {
@@ -1032,7 +1042,7 @@ export default {
         for (const mail of activeMails) {
           try {
             const result = await mailAPI.update({
-              mailId: mail.mailId,
+              mailId: mail.id,
               status: 'expired'
             })
             if (result.code === 0) {
@@ -1082,7 +1092,10 @@ export default {
         
         for (const mail of deletableMails) {
           try {
-            const result = await mailAPI.delete(mail.mailId)
+            const result = await mailAPI.delete({
+              appId: selectedAppId.value,
+              mailId: mail.id
+            })
             if (result.code === 0) {
               successCount++
             } else {

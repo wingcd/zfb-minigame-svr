@@ -22,20 +22,66 @@ type AdminController struct {
 
 // GetAdmin 获取单个管理员信息 (API命名空间使用)
 func (c *AdminController) GetAdmin() {
-	id, _ := strconv.ParseInt(c.Ctx.Input.Param(":id"), 10, 64)
+	var req struct {
+		ID int64 `json:"id"`
+	}
 
-	user, err := models.GetAdminUserById(id)
-	if err != nil {
-		utils.Error(&c.Controller, utils.CodeNotFound, "用户不存在")
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4001,
+			"msg":       "参数解析失败",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
 		return
 	}
 
-	utils.Success(&c.Controller, user)
+	if req.ID <= 0 {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4001,
+			"msg":       "无效的管理员ID",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	user, err := models.GetAdminUserById(req.ID)
+	if err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4004,
+			"msg":       "用户不存在",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	c.Data["json"] = map[string]interface{}{
+		"code":      0,
+		"msg":       "获取成功",
+		"timestamp": utils.UnixMilli(),
+		"data":      user,
+	}
+	c.ServeJSON()
 }
 
 // UpdateAdmin 更新管理员信息 (API命名空间使用)
 func (c *AdminController) UpdateAdmin() {
-	id, _ := strconv.ParseInt(c.Ctx.Input.Param(":id"), 10, 64)
+	var req UpdateAdminRequest
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4001,
+			"msg":       "参数解析失败",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
 
 	var user models.AdminUser
 	if err := utils.ParseJSON(&c.Controller, &user); err != nil {
@@ -44,14 +90,13 @@ func (c *AdminController) UpdateAdmin() {
 	}
 
 	// 检查用户是否存在
-	existUser, err := models.GetAdminUserById(id)
+	existUser, err := models.GetAdminUserById(req.ID)
 	if err != nil {
 		utils.Error(&c.Controller, utils.CodeNotFound, "用户不存在")
 		return
 	}
 
 	// 更新数据
-	user.ID = id
 	if user.Password != "" {
 		hashedPassword, err := utils.HashPasswordBcrypt(user.Password)
 		if err != nil {
@@ -68,36 +113,52 @@ func (c *AdminController) UpdateAdmin() {
 		return
 	}
 
-	c.logOperation("更新管理员", "admin", "PUT", "/api/admins/"+strconv.FormatInt(id, 10), user, 1, "", 0)
+	c.logOperation("更新管理员", "admin", "PUT", "/api/admins/"+strconv.FormatInt(req.ID, 10), user, 1, "", 0)
 	utils.Success(&c.Controller, "更新成功")
 }
 
 // DeleteAdmin 删除管理员 (API命名空间使用)
 func (c *AdminController) DeleteAdmin() {
-	id, _ := strconv.ParseInt(c.Ctx.Input.Param(":id"), 10, 64)
+	var req DeleteAdminRequest
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4001,
+			"msg":       "参数解析失败",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
 
 	// 检查用户是否存在
-	_, err := models.GetAdminUserById(id)
+	_, err := models.GetAdminUserById(req.ID)
 	if err != nil {
 		utils.Error(&c.Controller, utils.CodeNotFound, "用户不存在")
 		return
 	}
 
-	if err := models.DeleteAdminUser(id); err != nil {
+	if err := models.DeleteAdminUser(req.ID); err != nil {
 		utils.Error(&c.Controller, utils.CodeError, "删除失败")
 		return
 	}
 
-	c.logOperation("删除管理员", "admin", "DELETE", "/api/admins/"+strconv.FormatInt(id, 10), nil, 1, "", 0)
+	c.logOperation("删除管理员", "admin", "DELETE", "/api/admins/"+strconv.FormatInt(req.ID, 10), nil, 1, "", 0)
 	utils.Success(&c.Controller, "删除成功")
 }
 
 // ResetPassword 重置管理员密码 (API命名空间使用)
 func (c *AdminController) ResetPassword() {
-	id, _ := strconv.ParseInt(c.Ctx.Input.Param(":id"), 10, 64)
-
-	var req struct {
-		NewPassword string `json:"new_password"`
+	var req ResetPasswordRequest
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4001,
+			"msg":       "参数解析失败",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
 	}
 	if err := utils.ParseJSON(&c.Controller, &req); err != nil {
 		utils.Error(&c.Controller, utils.CodeInvalidParam, "参数解析失败")
@@ -105,7 +166,7 @@ func (c *AdminController) ResetPassword() {
 	}
 
 	// 检查用户是否存在
-	_, err := models.GetAdminUserById(id)
+	_, err := models.GetAdminUserById(req.ID)
 	if err != nil {
 		utils.Error(&c.Controller, utils.CodeNotFound, "用户不存在")
 		return
@@ -119,14 +180,14 @@ func (c *AdminController) ResetPassword() {
 	}
 
 	// 更新密码
-	if err := models.UpdateAdminUserFields(id, map[string]interface{}{
+	if err := models.UpdateAdminUserFields(req.ID, map[string]interface{}{
 		"password": hashedPassword,
 	}); err != nil {
 		utils.Error(&c.Controller, utils.CodeError, "密码重置失败")
 		return
 	}
 
-	c.logOperation("重置管理员密码", "admin", "POST", "/api/admins/"+strconv.FormatInt(id, 10)+"/reset-password", nil, 1, "", 0)
+	c.logOperation("重置管理员密码", "admin", "POST", "/api/admins/"+strconv.FormatInt(req.ID, 10)+"/reset-password", nil, 1, "", 0)
 	utils.Success(&c.Controller, "密码重置成功")
 }
 

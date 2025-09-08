@@ -279,7 +279,7 @@ func (c *AdminRoleController) GetAllRoles() {
 		"msg":       "success",
 		"timestamp": utils.UnixMilli(),
 		"data": map[string]interface{}{
-			"roles": roleList,
+			"list":  roleList,
 			"total": len(roleList),
 		},
 	}
