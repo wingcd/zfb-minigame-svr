@@ -60,27 +60,8 @@ func init() {
 	// 注册数据库
 	orm.RegisterDataBase("default", "mysql", dataSource)
 
-	// 注册模型
-	registerModels()
-
-	// 自动建表
-	orm.RunSyncdb("default", false, true)
-
 	// 初始化Redis连接
 	initRedis()
-}
-
-// 注册所有模型
-func registerModels() {
-	orm.RegisterModel(
-		new(UserDataEntry),
-		new(Leaderboard),
-		new(LeaderboardEntry),
-		new(Counter),
-		new(Mail),
-		new(GameConfig),
-		new(Application),
-	)
 }
 
 // 初始化Redis连接

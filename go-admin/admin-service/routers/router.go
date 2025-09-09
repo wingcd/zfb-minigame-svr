@@ -65,7 +65,7 @@ func init() {
 	web.Router("/install/uninstall", &controllers.InstallController{}, "post:Uninstall")
 
 	// 健康检查
-	web.Router("/health", &controllers.HealthController{}, "get:Health")
+	web.Router("/health", &controllers.HealthController{}, "get,options:Health")
 
 	// 基本认证模块
 	web.Router("/admin/login", &controllers.AuthController{}, "post:AdminLogin")

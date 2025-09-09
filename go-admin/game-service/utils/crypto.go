@@ -69,7 +69,7 @@ func VerifySign(appId, userId, sign string) (bool, error) {
 	// 计算MD5
 	expectedSign := fmt.Sprintf("%x", md5.Sum([]byte(signString)))
 
-	ret := strings.ToLower(sign) == strings.ToLower(expectedSign)
+	ret := strings.EqualFold(sign, expectedSign)
 	if !ret {
 		return false, errors.New("sign is invalid")
 	}
@@ -175,4 +175,34 @@ func GetMD5Salt() string {
 		return "default_md5_salt"
 	}
 	return md5Salt
+}
+
+// HashPassword 密码哈希（使用MD5加盐）
+func HashPassword(password string) string {
+	return MD5WithSalt(password, GetMD5Salt())
+}
+
+// GenerateUserID 生成用户ID（基于用户名和应用ID）
+func GenerateUserID(username, appId string) string {
+	data := fmt.Sprintf("user_%s_%s", username, appId)
+	return MD5(data)
+}
+
+// GenerateOpenID 生成OpenID（基于微信授权码和应用ID）
+func GenerateOpenID(code, appId string) string {
+	data := fmt.Sprintf("wx_%s_%s", code, appId)
+	return MD5(data)
+}
+
+// GenerateUserIDFromOpenID 基于OpenID生成用户ID
+func GenerateUserIDFromOpenID(openId, appId string) string {
+	data := fmt.Sprintf("wxuser_%s_%s", openId, appId)
+	return MD5(data)
+}
+
+// GenerateSessionToken 生成会话token
+func GenerateSessionToken(userId, appId string) string {
+	randomStr := GenerateRandomString(16)
+	data := fmt.Sprintf("session_%s_%s_%s", userId, appId, randomStr)
+	return MD5(data)
 }

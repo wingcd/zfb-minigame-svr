@@ -266,29 +266,3 @@ func (s *UserService) GetUserStats(appId string) (map[string]interface{}, error)
 func (s *UserService) getUserDataTableName(appId string) string {
 	return utils.GetUserDataTableName(appId)
 }
-
-// CreateUserDataTable 创建用户数据表（如果不存在）
-func (s *UserService) CreateUserDataTable(appId string) error {
-	o := orm.NewOrm()
-
-	tableName := s.getUserDataTableName(appId)
-
-	createSQL := fmt.Sprintf(`
-		CREATE TABLE IF NOT EXISTS %s (
-			id BIGINT AUTO_INCREMENT PRIMARY KEY,
-			user_id VARCHAR(100) NOT NULL,
-			data LONGTEXT,
-			create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-			update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-			UNIQUE KEY uk_user_id (user_id),
-			KEY idx_update_time (update_time)
-		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户数据表'
-	`, tableName)
-
-	_, err := o.Raw(createSQL).Exec()
-	if err != nil {
-		return fmt.Errorf("创建用户数据表失败: %v", err)
-	}
-
-	return nil
-}

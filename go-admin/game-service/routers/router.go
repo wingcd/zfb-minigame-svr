@@ -2,13 +2,29 @@ package routers
 
 import (
 	"game-service/controllers"
+	"game-service/middlewares"
 
 	"github.com/beego/beego/v2/server/web"
 )
 
 func init() {
+	// 注册CORS中间件 - 在所有路由之前处理
+	web.InsertFilter("/*", web.BeforeRouter, middlewares.CORSMiddleware)
+
+	// 注册认证中间件 - 跳过健康检查等公开接口
+	web.InsertFilter("/*", web.BeforeExec, middlewares.SignAuthMiddleware)
+
+	// 注册日志中间件
+	web.InsertFilter("/*", web.BeforeExec, middlewares.LogMiddleware)
+
+	// 注册限流中间件
+	web.InsertFilter("/*", web.BeforeExec, middlewares.RateLimitMiddleware)
+
 	// 健康检查
 	web.Router("/health", &controllers.HealthController{}, "get:Health")
+
+	// 心跳接口
+	web.Router("/heartbeat", &controllers.HealthController{}, "get:Heartbeat")
 
 	// ===== zy-sdk对齐接口 =====
 	// 用户数据接口（对齐zy-sdk/user.ts）
@@ -52,7 +68,6 @@ func init() {
 	web.Router("/getAllCounters", &controllers.CounterController{}, "post:GetAllCounters")
 
 	// 邮件接口
-	web.Router("/getMailList", &controllers.MailController{}, "post:GetMailList")
 	web.Router("/readMail", &controllers.MailController{}, "post:ReadMail")
 	web.Router("/claimRewards", &controllers.MailController{}, "post:ClaimRewards")
 	web.Router("/deleteMail", &controllers.MailController{}, "post:DeleteMail")

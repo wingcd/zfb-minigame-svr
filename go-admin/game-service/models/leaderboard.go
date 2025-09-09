@@ -1,17 +1,38 @@
 package models
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 
 	"game-service/utils"
 
 	"github.com/beego/beego/v2/client/orm"
+	"github.com/go-redis/redis/v8"
 )
 
 // getLeaderboardTableName 获取排行榜表名
 func getLeaderboardTableName(appId string) string {
 	return utils.GetLeaderboardTableName(appId)
+}
+
+// getLeaderboardRedisKey 获取排行榜Redis键名
+func getLeaderboardRedisKey(appId, leaderboardName string) string {
+	return fmt.Sprintf("leaderboard:%s:%s", appId, leaderboardName)
+}
+
+// getUserRankRedisKey 获取用户排名Redis键名
+func getUserRankRedisKey(appId, leaderboardName, userId string) string {
+	return fmt.Sprintf("rank:%s:%s:%s", appId, leaderboardName, userId)
+}
+
+// LeaderboardRedisEntry Redis排行榜条目结构
+type LeaderboardRedisEntry struct {
+	PlayerID   string `json:"playerId"`
+	PlayerName string `json:"playerName,omitempty"`
+	Score      int64  `json:"score"`
+	ExtraData  string `json:"extraData,omitempty"`
+	UpdateTime int64  `json:"updateTime"`
 }
 
 // Leaderboard 排行榜模型 - 兼容旧版本API
@@ -52,7 +73,7 @@ func (le *LeaderboardEntry) GetTableName(appId string) string {
 	return getLeaderboardTableName(appId)
 }
 
-// SubmitScore 提交分数到排行榜
+// SubmitScore 提交分数到排行榜（支持Redis缓存）
 func SubmitScore(appId, userId, leaderboardName string, score int64, extraData string) error {
 	o := orm.NewOrm()
 	tableName := getLeaderboardTableName(appId)
@@ -69,13 +90,62 @@ func SubmitScore(appId, userId, leaderboardName string, score int64, extraData s
 	`, tableName)
 
 	_, err := o.Raw(sql, leaderboardName, userId, score, extraData).Exec()
-
-	// 如果成功，更新排名
-	if err == nil {
-		err = updateLeaderboardRanks(o, tableName, leaderboardName)
+	if err != nil {
+		return err
 	}
 
-	return err
+	// 更新数据库排名
+	err = updateLeaderboardRanks(o, tableName, leaderboardName)
+	if err != nil {
+		return err
+	}
+
+	// 同步到Redis（如果Redis可用）
+	if RedisClient != nil {
+		err = syncScoreToRedis(appId, userId, leaderboardName, score, extraData)
+		if err != nil {
+			// Redis错误不影响主流程，记录日志即可
+			fmt.Printf("Redis同步失败: %v\n", err)
+		}
+	}
+
+	return nil
+}
+
+// syncScoreToRedis 同步分数到Redis
+func syncScoreToRedis(appId, userId, leaderboardName string, score int64, extraData string) error {
+	redisKey := getLeaderboardRedisKey(appId, leaderboardName)
+
+	// 创建Redis排行榜条目
+	entry := LeaderboardRedisEntry{
+		PlayerID:   userId,
+		Score:      score,
+		ExtraData:  extraData,
+		UpdateTime: time.Now().Unix(),
+	}
+
+	// 序列化到JSON
+	entryData, err := json.Marshal(entry)
+	if err != nil {
+		return err
+	}
+
+	// 使用有序集合存储排行榜（分数作为score，用户数据作为member）
+	member := &redis.Z{
+		Score:  float64(score),
+		Member: string(entryData),
+	}
+
+	// 添加到Redis有序集合
+	err = RedisClient.ZAdd(RedisClient.Context(), redisKey, member).Err()
+	if err != nil {
+		return err
+	}
+
+	// 设置过期时间（24小时）
+	RedisClient.Expire(RedisClient.Context(), redisKey, 24*time.Hour)
+
+	return nil
 }
 
 func UpdateScore(appId, userId, leaderboardName string, score int64, extraData string) error {
@@ -107,8 +177,56 @@ func UpdateScore(appId, userId, leaderboardName string, score int64, extraData s
 	return updateLeaderboardRanks(o, tableName, leaderboardName)
 }
 
-// GetLeaderboard 获取排行榜
+// GetLeaderboard 获取排行榜（优先从Redis读取）
 func GetLeaderboard(appId, leaderboardName string, limit int) ([]Leaderboard, error) {
+	// 尝试从Redis获取
+	if RedisClient != nil {
+		leaderboards, err := getLeaderboardFromRedis(appId, leaderboardName, limit)
+		if err == nil && len(leaderboards) > 0 {
+			return leaderboards, nil
+		}
+		// Redis失败或没有数据，继续从数据库读取
+	}
+
+	// 从数据库获取
+	return getLeaderboardFromDB(appId, leaderboardName, limit)
+}
+
+// getLeaderboardFromRedis 从Redis获取排行榜
+func getLeaderboardFromRedis(appId, leaderboardName string, limit int) ([]Leaderboard, error) {
+	redisKey := getLeaderboardRedisKey(appId, leaderboardName)
+
+	// 获取Redis有序集合的前N个成员（按分数降序）
+	results, err := RedisClient.ZRevRangeWithScores(RedisClient.Context(), redisKey, 0, int64(limit-1)).Result()
+	if err != nil {
+		return nil, err
+	}
+
+	var leaderboards []Leaderboard
+	for _, result := range results {
+		// 解析member数据
+		var entry LeaderboardRedisEntry
+		err := json.Unmarshal([]byte(result.Member.(string)), &entry)
+		if err != nil {
+			continue // 跳过格式错误的数据
+		}
+
+		lb := Leaderboard{
+			LeaderboardName: leaderboardName,
+			UserId:          entry.PlayerID,
+			Score:           entry.Score,
+			ExtraData:       entry.ExtraData,
+			UpdatedAt:       time.Unix(entry.UpdateTime, 0).Format("2006-01-02 15:04:05"),
+		}
+
+		leaderboards = append(leaderboards, lb)
+	}
+
+	return leaderboards, nil
+}
+
+// getLeaderboardFromDB 从数据库获取排行榜
+func getLeaderboardFromDB(appId, leaderboardName string, limit int) ([]Leaderboard, error) {
 	o := orm.NewOrm()
 	tableName := getLeaderboardTableName(appId)
 
@@ -167,8 +285,45 @@ func GetLeaderboard(appId, leaderboardName string, limit int) ([]Leaderboard, er
 	return leaderboards, nil
 }
 
-// GetUserRank 获取用户在排行榜中的排名
+// GetUserRank 获取用户在排行榜中的排名（优先从Redis读取）
 func GetUserRank(appId, userId, leaderboardName string) (int, int64, error) {
+	// 尝试从Redis获取
+	if RedisClient != nil {
+		rank, score, err := getUserRankFromRedis(appId, userId, leaderboardName)
+		if err == nil && rank > 0 {
+			return rank, score, nil
+		}
+		// Redis失败或没有数据，继续从数据库读取
+	}
+
+	// 从数据库获取
+	return getUserRankFromDB(appId, userId, leaderboardName)
+}
+
+// getUserRankFromRedis 从Redis获取用户排名
+func getUserRankFromRedis(appId, userId, leaderboardName string) (int, int64, error) {
+	redisKey := getLeaderboardRedisKey(appId, leaderboardName)
+
+	// 查找用户在有序集合中的排名（从0开始，需要+1）
+	rank, err := RedisClient.ZRevRank(RedisClient.Context(), redisKey, userId).Result()
+	if err == redis.Nil {
+		return 0, 0, nil // 用户不在排行榜中
+	}
+	if err != nil {
+		return 0, 0, err
+	}
+
+	// 获取用户分数
+	score, err := RedisClient.ZScore(RedisClient.Context(), redisKey, userId).Result()
+	if err != nil {
+		return 0, 0, err
+	}
+
+	return int(rank) + 1, int64(score), nil
+}
+
+// getUserRankFromDB 从数据库获取用户排名
+func getUserRankFromDB(appId, userId, leaderboardName string) (int, int64, error) {
 	o := orm.NewOrm()
 	tableName := getLeaderboardTableName(appId)
 
@@ -202,7 +357,7 @@ func GetUserRank(appId, userId, leaderboardName string) (int, int64, error) {
 	return int(rank), score, nil
 }
 
-// ResetLeaderboard 重置排行榜
+// ResetLeaderboard 重置排行榜（同时清理Redis）
 func ResetLeaderboard(appId, leaderboardName string) error {
 	o := orm.NewOrm()
 	tableName := getLeaderboardTableName(appId)
@@ -213,7 +368,17 @@ func ResetLeaderboard(appId, leaderboardName string) error {
 	`, tableName)
 
 	_, err := o.Raw(sql, leaderboardName).Exec()
-	return err
+	if err != nil {
+		return err
+	}
+
+	// 同时清理Redis数据
+	if RedisClient != nil {
+		redisKey := getLeaderboardRedisKey(appId, leaderboardName)
+		RedisClient.Del(RedisClient.Context(), redisKey)
+	}
+
+	return nil
 }
 
 // GetLeaderboardList 获取排行榜列表（管理后台使用）
@@ -313,41 +478,4 @@ func updateLeaderboardRanks(o orm.Ormer, tableName, leaderboardName string) erro
 
 	_, err := o.Raw(sql, leaderboardName, leaderboardName).Exec()
 	return err
-}
-
-// CreateLeaderboardTable 创建排行榜表
-func CreateLeaderboardTable(appId string) error {
-	o := orm.NewOrm()
-	tableName := getLeaderboardTableName(appId)
-
-	sql := fmt.Sprintf(`
-		CREATE TABLE IF NOT EXISTS %s (
-			id BIGINT PRIMARY KEY AUTO_INCREMENT,
-			leaderboard_name VARCHAR(100) NOT NULL COMMENT '排行榜名称',
-			player_id VARCHAR(100) NOT NULL COMMENT '玩家ID',
-			player_name VARCHAR(100) DEFAULT '' COMMENT '玩家昵称',
-			score BIGINT DEFAULT 0 COMMENT '分数',
-			extra_data TEXT COMMENT '额外数据JSON',
-			rank INT DEFAULT 0 COMMENT '排名',
-			season VARCHAR(50) DEFAULT 'default' COMMENT '赛季',
-			category VARCHAR(50) DEFAULT 'general' COMMENT '分类',
-			is_active BOOLEAN DEFAULT TRUE COMMENT '是否活跃',
-			last_update_time DATETIME DEFAULT CURRENT_TIMESTAMP COMMENT '最后更新时间',
-			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-			UNIQUE KEY uk_leaderboard_player (leaderboard_name, player_id),
-			INDEX idx_leaderboard_score (leaderboard_name, score DESC),
-			INDEX idx_leaderboard_rank (leaderboard_name, rank),
-			INDEX idx_player_id (player_id),
-			INDEX idx_season_category (season, category),
-			INDEX idx_last_update (last_update_time)
-		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='排行榜表'
-	`, tableName)
-
-	_, err := o.Raw(sql).Exec()
-	if err != nil {
-		return fmt.Errorf("创建排行榜表失败: %v", err)
-	}
-
-	return nil
 }

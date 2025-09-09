@@ -404,3 +404,34 @@ func ensurePlayerMailRelations(o orm.Ormer, appId, playerId, mailTableName, rela
 	_, err := o.Raw(sql, playerId, playerId, playerId).Exec()
 	return err
 }
+
+// HasNewMail 检查用户是否有新邮件（状态为0的邮件）
+func HasNewMail(appId, userId string) (bool, error) {
+	o := orm.NewOrm()
+	mailTableName := utils.GetMailTableName(appId)
+	relationTableName := utils.GetMailRelationTableName(appId)
+
+	// 首先确保用户的邮件关联记录完整
+	err := ensurePlayerMailRelations(o, appId, userId, mailTableName, relationTableName)
+	if err != nil {
+		return false, fmt.Errorf("确保邮件关联失败: %v", err)
+	}
+
+	// 查询是否有未读邮件
+	sql := fmt.Sprintf(`
+		SELECT COUNT(*)
+		FROM %s m
+		INNER JOIN %s r ON m.id = r.mail_id
+		WHERE r.player_id = ?
+		  AND r.status = 0
+		  AND (m.expire_time IS NULL OR m.expire_time > NOW())
+	`, mailTableName, relationTableName)
+
+	var count int64
+	err = o.Raw(sql, userId).QueryRow(&count)
+	if err != nil {
+		return false, err
+	}
+
+	return count > 0, nil
+}

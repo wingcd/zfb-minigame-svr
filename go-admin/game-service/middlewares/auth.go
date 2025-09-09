@@ -67,7 +67,7 @@ func SignAuthMiddleware(ctx *context.Context) {
 
 	// 获取请求体
 	var requestBody map[string]interface{}
-	if ctx.Input.RequestBody != nil && len(ctx.Input.RequestBody) > 0 {
+	if len(ctx.Input.RequestBody) > 0 {
 		err = json.Unmarshal(ctx.Input.RequestBody, &requestBody)
 		if err != nil {
 			responseError(ctx, 1002, "请求体格式错误")
@@ -91,12 +91,8 @@ func SignAuthMiddleware(ctx *context.Context) {
 
 // CORSMiddleware CORS中间件
 func CORSMiddleware(ctx *context.Context) {
-	origin := ctx.Input.Header("Origin")
-	if origin != "" {
-		ctx.Output.Header("Access-Control-Allow-Origin", origin)
-	} else {
-		ctx.Output.Header("Access-Control-Allow-Origin", "*")
-	}
+	ctx.Output.Header("Access-Control-Allow-Origin", "*")
+	ctx.Output.Header("*", "*")
 
 	ctx.Output.Header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS")
 	ctx.Output.Header("Access-Control-Allow-Headers", "Origin,Content-Type,Accept,Authorization,X-Requested-With,App-Id,Token,Timestamp,Sign")

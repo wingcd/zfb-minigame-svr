@@ -78,3 +78,29 @@ func (c *UserDataController) DeleteData() {
 
 	utils.SuccessResponse(c.Ctx, "删除成功", nil)
 }
+
+// SaveUserInfo 保存用户信息（对齐zy-sdk/user.ts）
+func (c *UserDataController) SaveUserInfo() {
+	// 验证签名
+	appId, userId, err := utils.ValidateSignature(c.Ctx.Request)
+	if err != nil {
+		utils.ErrorResponse(c.Ctx, 1001, "签名验证失败: "+err.Error(), nil)
+		return
+	}
+
+	// 获取用户信息数据
+	userInfo := c.GetString("userInfo")
+	if userInfo == "" {
+		utils.ErrorResponse(c.Ctx, 1002, "userInfo参数不能为空", nil)
+		return
+	}
+
+	// 保存用户信息到userInfo键
+	err = models.SaveUserDataWithKey(appId, userId, "userInfo", userInfo)
+	if err != nil {
+		utils.ErrorResponse(c.Ctx, 1003, "保存用户信息失败: "+err.Error(), nil)
+		return
+	}
+
+	utils.SuccessResponse(c.Ctx, "保存用户信息成功", nil)
+}
