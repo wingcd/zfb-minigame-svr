@@ -264,8 +264,7 @@ func (s *UserService) GetUserStats(appId string) (map[string]interface{}, error)
 
 // getUserDataTableName 获取用户数据表名
 func (s *UserService) getUserDataTableName(appId string) string {
-	cleanAppId := utils.CleanAppId(appId)
-	return fmt.Sprintf("user_data_%s", cleanAppId)
+	return utils.GetUserDataTableName(appId)
 }
 
 // CreateUserDataTable 创建用户数据表（如果不存在）

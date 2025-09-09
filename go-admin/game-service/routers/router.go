@@ -63,4 +63,6 @@ func init() {
 	web.Router("/getConfigsByVersion", &controllers.ConfigController{}, "post:GetConfigsByVersion")
 	web.Router("/getAllConfigs", &controllers.ConfigController{}, "post:GetAllConfigs")
 	web.Router("/deleteConfig", &controllers.ConfigController{}, "post:DeleteConfig")
+
+	// 表管理接口已移除
 }

@@ -1,14 +1,14 @@
 package models
 
 import (
-	"fmt"
-	"strings"
 	"time"
+
+	"game-service/utils"
 
 	"github.com/beego/beego/v2/client/orm"
 )
 
-// Counter 计数器模型
+// Counter 计数器模型 - 兼容旧版本API
 type Counter struct {
 	Id            int64     `orm:"auto" json:"id"`
 	CounterName   string    `orm:"size(100)" json:"counter_name"`
@@ -20,11 +20,31 @@ type Counter struct {
 	UpdatedAt     string    `orm:"auto_now;type(datetime)" json:"update_time"`
 }
 
+// CounterEntry 计数器条目模型 - 对应数据库设计的counter_[appid]表
+type CounterEntry struct {
+	ID            int64      `orm:"pk;auto" json:"id"`
+	AppId         string     `orm:"-" json:"appId"`                                                   // 应用ID（仅用于逻辑，不存储到数据库）
+	CounterName   string     `orm:"size(100);column(counter_name)" json:"counterName"`                // 计数器名称
+	UserID        string     `orm:"size(100);column(user_id)" json:"userID"`                          // 用户ID，为空表示全局计数器
+	CurrentValue  int64      `orm:"default(0);column(current_value)" json:"currentValue"`             // 当前值
+	MaxValue      *int64     `orm:"null;column(max_value)" json:"maxValue"`                           // 最大值
+	MinValue      *int64     `orm:"null;column(min_value)" json:"minValue"`                           // 最小值
+	IncrementStep int64      `orm:"default(1);column(increment_step)" json:"incrementStep"`           // 递增步长
+	ResetType     string     `orm:"size(50);default(manual);column(reset_type)" json:"resetType"`     // 重置类型
+	LastResetTime *time.Time `orm:"type(datetime);null;column(last_reset_time)" json:"lastResetTime"` // 最后重置时间
+	Metadata      string     `orm:"type(text)" json:"metadata"`                                       // 元数据JSON
+	IsActive      bool       `orm:"default(true);column(is_active)" json:"isActive"`                  // 是否活跃
+	CreatedAt     time.Time  `orm:"auto_now_add;type(datetime);column(created_at)" json:"createdAt"`
+	UpdatedAt     time.Time  `orm:"auto_now;type(datetime);column(updated_at)" json:"updatedAt"`
+}
+
 // GetTableName 获取动态表名
 func (c *Counter) GetTableName(appId string) string {
-	cleanAppId := strings.ReplaceAll(appId, "-", "_")
-	cleanAppId = strings.ReplaceAll(cleanAppId, ".", "_")
-	return fmt.Sprintf("counter_%s", cleanAppId)
+	return utils.GetCounterTableName(appId)
+}
+
+func (ce *CounterEntry) GetTableName(appId string) string {
+	return utils.GetCounterTableName(appId)
 }
 
 // GetCounter 获取计数器值

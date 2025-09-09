@@ -99,7 +99,21 @@ CREATE TABLE IF NOT EXISTS user_%s (
   KEY idx_banned (banned)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户数据表_%s'`, cleanAppId, cleanAppId)
 
-	// 排行榜表现在按需创建，不在应用创建时预先创建
+	// 创建排行榜统计表
+	leaderboardStatsSQL := fmt.Sprintf(`
+CREATE TABLE IF NOT EXISTS leaderboard_%s (
+  id bigint(20) NOT NULL AUTO_INCREMENT,
+  leaderboard_name varchar(100) NOT NULL COMMENT '排行榜名称',
+  playerId varchar(100) NOT NULL COMMENT '玩家ID',
+  score bigint(20) NOT NULL DEFAULT 0 COMMENT '分数',
+  extraData text COMMENT '额外数据（JSON格式）',
+  created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_leaderboard_user (leaderboard_name, playerId),
+  KEY idx_leaderboard_score (leaderboard_name, score DESC),
+  KEY idx_updated_at (updated_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='排行榜数据表_%s'`, cleanAppId, cleanAppId)
 
 	// 创建计数器表
 	counterSQL := fmt.Sprintf(`
@@ -214,7 +228,7 @@ CREATE TABLE IF NOT EXISTS user_ban_records (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户封禁记录表'`
 
 	// 执行创建表的SQL
-	sqls := []string{userDataSQL, counterSQL, mailSQL, mailPlayerRelationSQL, gameConfigSQL, banRecordsSQL}
+	sqls := []string{userDataSQL, leaderboardStatsSQL, counterSQL, mailSQL, mailPlayerRelationSQL, gameConfigSQL, banRecordsSQL}
 	for _, sql := range sqls {
 		_, err := o.Raw(sql).Exec()
 		if err != nil {

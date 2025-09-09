@@ -2,6 +2,7 @@ package utils
 
 import (
 	"encoding/json"
+	"log"
 	"strconv"
 	"time"
 
@@ -156,6 +157,7 @@ func SuccessResponse(c *web.Controller, message string, data interface{}) {
 
 // ErrorResponse 兼容性错误响应方法
 func ErrorResponse(c *web.Controller, code int, message string, data interface{}) {
+	log.Println("ErrorResponse", code, message, data)
 	response := &APIResponse{
 		Code:      code,
 		Msg:       message,

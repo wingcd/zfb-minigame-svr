@@ -28,7 +28,7 @@ func (c *UserDataController) SaveData() {
 	}
 
 	// 保存数据
-	err = models.SaveUserData(appId, userId, data)
+	err = models.SaveUserDataWithKey(appId, userId, "default", data)
 	if err != nil {
 		utils.ErrorResponse(c.Ctx, 1003, "保存数据失败: "+err.Error(), nil)
 		return
@@ -47,7 +47,7 @@ func (c *UserDataController) GetData() {
 	}
 
 	// 获取数据
-	data, err := models.GetUserData(appId, userId)
+	data, err := models.GetUserDataWithKey(appId, userId, "default")
 	if err != nil {
 		utils.ErrorResponse(c.Ctx, 1003, "获取数据失败: "+err.Error(), nil)
 		return
@@ -70,7 +70,7 @@ func (c *UserDataController) DeleteData() {
 	}
 
 	// 删除数据
-	err = models.DeleteUserData(appId, userId)
+	err = models.DeleteUserDataWithKey(appId, userId, "default")
 	if err != nil {
 		utils.ErrorResponse(c.Ctx, 1003, "删除数据失败: "+err.Error(), nil)
 		return

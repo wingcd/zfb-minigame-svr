@@ -6,11 +6,11 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"game-service/models"
 	"net/http"
 	"sort"
 	"strings"
 
+	"github.com/beego/beego/v2/client/orm"
 	"github.com/beego/beego/v2/core/config"
 )
 
@@ -31,10 +31,12 @@ func VerifySign(appId, userId, sign string) (bool, error) {
 		return false, errors.New("sign is empty")
 	}
 
-	// 获取应用密钥
-	app := &models.Application{AppId: appId}
-	if err := app.GetByAppId(); err != nil {
-		return false, err
+	// 直接查询数据库获取应用密钥
+	o := orm.NewOrm()
+	var appSecret string
+	err := o.Raw("SELECT app_secret FROM application WHERE app_id = ?", appId).QueryRow(&appSecret)
+	if err != nil {
+		return false, errors.New("application not found")
 	}
 
 	// 构建签名字符串
@@ -43,7 +45,7 @@ func VerifySign(appId, userId, sign string) (bool, error) {
 	if userId != "" {
 		params["userId"] = userId
 	}
-	params["appSecret"] = app.AppSecret
+	params["appSecret"] = appSecret
 
 	// 按key排序
 	keys := make([]string, 0, len(params))
@@ -68,11 +70,10 @@ func VerifySign(appId, userId, sign string) (bool, error) {
 	expectedSign := fmt.Sprintf("%x", md5.Sum([]byte(signString)))
 
 	ret := strings.ToLower(sign) == strings.ToLower(expectedSign)
-	var err error
 	if !ret {
-		err = errors.New("sign is invalid")
+		return false, errors.New("sign is invalid")
 	}
-	return ret, err
+	return true, nil
 }
 
 // GenerateSign 生成签名（测试用）
@@ -138,15 +139,6 @@ func MD5(data string) string {
 // MD5WithSalt MD5加盐加密
 func MD5WithSalt(data, salt string) string {
 	return MD5(data + salt)
-}
-
-// CleanAppId 清理应用ID中的特殊字符
-func CleanAppId(appId string) string {
-	// 替换特殊字符为下划线
-	cleaned := strings.ReplaceAll(appId, "-", "_")
-	cleaned = strings.ReplaceAll(cleaned, ".", "_")
-	cleaned = strings.ReplaceAll(cleaned, " ", "_")
-	return cleaned
 }
 
 // GenerateRandomString 生成随机字符串

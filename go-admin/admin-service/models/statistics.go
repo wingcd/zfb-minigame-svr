@@ -370,17 +370,20 @@ func GetAppStats(appId string) (map[string]interface{}, error) {
 
 // GetLeaderboardStats 获取排行榜统计
 func GetLeaderboardStats(appId string) (map[string]interface{}, error) {
-	stats := make(map[string]interface{})
+	// 获取基础统计数据
+	stats, err := GetLeaderboardStatsByAppId(appId)
+	if err != nil {
+		return nil, err
+	}
 
-	// 获取排行榜总数
-	total, _ := GetLeaderboardCount(appId)
-	stats["total"] = total
+	// 保持向后兼容性，添加别名
+	if _, ok := stats["totalPlayers"]; ok {
+		stats["active"] = stats["total"] // 活跃排行榜数等于总数
+	}
 
-	// 获取活跃排行榜数（模拟数据）
-	stats["active"] = total
-
-	// 获取今日提交数（模拟数据）
-	stats["todaySubmits"] = int64(0)
+	if todaySubmissions, ok := stats["todaySubmissions"]; ok {
+		stats["todaySubmits"] = todaySubmissions // 兼容旧字段名
+	}
 
 	// 获取排行榜列表，包含玩家详细信息
 	leaderboards, _, err := GetLeaderboardList(appId, 1, 100, "")

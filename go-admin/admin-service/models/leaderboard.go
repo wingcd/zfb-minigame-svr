@@ -230,10 +230,10 @@ func GetLeaderboardData(appId, leaderboardType string, page, pageSize int) ([]ma
 	// 获取分页数据
 	offset := (page - 1) * pageSize
 	querySQL := fmt.Sprintf(`
-		SELECT id, leaderboard_name, playerId, score, extraData, createdAt, updatedAt 
+		SELECT id, leaderboard_name, playerId, score, extraData, created_at as createdAt, updated_at as updatedAt 
 		FROM %s 
 		WHERE leaderboard_name = ? 
-		ORDER BY score DESC, createdAt ASC 
+		ORDER BY score DESC, created_at ASC 
 		LIMIT ? OFFSET ?
 	`, tableName)
 
@@ -348,14 +348,14 @@ func UpdateLeaderboardScore(appId, leaderboardType, playerId string, score int64
 	if err == orm.ErrNoRows {
 		// 插入新记录
 		insertSQL := fmt.Sprintf(`
-			INSERT INTO %s (leaderboard_name, playerId, score, createdAt, updatedAt) 
+			INSERT INTO %s (leaderboard_name, playerId, score, created_at, updated_at) 
 			VALUES (?, ?, ?, NOW(), NOW())
 		`, tableName)
 		_, err = o.Raw(insertSQL, leaderboardType, playerId, score).Exec()
 	} else if err == nil {
 		// 更新现有记录
 		updateSQL := fmt.Sprintf(`
-			UPDATE %s SET score = ?, updatedAt = NOW() 
+			UPDATE %s SET score = ?, updated_at = NOW() 
 			WHERE leaderboard_name = ? AND playerId = ?
 		`, tableName)
 		_, err = o.Raw(updateSQL, score, leaderboardType, playerId).Exec()
@@ -415,12 +415,12 @@ func CommitLeaderboardScore(appId, leaderboardType, playerId string, score int64
 
 			if count >= int64(leaderboard.MaxRank) {
 				// 删除最低分记录
-				lowestSQL := fmt.Sprintf("SELECT score FROM %s WHERE leaderboard_name = ? ORDER BY score ASC, createdAt DESC LIMIT 1", tableName)
+				lowestSQL := fmt.Sprintf("SELECT score FROM %s WHERE leaderboard_name = ? ORDER BY score ASC, created_at DESC LIMIT 1", tableName)
 				var lowestScore int64
 				err = o.Raw(lowestSQL, leaderboardType).QueryRow(&lowestScore)
 
 				if err == nil && score > lowestScore {
-					deleteLowestSQL := fmt.Sprintf("DELETE FROM %s WHERE leaderboard_name = ? ORDER BY score ASC, createdAt DESC LIMIT 1", tableName)
+					deleteLowestSQL := fmt.Sprintf("DELETE FROM %s WHERE leaderboard_name = ? ORDER BY score ASC, created_at DESC LIMIT 1", tableName)
 					o.Raw(deleteLowestSQL, leaderboardType).Exec()
 				} else if err == nil {
 					return fmt.Errorf("分数太低，无法进入排行榜")
@@ -430,7 +430,7 @@ func CommitLeaderboardScore(appId, leaderboardType, playerId string, score int64
 
 		// 创建新记录
 		insertSQL := fmt.Sprintf(`
-			INSERT INTO %s (leaderboard_name, playerId, score, createdAt, updatedAt) 
+			INSERT INTO %s (leaderboard_name, playerId, score, created_at, updated_at) 
 			VALUES (?, ?, ?, NOW(), NOW())
 		`, tableName)
 		_, err = o.Raw(insertSQL, leaderboardType, playerId, score).Exec()
@@ -449,7 +449,7 @@ func CommitLeaderboardScore(appId, leaderboardType, playerId string, score int64
 
 	if shouldUpdate {
 		updateSQL := fmt.Sprintf(`
-			UPDATE %s SET score = ?, updatedAt = NOW() 
+			UPDATE %s SET score = ?, updated_at = NOW() 
 			WHERE leaderboard_name = ? AND playerId = ?
 		`, tableName)
 		_, err = o.Raw(updateSQL, score, leaderboardType, playerId).Exec()
@@ -496,6 +496,83 @@ func FixLeaderboardUserInfo(appId, leaderboardType string) (int64, error) {
 	return 0, nil
 }
 
+// GetLeaderboardStatsByAppId 获取应用的排行榜统计信息
+func GetLeaderboardStatsByAppId(appId string) (map[string]interface{}, error) {
+	o := orm.NewOrm()
+	stats := make(map[string]interface{})
+
+	// 获取排行榜总数
+	total, err := GetLeaderboardCount(appId)
+	if err != nil {
+		return stats, err
+	}
+	stats["total"] = total
+
+	// 如果没有排行榜，返回默认值
+	if total == 0 {
+		stats["totalPlayers"] = int64(0)
+		stats["highestScore"] = int64(0)
+		stats["averageScore"] = float64(0)
+		stats["todaySubmissions"] = int64(0)
+		return stats, nil
+	}
+
+	// 获取动态表名
+	leaderboardData := &LeaderboardData{}
+	tableName := leaderboardData.GetTableName(appId)
+
+	// 检查表是否存在
+	checkSQL := fmt.Sprintf("SHOW TABLES LIKE '%s'", tableName)
+	var exists string
+	err = o.Raw(checkSQL).QueryRow(&exists)
+	if err == orm.ErrNoRows {
+		// 表不存在，返回默认值
+		stats["totalPlayers"] = int64(0)
+		stats["highestScore"] = int64(0)
+		stats["averageScore"] = float64(0)
+		stats["todaySubmissions"] = int64(0)
+		return stats, nil
+	}
+
+	// 获取总玩家数（去重）
+	var totalPlayers int64
+	playerCountSQL := fmt.Sprintf("SELECT COUNT(DISTINCT playerId) FROM %s", tableName)
+	err = o.Raw(playerCountSQL).QueryRow(&totalPlayers)
+	if err != nil {
+		totalPlayers = 0
+	}
+	stats["totalPlayers"] = totalPlayers
+
+	// 获取最高分数
+	var highestScore int64
+	highestScoreSQL := fmt.Sprintf("SELECT IFNULL(MAX(score), 0) FROM %s", tableName)
+	err = o.Raw(highestScoreSQL).QueryRow(&highestScore)
+	if err != nil {
+		highestScore = 0
+	}
+	stats["highestScore"] = highestScore
+
+	// 获取平均分数
+	var averageScore float64
+	averageScoreSQL := fmt.Sprintf("SELECT IFNULL(AVG(score), 0) FROM %s", tableName)
+	err = o.Raw(averageScoreSQL).QueryRow(&averageScore)
+	if err != nil {
+		averageScore = 0
+	}
+	stats["averageScore"] = averageScore
+
+	// 获取今日提交数
+	var todaySubmissions int64
+	todaySubmissionsSQL := fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE DATE(updated_at) = CURDATE()", tableName)
+	err = o.Raw(todaySubmissionsSQL).QueryRow(&todaySubmissions)
+	if err != nil {
+		todaySubmissions = 0
+	}
+	stats["todaySubmissions"] = todaySubmissions
+
+	return stats, nil
+}
+
 // createLeaderboardTable 创建排行榜数据表
 func createLeaderboardTable(appId string) error {
 	o := orm.NewOrm()
@@ -527,6 +604,83 @@ func createLeaderboardTable(appId string) error {
 
 		_, err = o.Raw(createSQL).Exec()
 		return err
+	}
+
+	return nil
+}
+
+// UpdateLeaderboardScoreWithExtra 更新排行榜分数（支持额外数据）
+func UpdateLeaderboardScoreWithExtra(appId, leaderboardType, playerId string, score int64, extraDataJson string) error {
+	o := orm.NewOrm()
+
+	// 检查应用是否存在
+	var app Application
+	err := o.QueryTable("application").Filter("appId", appId).One(&app)
+	if err != nil {
+		return fmt.Errorf("应用不存在")
+	}
+
+	// 检查排行榜配置
+	var config LeaderboardConfig
+	err = o.QueryTable("leaderboard_config").Filter("appId", appId).Filter("leaderboard_type", leaderboardType).One(&config)
+	if err != nil {
+		return fmt.Errorf("排行榜配置不存在")
+	}
+
+	if !config.Enabled {
+		return fmt.Errorf("排行榜已禁用")
+	}
+
+	// 获取动态表名
+	leaderboardData := &LeaderboardData{}
+	tableName := leaderboardData.GetTableName(appId)
+
+	// 查找现有记录 - 使用原生SQL查询
+	var existingRecord struct {
+		ID              int64  `json:"id"`
+		LeaderboardName string `json:"leaderboard_name"`
+		PlayerId        string `json:"playerId"`
+		Score           int64  `json:"score"`
+		ExtraData       string `json:"extraData"`
+		CreatedAt       string `json:"created_at"`
+		UpdatedAt       string `json:"updated_at"`
+	}
+
+	err = o.Raw(fmt.Sprintf("SELECT id, leaderboard_name, playerId, score, extraData, created_at, updated_at FROM %s WHERE leaderboard_name = ? AND playerId = ?", tableName), leaderboardType, playerId).QueryRow(&existingRecord)
+
+	if err == orm.ErrNoRows {
+		// 新增记录 - 使用原生SQL插入
+		_, err = o.Raw(fmt.Sprintf("INSERT INTO %s (leaderboard_name, playerId, score, extraData) VALUES (?, ?, ?, ?)", tableName), leaderboardType, playerId, score, extraDataJson).Exec()
+		if err != nil {
+			return fmt.Errorf("插入排行榜数据失败: %v", err)
+		}
+	} else if err != nil {
+		return fmt.Errorf("查询排行榜数据失败: %v", err)
+	} else {
+		// 更新记录
+		shouldUpdate := false
+
+		switch config.UpdateStrategy {
+		case 0: // 最高分
+			if config.ScoreType == "higher_better" && score > existingRecord.Score {
+				shouldUpdate = true
+			} else if config.ScoreType == "lower_better" && score < existingRecord.Score {
+				shouldUpdate = true
+			}
+		case 1: // 最新分
+			shouldUpdate = true
+		case 2: // 累计分
+			score = score + existingRecord.Score
+			shouldUpdate = true
+		}
+
+		if shouldUpdate {
+			// 使用原生SQL更新
+			_, err = o.Raw(fmt.Sprintf("UPDATE %s SET score = ?, extraData = ?, updated_at = NOW() WHERE id = ?", tableName), score, extraDataJson, existingRecord.ID).Exec()
+			if err != nil {
+				return fmt.Errorf("更新排行榜数据失败: %v", err)
+			}
+		}
 	}
 
 	return nil

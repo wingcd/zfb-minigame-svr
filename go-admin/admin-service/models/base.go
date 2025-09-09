@@ -104,16 +104,24 @@ func InitRedis() error {
 		return fmt.Errorf("load config failed: %v", err)
 	}
 
-	redisAddr := getConfigString(appconf, "redis_addr", "localhost:6379")
+	redisHost := getConfigString(appconf, "redis_host", "localhost")
+	redisPort := getConfigString(appconf, "redis_port", "6379")
 	redisPassword := getConfigString(appconf, "redis_password", "")
-	redisDB := getConfigInt(appconf, "redis_db", 0)
+	redisDatabase := getConfigInt(appconf, "redis_database", 0)
+
+	// 创建Redis客户端选项
+	options := &redis.Options{
+		Addr: fmt.Sprintf("%s:%s", redisHost, redisPort),
+		DB:   redisDatabase,
+	}
+
+	// 只有在密码不为空时才设置密码
+	if redisPassword != "" {
+		options.Password = redisPassword
+	}
 
 	// 创建Redis客户端
-	RedisClient = redis.NewClient(&redis.Options{
-		Addr:     redisAddr,
-		Password: redisPassword,
-		DB:       redisDB,
-	})
+	RedisClient = redis.NewClient(options)
 
 	return nil
 }
@@ -132,6 +140,11 @@ func getConfigInt(conf config.Configer, key string, defaultValue int) int {
 		return value
 	}
 	return defaultValue
+}
+
+// GetOrm 获取ORM实例
+func GetOrm() orm.Ormer {
+	return orm.NewOrm()
 }
 
 // CreateTables 创建数据表

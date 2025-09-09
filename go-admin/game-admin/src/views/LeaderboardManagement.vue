@@ -417,7 +417,9 @@ export default {
       if (!selectedAppId.value) return
       
       try {
-        const result = await statsAPI.leaderboardStats(selectedAppId.value)
+        const result = await statsAPI.leaderboardStats({
+          appId: selectedAppId.value
+        })
         if (result.code === 0) {
           leaderboardStats.value = result.data
         }

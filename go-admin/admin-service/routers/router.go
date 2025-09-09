@@ -122,6 +122,8 @@ func init() {
 	web.Router("/leaderboard/getData", &controllers.LeaderboardController{}, "post:GetLeaderboardData")
 	web.Router("/leaderboard/updateScore", &controllers.LeaderboardController{}, "post:UpdateLeaderboardScore")
 	web.Router("/leaderboard/deleteScore", &controllers.LeaderboardController{}, "post:DeleteLeaderboardScore")
+	web.Router("/leaderboard/commitScore", &controllers.LeaderboardController{}, "post:CommitLeaderboardScore")
+	web.Router("/leaderboard/queryScore", &controllers.LeaderboardController{}, "post:QueryLeaderboardScore")
 	// 计数器管理模块
 	web.Router("/counter/getList", &controllers.CounterController{}, "post:GetCounterList")
 	web.Router("/counter/create", &controllers.CounterController{}, "post:CreateCounter")

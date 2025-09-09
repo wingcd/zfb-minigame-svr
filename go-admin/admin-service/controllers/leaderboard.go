@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"admin-service/models"
+	"admin-service/services"
 	"admin-service/utils"
 	"encoding/json"
 
@@ -10,6 +11,14 @@ import (
 
 type LeaderboardController struct {
 	web.Controller
+	redisService *services.LeaderboardRedisService
+}
+
+// init 初始化控制器
+func (c *LeaderboardController) init() {
+	if c.redisService == nil {
+		c.redisService = services.NewLeaderboardRedisService()
+	}
 }
 
 // GetAllLeaderboards 获取所有排行榜（对齐云函数getLeaderboards接口）
@@ -274,14 +283,15 @@ func (c *LeaderboardController) DeleteLeaderboard() {
 	c.ServeJSON()
 }
 
-// GetLeaderboardData 获取排行榜数据
+// GetLeaderboardData 获取排行榜数据（使用Redis）
 func (c *LeaderboardController) GetLeaderboardData() {
+	c.init() // 初始化Redis服务
+
 	var requestData struct {
 		AppId           string `json:"appId"`
 		LeaderboardType string `json:"leaderboardType"`
-		Page            int    `json:"page"`
-		PageSize        int    `json:"pageSize"`
-		StartRank       int    `json:"startRank"`
+		Offset          int    `json:"offset"`
+		Limit           int    `json:"limit"`
 	}
 
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &requestData); err != nil {
@@ -290,37 +300,51 @@ func (c *LeaderboardController) GetLeaderboardData() {
 	}
 
 	// 设置默认值
-	if requestData.Page <= 0 {
-		requestData.Page = 1
+	if requestData.Offset <= 0 {
+		requestData.Offset = 0
 	}
-	if requestData.PageSize <= 0 {
-		requestData.PageSize = 20
+	if requestData.Limit <= 0 {
+		requestData.Limit = 20
 	}
 
-	data, total, err := models.GetLeaderboardData(requestData.AppId, requestData.LeaderboardType, requestData.Page, requestData.PageSize)
+	// 计算Redis查询范围（从0开始）
+	start := int64(requestData.Offset)
+	stop := start + int64(requestData.Limit) - 1
+
+	// 从Redis获取数据
+	data, err := c.redisService.GetLeaderboard(requestData.AppId, requestData.LeaderboardType, start, stop)
 	if err != nil {
-		utils.ErrorResponse(&c.Controller, utils.CodeServerError, "获取排行榜数据失败", nil)
+		utils.ErrorResponse(&c.Controller, utils.CodeServerError, "获取排行榜数据失败: "+err.Error(), nil)
 		return
+	}
+
+	// 获取排行榜总大小
+	total, err := c.redisService.GetLeaderboardSize(requestData.AppId, requestData.LeaderboardType)
+	if err != nil {
+		total = int64(len(data)) // 使用当前返回数据长度作为备选
 	}
 
 	result := map[string]interface{}{
 		"list":       data,
 		"total":      total,
-		"page":       requestData.Page,
-		"pageSize":   requestData.PageSize,
-		"totalPages": (total + int64(requestData.PageSize) - 1) / int64(requestData.PageSize),
+		"offset":     requestData.Offset,
+		"limit":      requestData.Limit,
+		"totalPages": (total + int64(requestData.Limit) - 1) / int64(requestData.Limit),
 	}
 
 	utils.SuccessResponse(&c.Controller, "success", result)
 }
 
-// UpdateLeaderboardScore 更新排行榜分数
+// UpdateLeaderboardScore 更新排行榜分数（使用Redis）
 func (c *LeaderboardController) UpdateLeaderboardScore() {
+	c.init() // 初始化Redis服务
+
 	var requestData struct {
-		AppId           string `json:"appId"`
-		LeaderboardType string `json:"leaderboardType"`
-		PlayerId        string `json:"playerId"`
-		Score           int64  `json:"score"`
+		AppId           string                 `json:"appId"`
+		LeaderboardType string                 `json:"leaderboardType"`
+		PlayerId        string                 `json:"playerId"`
+		Score           int64                  `json:"score"`
+		ExtraData       map[string]interface{} `json:"extraData"`
 	}
 
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &requestData); err != nil {
@@ -328,16 +352,19 @@ func (c *LeaderboardController) UpdateLeaderboardScore() {
 		return
 	}
 
-	if err := models.UpdateLeaderboardScore(requestData.AppId, requestData.LeaderboardType, requestData.PlayerId, requestData.Score); err != nil {
-		utils.ErrorResponse(&c.Controller, utils.CodeServerError, "更新分数失败", nil)
+	// 使用Redis服务更新分数
+	if err := c.redisService.UpdateScore(requestData.AppId, requestData.LeaderboardType, requestData.PlayerId, requestData.Score, requestData.ExtraData); err != nil {
+		utils.ErrorResponse(&c.Controller, utils.CodeServerError, "更新分数失败: "+err.Error(), nil)
 		return
 	}
 
 	utils.SuccessResponse(&c.Controller, "success", nil)
 }
 
-// DeleteLeaderboardScore 删除排行榜分数
+// DeleteLeaderboardScore 删除排行榜分数（使用Redis）
 func (c *LeaderboardController) DeleteLeaderboardScore() {
+	c.init() // 初始化Redis服务
+
 	var requestData struct {
 		AppId           string `json:"appId"`
 		LeaderboardType string `json:"leaderboardType"`
@@ -349,21 +376,25 @@ func (c *LeaderboardController) DeleteLeaderboardScore() {
 		return
 	}
 
-	if err := models.DeleteLeaderboardScore(requestData.AppId, requestData.LeaderboardType, requestData.PlayerId); err != nil {
-		utils.ErrorResponse(&c.Controller, utils.CodeServerError, "删除分数失败", nil)
+	// 使用Redis服务删除分数
+	if err := c.redisService.RemovePlayer(requestData.AppId, requestData.LeaderboardType, requestData.PlayerId); err != nil {
+		utils.ErrorResponse(&c.Controller, utils.CodeServerError, "删除分数失败: "+err.Error(), nil)
 		return
 	}
 
 	utils.SuccessResponse(&c.Controller, "success", nil)
 }
 
-// CommitLeaderboardScore 提交排行榜分数
+// CommitLeaderboardScore 提交排行榜分数（使用Redis）
 func (c *LeaderboardController) CommitLeaderboardScore() {
+	c.init() // 初始化Redis服务
+
 	var requestData struct {
-		AppId           string `json:"appId"`
-		LeaderboardType string `json:"leaderboardType"`
-		PlayerId        string `json:"playerId"`
-		Score           int64  `json:"score"`
+		AppId           string                 `json:"appId"`
+		LeaderboardType string                 `json:"leaderboardType"`
+		PlayerId        string                 `json:"playerId"`
+		Score           int64                  `json:"score"`
+		ExtraData       map[string]interface{} `json:"extraData"`
 	}
 
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &requestData); err != nil {
@@ -371,16 +402,19 @@ func (c *LeaderboardController) CommitLeaderboardScore() {
 		return
 	}
 
-	if err := models.CommitLeaderboardScore(requestData.AppId, requestData.LeaderboardType, requestData.PlayerId, requestData.Score); err != nil {
-		utils.ErrorResponse(&c.Controller, utils.CodeServerError, "提交分数失败", nil)
+	// 使用Redis服务更新分数
+	if err := c.redisService.UpdateScore(requestData.AppId, requestData.LeaderboardType, requestData.PlayerId, requestData.Score, requestData.ExtraData); err != nil {
+		utils.ErrorResponse(&c.Controller, utils.CodeServerError, "提交分数失败: "+err.Error(), nil)
 		return
 	}
 
 	utils.SuccessResponse(&c.Controller, "success", nil)
 }
 
-// QueryLeaderboardScore 查询排行榜分数
+// QueryLeaderboardScore 查询排行榜分数（使用Redis）
 func (c *LeaderboardController) QueryLeaderboardScore() {
+	c.init() // 初始化Redis服务
+
 	var requestData struct {
 		AppId           string `json:"appId"`
 		LeaderboardType string `json:"leaderboardType"`
@@ -392,40 +426,17 @@ func (c *LeaderboardController) QueryLeaderboardScore() {
 		return
 	}
 
-	score, rank, err := models.QueryLeaderboardScore(requestData.AppId, requestData.LeaderboardType, requestData.PlayerId)
+	// 从Redis获取玩家排名和分数
+	score, rank, err := c.redisService.GetPlayerRank(requestData.AppId, requestData.LeaderboardType, requestData.PlayerId)
 	if err != nil {
-		utils.ErrorResponse(&c.Controller, utils.CodeServerError, "查询分数失败", nil)
+		utils.ErrorResponse(&c.Controller, utils.CodeServerError, "查询分数失败: "+err.Error(), nil)
 		return
 	}
 
 	data := map[string]interface{}{
-		"score": score,
-		"rank":  rank,
-	}
-
-	utils.SuccessResponse(&c.Controller, "success", data)
-}
-
-// FixLeaderboardUserInfo 修复排行榜用户信息
-func (c *LeaderboardController) FixLeaderboardUserInfo() {
-	var requestData struct {
-		AppId           string `json:"appId"`
-		LeaderboardType string `json:"leaderboardType"`
-	}
-
-	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &requestData); err != nil {
-		utils.ErrorResponse(&c.Controller, utils.CodeBadRequest, "参数错误", nil)
-		return
-	}
-
-	count, err := models.FixLeaderboardUserInfo(requestData.AppId, requestData.LeaderboardType)
-	if err != nil {
-		utils.ErrorResponse(&c.Controller, utils.CodeServerError, "修复用户信息失败", nil)
-		return
-	}
-
-	data := map[string]interface{}{
-		"fixedCount": count,
+		"playerId": requestData.PlayerId,
+		"score":    score,
+		"rank":     rank,
 	}
 
 	utils.SuccessResponse(&c.Controller, "success", data)

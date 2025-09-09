@@ -2,7 +2,8 @@ package models
 
 import (
 	"fmt"
-	"strings"
+
+	"game-service/utils"
 
 	"github.com/beego/beego/v2/client/orm"
 )
@@ -20,9 +21,7 @@ type GameConfig struct {
 
 // GetTableName 获取动态表名
 func (g *GameConfig) GetTableName(appId string) string {
-	cleanAppId := strings.ReplaceAll(appId, "-", "_")
-	cleanAppId = strings.ReplaceAll(cleanAppId, ".", "_")
-	return fmt.Sprintf("game_config_%s", cleanAppId)
+	return fmt.Sprintf("game_config_%s", utils.CleanAppId(appId))
 }
 
 // GetConfig 获取配置

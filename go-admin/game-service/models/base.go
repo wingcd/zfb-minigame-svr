@@ -73,8 +73,9 @@ func init() {
 // 注册所有模型
 func registerModels() {
 	orm.RegisterModel(
-		new(UserData),
+		new(UserDataEntry),
 		new(Leaderboard),
+		new(LeaderboardEntry),
 		new(Counter),
 		new(Mail),
 		new(GameConfig),
@@ -91,11 +92,18 @@ func initRedis() {
 	redisPassword := appconf.DefaultString("redis_password", "")
 	redisDatabase, _ := appconf.Int("redis_database")
 
-	RedisClient = redis.NewClient(&redis.Options{
-		Addr:     fmt.Sprintf("%s:%s", redisHost, redisPort),
-		Password: redisPassword,
-		DB:       redisDatabase,
-	})
+	// 创建Redis客户端选项
+	options := &redis.Options{
+		Addr: fmt.Sprintf("%s:%s", redisHost, redisPort),
+		DB:   redisDatabase,
+	}
+
+	// 只有在密码不为空时才设置密码
+	if redisPassword != "" {
+		options.Password = redisPassword
+	}
+
+	RedisClient = redis.NewClient(options)
 }
 
 // SuccessResponse 成功响应
