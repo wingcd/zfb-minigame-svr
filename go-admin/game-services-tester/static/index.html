@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Service API Tester - 现代化测试工具</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- 侧边栏导航 -->
+    <nav class="sidebar">
+        <div class="sidebar-header">
+            <i class="fas fa-rocket"></i>
+            <h2>API Tester</h2>
+        </div>
+        
+        <div class="nav-menu">
+            <a href="#dashboard" class="nav-item active" data-section="dashboard">
+                <i class="fas fa-tachometer-alt"></i>
+                <span>控制台</span>
+            </a>
+            <a href="#config" class="nav-item" data-section="config">
+                <i class="fas fa-cog"></i>
+                <span>配置设置</span>
+            </a>
+            <a href="#health" class="nav-item" data-section="health">
+                <i class="fas fa-heartbeat"></i>
+                <span>健康检查</span>
+            </a>
+            <a href="#user" class="nav-item" data-section="user">
+                <i class="fas fa-user"></i>
+                <span>用户数据</span>
+            </a>
+            <a href="#leaderboard" class="nav-item" data-section="leaderboard">
+                <i class="fas fa-trophy"></i>
+                <span>排行榜</span>
+            </a>
+            <a href="#counter" class="nav-item" data-section="counter">
+                <i class="fas fa-sort-numeric-up"></i>
+                <span>计数器</span>
+            </a>
+            <a href="#mail" class="nav-item" data-section="mail">
+                <i class="fas fa-envelope"></i>
+                <span>邮件系统</span>
+            </a>
+            <a href="#config-api" class="nav-item" data-section="config-api">
+                <i class="fas fa-database"></i>
+                <span>配置接口</span>
+            </a>
+        </div>
+        
+        <div class="sidebar-footer">
+            <div class="stats-mini">
+                <div class="stat-item">
+                    <i class="fas fa-check-circle"></i>
+                    <span id="sidebar-success">0</span>
+                </div>
+                <div class="stat-item">
+                    <i class="fas fa-times-circle"></i>
+                    <span id="sidebar-fail">0</span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容区域 -->
+    <main class="main-content">
+        <!-- 顶部导航栏 -->
+        <header class="top-header">
+            <div class="header-left">
+                <button class="sidebar-toggle" onclick="toggleSidebar()">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <h1 id="page-title">控制台</h1>
+            </div>
+            <div class="header-right">
+                <div class="connection-status" id="connection-status">
+                    <i class="fas fa-circle"></i>
+                    <span>检查连接中...</span>
+                </div>
+                <button class="btn btn-primary" onclick="runAllTests()">
+                    <i class="fas fa-play"></i>
+                    运行所有测试
+                </button>
+                <button class="btn btn-secondary" onclick="clearAllResults()">
+                    <i class="fas fa-broom"></i>
+                    清空结果
+                </button>
+            </div>
+        </header>
+
+        <!-- 控制台面板 -->
+        <section id="dashboard" class="content-section active">
+            <div class="dashboard-grid">
+                <div class="card stat-card success-card">
+                    <div class="card-icon">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="card-content">
+                        <h3>成功测试</h3>
+                        <span class="stat-number" id="dashboard-success">0</span>
+                    </div>
+                </div>
+                
+                <div class="card stat-card error-card">
+                    <div class="card-icon">
+                        <i class="fas fa-exclamation-circle"></i>
+                    </div>
+                    <div class="card-content">
+                        <h3>失败测试</h3>
+                        <span class="stat-number" id="dashboard-fail">0</span>
+                    </div>
+                </div>
+                
+                <div class="card stat-card total-card">
+                    <div class="card-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="card-content">
+                        <h3>总测试数</h3>
+                        <span class="stat-number" id="dashboard-total">0</span>
+                    </div>
+                </div>
+                
+                <div class="card stat-card rate-card">
+                    <div class="card-icon">
+                        <i class="fas fa-percentage"></i>
+                    </div>
+                    <div class="card-content">
+                        <h3>成功率</h3>
+                        <span class="stat-number" id="dashboard-rate">100%</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h3><i class="fas fa-history"></i> 最近测试记录</h3>
+                </div>
+                <div class="card-body">
+                    <div id="test-history" class="test-history"></div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h3><i class="fas fa-bolt"></i> 快速测试</h3>
+                </div>
+                <div class="card-body">
+                    <div class="quick-test-grid">
+                        <button class="quick-test-btn" onclick="quickTest('health')">
+                            <i class="fas fa-heartbeat"></i>
+                            <span>健康检查</span>
+                        </button>
+                        <button class="quick-test-btn" onclick="quickTest('login')">
+                            <i class="fas fa-sign-in-alt"></i>
+                            <span>用户登录</span>
+                        </button>
+                        <button class="quick-test-btn" onclick="quickTest('leaderboard')">
+                            <i class="fas fa-trophy"></i>
+                            <span>排行榜</span>
+                        </button>
+                        <button class="quick-test-btn" onclick="quickTest('mail')">
+                            <i class="fas fa-envelope"></i>
+                            <span>邮件系统</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 配置设置面板 -->
+        <section id="config" class="content-section">
+            <div class="card">
+                <div class="card-header">
+                    <h3><i class="fas fa-cog"></i> 基础配置</h3>
+                    <div class="card-actions">
+                        <button class="btn btn-small btn-secondary" onclick="resetConfig()">
+                            <i class="fas fa-undo"></i>
+                            重置默认
+                        </button>
+                        <button class="btn btn-small btn-primary" onclick="saveConfig()">
+                            <i class="fas fa-save"></i>
+                            保存配置
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="baseUrl">
+                                <i class="fas fa-server"></i>
+                                服务器地址
+                            </label>
+                            <input type="text" id="baseUrl" value="http://localhost:8081" placeholder="http://localhost:8081">
+                            <small>Game Service 运行地址</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="appId">
+                                <i class="fas fa-key"></i>
+                                App ID
+                            </label>
+                            <input type="text" id="appId" value="test_app" placeholder="test_app">
+                            <small>应用标识符</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="appSecret">
+                                <i class="fas fa-lock"></i>
+                                App Secret
+                            </label>
+                            <input type="password" id="appSecret" value="test_secret" placeholder="test_secret">
+                            <small>应用密钥（用于签名验证）</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="playerId">
+                                <i class="fas fa-user"></i>
+                                Player ID
+                            </label>
+                            <input type="text" id="playerId" value="test_player_001" placeholder="test_player_001">
+                            <small>测试玩家标识</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h3><i class="fas fa-magic"></i> 智能预设</h3>
+                </div>
+                <div class="card-body">
+                    <div class="preset-grid">
+                        <div class="preset-item" onclick="applyPreset('local')">
+                            <i class="fas fa-laptop"></i>
+                            <h4>本地开发</h4>
+                            <p>localhost:8081 配置</p>
+                        </div>
+                        <div class="preset-item" onclick="applyPreset('staging')">
+                            <i class="fas fa-cloud"></i>
+                            <h4>测试环境</h4>
+                            <p>staging 服务器配置</p>
+                        </div>
+                        <div class="preset-item" onclick="applyPreset('production')">
+                            <i class="fas fa-globe"></i>
+                            <h4>生产环境</h4>
+                            <p>production 服务器配置</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 健康检查面板 -->
+        <section id="health" class="content-section">
+            <div class="test-card">
+                <div class="test-header">
+                    <h3><i class="fas fa-heartbeat"></i> 服务健康检查</h3>
+                    <button class="btn btn-primary" onclick="testHealth()">
+                        <i class="fas fa-play"></i>
+                        测试
+                    </button>
+                </div>
+                <div class="test-body">
+                    <p>检查 Game Service 基础服务状态</p>
+                    <div id="health-result" class="result-container"></div>
+                </div>
+            </div>
+            
+            <div class="test-card">
+                <div class="test-header">
+                    <h3><i class="fas fa-pulse"></i> 心跳检测</h3>
+                    <button class="btn btn-primary" onclick="testHeartbeat()">
+                        <i class="fas fa-play"></i>
+                        测试
+                    </button>
+                </div>
+                <div class="test-body">
+                    <p>测试服务器响应速度和可用性</p>
+                    <div id="heartbeat-result" class="result-container"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 用户数据面板 -->
+        <section id="user" class="content-section">
+            <div class="test-card">
+                <div class="test-header">
+                    <h3><i class="fas fa-sign-in-alt"></i> 模拟用户登录</h3>
+                    <button class="btn btn-primary" onclick="testLogin()">
+                        <i class="fas fa-play"></i>
+                        测试登录
+                    </button>
+                </div>
+                <div class="test-body">
+                    <div class="form-group">
+                        <label for="loginCode">
+                            <i class="fas fa-code"></i>
+                            登录码
+                        </label>
+                        <input type="text" id="loginCode" value="test_code_123" placeholder="输入登录码">
+                    </div>
+                    <div id="login-result" class="result-container"></div>
+                </div>
+            </div>
+            
+            <div class="test-card">
+                <div class="test-header">
+                    <h3><i class="fas fa-save"></i> 保存游戏数据</h3>
+                    <div class="test-actions">
+                        <button class="btn btn-small btn-secondary" onclick="fillSampleGameData()">
+                            <i class="fas fa-magic"></i>
+                            填充示例数据
+                        </button>
+                        <button class="btn btn-primary" onclick="testSaveData()">
+                            <i class="fas fa-play"></i>
+                            保存数据
+                        </button>
+                    </div>
+                </div>
+                <div class="test-body">
+                    <div class="form-group">
+                        <label for="saveDataContent">
+                            <i class="fas fa-database"></i>
+                            游戏数据 (JSON 格式)
+                        </label>
+                        <textarea id="saveDataContent" placeholder='{"level": 10, "score": 1000}'></textarea>
+                    </div>
+                    <div id="saveData-result" class="result-container"></div>
+                </div>
+            </div>
+            
+            <div class="test-card">
+                <div class="test-header">
+                    <h3><i class="fas fa-download"></i> 获取游戏数据</h3>
+                    <button class="btn btn-primary" onclick="testGetData()">
+                        <i class="fas fa-play"></i>
+                        获取数据
+                    </button>
+                </div>
+                <div class="test-body">
+                    <p>从服务器获取当前用户的游戏数据</p>
+                    <div id="getData-result" class="result-container"></div>
+                </div>
+            </div>
+            
+            <div class="test-card">
+                <div class="test-header">
+                    <h3><i class="fas fa-user-edit"></i> 保存用户信息</h3>
+                    <div class="test-actions">
+                        <button class="btn btn-small btn-secondary" onclick="fillSampleUserInfo()">
+                            <i class="fas fa-magic"></i>
+                            填充示例信息
+                        </button>
+                        <button class="btn btn-primary" onclick="testSaveUserInfo()">
+                            <i class="fas fa-play"></i>
+                            保存信息
+                        </button>
+                    </div>
+                </div>
+                <div class="test-body">
+                    <div class="form-group">
+                        <label for="userInfo">
+                            <i class="fas fa-id-card"></i>
+                            用户信息 (JSON 格式)
+                        </label>
+                        <textarea id="userInfo" placeholder='{"nickName": "测试玩家"}'></textarea>
+                    </div>
+                    <div id="saveUserInfo-result" class="result-container"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 排行榜面板 -->
+        <section id="leaderboard" class="content-section">
+            <div class="test-card">
+                <div class="test-header">
+                    <h3><i class="fas fa-trophy"></i> 提交分数</h3>
+                    <button class="btn btn-primary" onclick="testCommitScore()">
+                        <i class="fas fa-play"></i>
+                        提交分数
+                    </button>
+                </div>
+                <div class="test-body">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="leaderboardType">
+                                <i class="fas fa-list"></i>
+                                排行榜类型
+                            </label>
+                            <select id="leaderboardType">
+                                <option value="global">全球排行榜</option>
+                                <option value="weekly">周榜</option>
+                                <option value="monthly">月榜</option>
+                                <option value="friends">好友榜</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="score">
+                                <i class="fas fa-star"></i>
+                                分数
+                            </label>
+                            <input type="number" id="score" value="1000" placeholder="输入分数">
+                        </div>
+                    </div>
+                    <div id="commitScore-result" class="result-container"></div>
+                </div>
+            </div>
+            
+            <div class="test-card">
+                <div class="test-header">
+                    <h3><i class="fas fa-medal"></i> 查询排行榜</h3>
+                    <button class="btn btn-primary" onclick="testQueryTopRank()">
+                        <i class="fas fa-play"></i>
+                        查询排行榜
+                    </button>
+                </div>
+                <div class="test-body">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="queryType">
+                                <i class="fas fa-list"></i>
+                                排行榜类型
+                            </label>
+                            <select id="queryType">
+                                <option value="global">全球排行榜</option>
+                                <option value="weekly">周榜</option>
+                                <option value="monthly">月榜</option>
+                                <option value="friends">好友榜</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="queryCount">
+                                <i class="fas fa-hashtag"></i>
+                                查询数量
+                            </label>
+                            <input type="number" id="queryCount" value="10" min="1" max="100">
+                        </div>
+                        <div class="form-group">
+                            <label for="startRank">
+                                <i class="fas fa-sort-numeric-up"></i>
+                                起始排名
+                            </label>
+                            <input type="number" id="startRank" value="1" min="1">
+                        </div>
+                    </div>
+                    <div id="queryTopRank-result" class="result-container"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 计数器面板 -->
+        <section id="counter" class="content-section">
+            <div class="test-card">
+                <div class="test-header">
+                    <h3><i class="fas fa-plus-circle"></i> 增加计数器</h3>
+                    <button class="btn btn-primary" onclick="testIncrementCounter()">
+                        <i class="fas fa-play"></i>
+                        增加计数
+                    </button>
+                </div>
+                <div class="test-body">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="counterName">
+                                <i class="fas fa-tag"></i>
+                                计数器名称
+                            </label>
+                            <input type="text" id="counterName" value="test_counter" placeholder="计数器名称">
+                        </div>
+                        <div class="form-group">
+                            <label for="increment">
+                                <i class="fas fa-plus"></i>
+                                增加数量
+                            </label>
+                            <input type="number" id="increment" value="1" min="1">
+                        </div>
+                    </div>
+                    <div id="incrementCounter-result" class="result-container"></div>
+                </div>
+            </div>
+            
+            <div class="test-card">
+                <div class="test-header">
+                    <h3><i class="fas fa-search"></i> 获取计数器值</h3>
+                    <button class="btn btn-primary" onclick="testGetCounter()">
+                        <i class="fas fa-play"></i>
+                        获取计数
+                    </button>
+                </div>
+                <div class="test-body">
+                    <div class="form-group">
+                        <label for="getCounterName">
+                            <i class="fas fa-tag"></i>
+                            计数器名称
+                        </label>
+                        <input type="text" id="getCounterName" value="test_counter" placeholder="计数器名称">
+                    </div>
+                    <div id="getCounter-result" class="result-container"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 邮件系统面板 -->
+        <section id="mail" class="content-section">
+            <div class="test-card">
+                <div class="test-header">
+                    <h3><i class="fas fa-inbox"></i> 获取邮件列表</h3>
+                    <button class="btn btn-primary" onclick="testGetUserMails()">
+                        <i class="fas fa-play"></i>
+                        获取邮件
+                    </button>
+                </div>
+                <div class="test-body">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="mailPage">
+                                <i class="fas fa-file-alt"></i>
+                                页码
+                            </label>
+                            <input type="number" id="mailPage" value="1" min="1">
+                        </div>
+                        <div class="form-group">
+                            <label for="mailPageSize">
+                                <i class="fas fa-list-ol"></i>
+                                每页数量
+                            </label>
+                            <input type="number" id="mailPageSize" value="10" min="1" max="50">
+                        </div>
+                    </div>
+                    <div id="getUserMails-result" class="result-container"></div>
+                </div>
+            </div>
+            
+            <div class="test-card">
+                <div class="test-header">
+                    <h3><i class="fas fa-edit"></i> 更新邮件状态</h3>
+                    <button class="btn btn-primary" onclick="testUpdateMailStatus()">
+                        <i class="fas fa-play"></i>
+                        更新状态
+                    </button>
+                </div>
+                <div class="test-body">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="mailId">
+                                <i class="fas fa-envelope"></i>
+                                邮件ID
+                            </label>
+                            <input type="text" id="mailId" value="test_mail_001" placeholder="邮件ID">
+                        </div>
+                        <div class="form-group">
+                            <label for="mailAction">
+                                <i class="fas fa-cogs"></i>
+                                操作类型
+                            </label>
+                            <select id="mailAction">
+                                <option value="read">标记已读</option>
+                                <option value="claimed">领取奖励</option>
+                                <option value="deleted">删除邮件</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="updateMailStatus-result" class="result-container"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 配置接口面板 -->
+        <section id="config-api" class="content-section">
+            <div class="test-card">
+                <div class="test-header">
+                    <h3><i class="fas fa-key"></i> 获取单个配置</h3>
+                    <button class="btn btn-primary" onclick="testGetConfig()">
+                        <i class="fas fa-play"></i>
+                        获取配置
+                    </button>
+                </div>
+                <div class="test-body">
+                    <div class="form-group">
+                        <label for="configKey">
+                            <i class="fas fa-tag"></i>
+                            配置键名
+                        </label>
+                        <input type="text" id="configKey" value="test_config" placeholder="配置键名">
+                    </div>
+                    <div id="getConfig-result" class="result-container"></div>
+                </div>
+            </div>
+            
+            <div class="test-card">
+                <div class="test-header">
+                    <h3><i class="fas fa-list"></i> 获取所有配置</h3>
+                    <button class="btn btn-primary" onclick="testGetAllConfigs()">
+                        <i class="fas fa-play"></i>
+                        获取全部配置
+                    </button>
+                </div>
+                <div class="test-body">
+                    <p>获取应用的所有配置项</p>
+                    <div id="getAllConfigs-result" class="result-container"></div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- 加载提示 -->
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="loading-spinner">
+            <i class="fas fa-spinner fa-spin"></i>
+            <p>正在执行测试...</p>
+        </div>
+    </div>
+
+    <!-- 通知容器 -->
+    <div id="notification-container" class="notification-container"></div>
+
+    <script src="crypto.js"></script>
+    <script src="api-tester.js"></script>
+</body>
+</html>
