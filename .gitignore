@@ -20,3 +20,4 @@
 /go-admin/game-service/game-service.exe
 /go-admin/game-service/test_redis.exe
 /go-admin/game-service/logs/game-service.log
+/go-admin/game-service/logs
