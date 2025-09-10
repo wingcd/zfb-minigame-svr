@@ -12,55 +12,6 @@ type UserController struct {
 	web.Controller
 }
 
-// MigrateUserTable 迁移用户表，添加banned字段
-func (c *UserController) MigrateUserTable() {
-	var req struct {
-		AppId string `json:"appId"`
-	}
-
-	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
-		c.Data["json"] = map[string]interface{}{
-			"code":      4001,
-			"msg":       "参数解析失败",
-			"timestamp": utils.UnixMilli(),
-			"data":      nil,
-		}
-		c.ServeJSON()
-		return
-	}
-
-	if req.AppId == "" {
-		c.Data["json"] = map[string]interface{}{
-			"code":      4001,
-			"msg":       "appId不能为空",
-			"timestamp": utils.UnixMilli(),
-			"data":      nil,
-		}
-		c.ServeJSON()
-		return
-	}
-
-	err := models.MigrateUserTableAddBannedField(req.AppId)
-	if err != nil {
-		c.Data["json"] = map[string]interface{}{
-			"code":      5001,
-			"msg":       "迁移失败: " + err.Error(),
-			"timestamp": utils.UnixMilli(),
-			"data":      nil,
-		}
-		c.ServeJSON()
-		return
-	}
-
-	c.Data["json"] = map[string]interface{}{
-		"code":      2000,
-		"msg":       "迁移成功",
-		"timestamp": utils.UnixMilli(),
-		"data":      nil,
-	}
-	c.ServeJSON()
-}
-
 // GetAllUsers 获取所有用户（对齐云函数getUserList接口）
 func (c *UserController) GetAllUsers() {
 	var req struct {

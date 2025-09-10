@@ -146,9 +146,9 @@
             {{ scope.row.resetType === 'custom' ? `${scope.row.resetValue}小时` : '-' }}
           </template>
         </el-table-column>
-        <el-table-column prop="gmtCreate" label="创建时间" width="180" align="center">
+        <el-table-column prop="CreatedAt" label="创建时间" width="180" align="center">
           <template #default="scope">
-            {{ formatDate(scope.row.gmtCreate) }}
+            {{ formatDate(scope.row.CreatedAt) }}
           </template>
         </el-table-column>
                         <el-table-column label="操作" width="240" align="center" fixed="right">
@@ -198,9 +198,9 @@
             {{ scope.row.resetTime ? formatDate(scope.row.resetTime) : '永不重置' }}
           </template>
         </el-table-column>
-        <el-table-column prop="gmtCreate" label="创建时间" width="180" align="center">
+        <el-table-column prop="CreatedAt" label="创建时间" width="180" align="center">
           <template #default="scope">
-            {{ formatDate(scope.row.gmtCreate) }}
+            {{ formatDate(scope.row.CreatedAt) }}
           </template>
         </el-table-column>
         <el-table-column label="操作" width="200" align="center" fixed="right">

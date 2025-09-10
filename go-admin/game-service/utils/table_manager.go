@@ -27,9 +27,15 @@ func GetLeaderboardTableName(appId string) string {
 	return fmt.Sprintf("leaderboard_%s", CleanAppId(appId))
 }
 
-// GetUserDataTableName 获取用户数据表名
+// GetUserTableName 获取用户表名（新的正确命名）
+func GetUserTableName(appId string) string {
+	return fmt.Sprintf("user_%s", CleanAppId(appId))
+}
+
+// GetUserDataTableName 获取用户数据表名（兼容旧版本）
+// Deprecated: 请使用 GetUserTableName
 func GetUserDataTableName(appId string) string {
-	return fmt.Sprintf("user_data_%s", CleanAppId(appId))
+	return GetUserTableName(appId)
 }
 
 // GetCounterTableName 获取计数器表名

@@ -2,6 +2,7 @@ package utils
 
 import (
 	"encoding/json"
+	"log"
 
 	"github.com/beego/beego/v2/server/web/context"
 )
@@ -15,14 +16,14 @@ type Response struct {
 // SuccessResponse 成功响应
 func SuccessResponse(ctx *context.Context, message string, data interface{}) {
 	response := Response{
-		Code:    200,
+		Code:    0,
 		Message: message,
 		Data:    data,
 	}
 
 	ctx.Output.Header("Content-Type", "application/json")
 	ctx.Output.SetStatus(200)
-	
+
 	if err := json.NewEncoder(ctx.Output.Context.ResponseWriter).Encode(response); err != nil {
 		ctx.Output.SetStatus(500)
 		ctx.WriteString(`{"code":500,"message":"Internal server error"}`)
@@ -39,9 +40,11 @@ func ErrorResponse(ctx *context.Context, code int, message string, data interfac
 
 	ctx.Output.Header("Content-Type", "application/json")
 	ctx.Output.SetStatus(code)
-	
+
 	if err := json.NewEncoder(ctx.Output.Context.ResponseWriter).Encode(response); err != nil {
 		ctx.Output.SetStatus(500)
 		ctx.WriteString(`{"code":500,"message":"Internal server error"}`)
 	}
-} 
+
+	log.Println("ErrorResponse", code, message, data)
+}

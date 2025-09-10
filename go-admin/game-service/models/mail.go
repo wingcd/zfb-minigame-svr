@@ -286,38 +286,6 @@ func SendMail(appId, userId, title, content, rewards string, expireHours int) er
 	return err
 }
 
-// SendBroadcastMail 发送广播邮件（管理后台使用）
-func SendBroadcastMail(appId, title, content, rewards string, expireHours int, userIds []string) error {
-	o := orm.NewOrm()
-
-	var expireTime time.Time
-	if expireHours > 0 {
-		expireTime = time.Now().Add(time.Duration(expireHours) * time.Hour)
-	}
-
-	// 批量插入邮件
-	for _, userId := range userIds {
-		mailRecord := &Mail{
-			UserId:  userId,
-			Title:   title,
-			Content: content,
-			Rewards: rewards,
-			Status:  0,
-		}
-
-		if !expireTime.IsZero() {
-			mailRecord.ExpireAt = expireTime
-		}
-
-		_, err := o.Insert(mailRecord)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 // GetMailDetails 获取邮件详情（管理后台使用）
 func GetMailDetails(appId string, mailId int64) (*Mail, error) {
 	o := orm.NewOrm()

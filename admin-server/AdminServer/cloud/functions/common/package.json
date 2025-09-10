@@ -1,6 +1,12 @@
 {
+  "name": "common",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {},
+  "author": "",
+  "license": "ISC",
   "dependencies": {
-    "@alipay/faas-server-sdk": "^1.1.12",
     "moment": "^2.30.1"
   }
-} 
+}

@@ -15,7 +15,7 @@ set "SERVICE_PORT=8080"
 REM 数据库配置
 set "MYSQL_HOST=127.0.0.1"
 set "MYSQL_PORT=3306"
-set "MYSQL_DATABASE=minigame_admin"
+set "MYSQL_DATABASE=minigame_game"
 set "MYSQL_USER=minigame"
 set "MYSQL_PASSWORD="
 set "MYSQL_ROOT_PASSWORD="

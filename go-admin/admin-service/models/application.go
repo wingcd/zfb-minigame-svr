@@ -84,34 +84,53 @@ func (a *Application) createAppTables() error {
 	cleanAppId := strings.ReplaceAll(a.AppId, "-", "_")
 	cleanAppId = strings.ReplaceAll(cleanAppId, ".", "_")
 
-	// 创建用户数据表（与用户管理模块匹配）
+	// 创建用户数据表（按照数据库设计.md的正确结构）
 	userDataSQL := fmt.Sprintf(`
 CREATE TABLE IF NOT EXISTS user_%s (
   id bigint(20) NOT NULL AUTO_INCREMENT,
-  player_id varchar(100) NOT NULL COMMENT '玩家ID',
+  open_id varchar(100) NOT NULL COMMENT '用户唯一标识',
+  player_id varchar(100) NOT NULL COMMENT '玩家ID（唯一，自动生成）',
+  token varchar(255) COMMENT '登录Token',
+  nickname varchar(100) COMMENT '昵称',
+  avatar varchar(500) COMMENT '头像URL',
+  data longtext COMMENT '游戏数据（JSON格式）',
+  level int(11) NOT NULL DEFAULT 1 COMMENT '等级',
+  exp bigint(20) NOT NULL DEFAULT 0 COMMENT '经验值',
+  coin bigint(20) NOT NULL DEFAULT 0 COMMENT '金币',
+  diamond bigint(20) NOT NULL DEFAULT 0 COMMENT '钻石',
+  vip_level int(11) NOT NULL DEFAULT 0 COMMENT 'VIP等级',
   banned tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否封禁',
-  data longtext COMMENT '用户数据（JSON格式）',
-  created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  ban_reason varchar(500) COMMENT '封禁原因',
+  ban_expire datetime COMMENT '封禁到期时间',
+  login_count int(11) NOT NULL DEFAULT 0 COMMENT '登录次数',
+  last_login_time datetime COMMENT '最后登录时间',
+  last_login_ip varchar(50) COMMENT '最后登录IP',
+  register_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '注册时间',
+  created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
   PRIMARY KEY (id),
+  UNIQUE KEY uk_open_id (open_id),
   UNIQUE KEY uk_player_id (player_id),
+  KEY idx_token (token),
   KEY idx_updated_at (updated_at),
-  KEY idx_banned (banned)
+  KEY idx_created_at (created_at),
+  KEY idx_banned_ban_expire (banned, ban_expire)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户数据表_%s'`, cleanAppId, cleanAppId)
 
 	// 创建排行榜统计表
 	leaderboardStatsSQL := fmt.Sprintf(`
 CREATE TABLE IF NOT EXISTS leaderboard_%s (
   id bigint(20) NOT NULL AUTO_INCREMENT,
-  leaderboard_name varchar(100) NOT NULL COMMENT '排行榜名称',
-  playerId varchar(100) NOT NULL COMMENT '玩家ID',
+  type varchar(50) NOT NULL COMMENT '排行榜类型',
+  player_id varchar(100) NOT NULL COMMENT '玩家ID',
   score bigint(20) NOT NULL DEFAULT 0 COMMENT '分数',
-  extraData text COMMENT '额外数据（JSON格式）',
+  extra_data text COMMENT '额外数据（JSON格式）',
   created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (id),
-  UNIQUE KEY uk_leaderboard_user (leaderboard_name, playerId),
-  KEY idx_leaderboard_score (leaderboard_name, score DESC),
+  UNIQUE KEY uk_leaderboard_user (type, player_id),
+  KEY idx_leaderboard_score (type, score DESC),
+  KEY idx_leaderboard_type (type),
   KEY idx_updated_at (updated_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='排行榜数据表_%s'`, cleanAppId, cleanAppId)
 
@@ -205,30 +224,8 @@ CREATE TABLE IF NOT EXISTS game_config_%s (
   KEY idx_priority (priority)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='游戏配置表_%s'`, cleanAppId, cleanAppId)
 
-	// 创建用户封禁记录表（全局表，只在第一次创建应用时创建）
-	banRecordsSQL := `
-CREATE TABLE IF NOT EXISTS user_ban_records (
-  id varchar(64) NOT NULL PRIMARY KEY,
-  app_id varchar(100) NOT NULL,
-  player_id varchar(100) NOT NULL,
-  admin_id bigint(20) NOT NULL,
-  ban_type varchar(20) NOT NULL COMMENT 'temporary, permanent',
-  ban_reason text,
-  ban_start_time datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  ban_end_time datetime NULL,
-  is_active tinyint(1) NOT NULL DEFAULT 1,
-  unban_admin_id bigint(20) NULL,
-  unban_time datetime NULL,
-  unban_reason text,
-  created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  KEY idx_app_player (app_id, player_id),
-  KEY idx_is_active (is_active),
-  KEY idx_ban_end_time (ban_end_time)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户封禁记录表'`
-
 	// 执行创建表的SQL
-	sqls := []string{userDataSQL, leaderboardStatsSQL, counterSQL, mailSQL, mailPlayerRelationSQL, gameConfigSQL, banRecordsSQL}
+	sqls := []string{userDataSQL, leaderboardStatsSQL, counterSQL, mailSQL, mailPlayerRelationSQL, gameConfigSQL}
 	for _, sql := range sqls {
 		_, err := o.Raw(sql).Exec()
 		if err != nil {

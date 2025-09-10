@@ -22,6 +22,14 @@ func SignAuthMiddleware(ctx *context.Context) {
 		"/ping",
 	}
 
+	var skipTokenPath = []string{
+		"/user/login",
+		"/user/login/wx",
+		"/user/login/alipay",
+		"/user/login/douyin",
+		"/user/login/qq",
+	}
+
 	requestPath := ctx.Request.URL.Path
 	for _, path := range skipPaths {
 		if strings.HasSuffix(requestPath, path) {
@@ -29,20 +37,83 @@ func SignAuthMiddleware(ctx *context.Context) {
 		}
 	}
 
-	// 获取必要的请求头
-	appId := ctx.Input.Header("App-Id")
-	timestamp := ctx.Input.Header("Timestamp")
-	sign := ctx.Input.Header("Sign")
-
-	if appId == "" || timestamp == "" || sign == "" {
-		responseError(ctx, 1001, "缺少必要的请求头参数")
+	// 获取请求体
+	var requestBody map[string]interface{}
+	if len(ctx.Input.RequestBody) > 0 {
+		err := json.Unmarshal(ctx.Input.RequestBody, &requestBody)
+		if err != nil {
+			responseError(ctx, 1002, "请求体格式错误")
+			return
+		}
+	} else {
+		responseError(ctx, 1001, "请求体不能为空")
 		return
 	}
 
-	// 验证时间戳
-	ts, err := strconv.ParseInt(timestamp, 10, 64)
-	if err != nil {
+	// 从请求体获取必要参数
+	appId, ok := requestBody["appId"].(string)
+	if !ok || appId == "" {
+		responseError(ctx, 1001, "缺少appId参数")
+		return
+	}
+
+	timestampVal, ok := requestBody["timestamp"]
+	if !ok {
+		responseError(ctx, 1001, "缺少timestamp参数")
+		return
+	}
+
+	var skipToken = false
+	for _, path := range skipTokenPath {
+		if strings.HasSuffix(requestPath, path) {
+			skipToken = true
+			break
+		}
+	}
+
+	if !skipToken {
+		// 从数据库查询用户token是否有效
+		var token string
+		tokenVal, ok := requestBody["token"]
+		if ok {
+			playerId, ok := requestBody["playerId"]
+			if !ok {
+				responseError(ctx, 1001, "缺少playerId参数")
+				return
+			}
+
+			token = tokenVal.(string)
+			userToken, err := models.GetUserStatusFromRedis(appId, playerId.(string))
+			if err != nil && userToken != token {
+				responseError(ctx, 1001, "token无效")
+				return
+			}
+		}
+	}
+
+	// 处理timestamp类型转换（可能是number或string）
+	var ts int64
+	switch v := timestampVal.(type) {
+	case float64:
+		ts = int64(v)
+	case int64:
+		ts = v
+	case string:
+		var err error
+		ts, err = strconv.ParseInt(v, 10, 64)
+		if err != nil {
+			responseError(ctx, 1001, "时间戳格式错误")
+			return
+		}
+	default:
 		responseError(ctx, 1001, "时间戳格式错误")
+		return
+	}
+	requestBody["timestamp"] = strconv.FormatInt(ts, 10)
+
+	sign, ok := requestBody["sign"].(string)
+	if !ok || sign == "" {
+		responseError(ctx, 1001, "缺少sign参数")
 		return
 	}
 
@@ -54,31 +125,19 @@ func SignAuthMiddleware(ctx *context.Context) {
 
 	// 获取应用信息
 	app := &models.Application{AppId: appId}
-	err = app.GetByAppId()
+	err := app.GetByAppId(appId)
 	if err != nil {
 		responseError(ctx, 1001, "应用不存在")
 		return
 	}
 
-	if app.Status != 1 {
+	if app.Status != "active" {
 		responseError(ctx, 1001, "应用已被禁用")
 		return
 	}
 
-	// 获取请求体
-	var requestBody map[string]interface{}
-	if len(ctx.Input.RequestBody) > 0 {
-		err = json.Unmarshal(ctx.Input.RequestBody, &requestBody)
-		if err != nil {
-			responseError(ctx, 1002, "请求体格式错误")
-			return
-		}
-	} else {
-		requestBody = make(map[string]interface{})
-	}
-
 	// 验证签名
-	expectedSign := generateSign(requestBody, ts, app.AppSecret)
+	expectedSign := generateSign(requestBody)
 	if sign != expectedSign {
 		responseError(ctx, 1001, "签名验证失败")
 		return
@@ -86,24 +145,8 @@ func SignAuthMiddleware(ctx *context.Context) {
 
 	// 将应用信息存储到上下文中
 	ctx.Input.SetData("app_id", appId)
-	ctx.Input.SetData("appSecret", app.AppSecret)
-}
+	ctx.Input.SetData("appSecret", app.ChannelAppKey)
 
-// CORSMiddleware CORS中间件
-func CORSMiddleware(ctx *context.Context) {
-	ctx.Output.Header("Access-Control-Allow-Origin", "*")
-	ctx.Output.Header("*", "*")
-
-	ctx.Output.Header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS")
-	ctx.Output.Header("Access-Control-Allow-Headers", "Origin,Content-Type,Accept,Authorization,X-Requested-With,App-Id,Token,Timestamp,Sign")
-	ctx.Output.Header("Access-Control-Allow-Credentials", "true")
-	ctx.Output.Header("Access-Control-Max-Age", "86400")
-
-	// 处理预检请求
-	if ctx.Input.Method() == "OPTIONS" {
-		ctx.Output.SetStatus(200)
-		return
-	}
 }
 
 // LogMiddleware 日志中间件
@@ -131,7 +174,7 @@ func RateLimitMiddleware(ctx *context.Context) {
 }
 
 // generateSign 生成API签名
-func generateSign(params map[string]interface{}, timestamp int64, appSecret string) string {
+func generateSign(params map[string]interface{}) string {
 	// 将参数按键名排序
 	var keys []string
 	for k := range params {
@@ -140,24 +183,24 @@ func generateSign(params map[string]interface{}, timestamp int64, appSecret stri
 	sort.Strings(keys)
 
 	// 构建签名字符串
-	var signParts []string
+	var signStr strings.Builder
 	for _, k := range keys {
+		if k == "sign" || k == "ver" {
+			continue
+		}
 		v := params[k]
-		if v != nil {
-			signParts = append(signParts, fmt.Sprintf("%s=%v", k, v))
+		if v != nil && v != "" && v != 0 {
+			// 如果v不是字符串，需要转为字符串
+			if _, ok := v.(string); !ok {
+				v = fmt.Sprintf("%v", v)
+			}
+			signStr.WriteString(fmt.Sprintf("%s%s", k, v))
 		}
 	}
-
-	// 添加时间戳和密钥
-	signStr := strings.Join(signParts, "&")
-	if signStr != "" {
-		signStr += "&"
-	}
-	signStr += fmt.Sprintf("timestamp=%d&key=%s", timestamp, appSecret)
-
 	// MD5加密
 	h := md5.New()
-	h.Write([]byte(signStr))
+	h.Write([]byte(signStr.String()))
+	// println(signStr.String())
 	return fmt.Sprintf("%x", h.Sum(nil))
 }
 

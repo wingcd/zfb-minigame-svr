@@ -1,15 +1,77 @@
 package controllers
 
 import (
+	"encoding/json"
 	"game-service/models"
 	"game-service/utils"
-	"strconv"
 
 	"github.com/beego/beego/v2/server/web"
 )
 
 type MailController struct {
 	web.Controller
+}
+
+// ReadMailRequest 读取邮件请求
+type ReadMailRequest struct {
+	AppId     string `json:"appId"`
+	PlayerId  string `json:"playerId"`
+	Token     string `json:"token"`
+	Timestamp int64  `json:"timestamp"`
+	Ver       string `json:"ver"`
+	Sign      string `json:"sign"`
+	MailId    int64  `json:"mailId"`
+}
+
+// ClaimRewardsRequest 领取奖励请求
+type ClaimRewardsRequest struct {
+	AppId     string `json:"appId"`
+	PlayerId  string `json:"playerId"`
+	Token     string `json:"token"`
+	Timestamp int64  `json:"timestamp"`
+	Ver       string `json:"ver"`
+	Sign      string `json:"sign"`
+	MailId    int64  `json:"mailId"`
+}
+
+// DeleteMailRequest 删除邮件请求
+type DeleteMailRequest struct {
+	AppId     string `json:"appId"`
+	PlayerId  string `json:"playerId"`
+	Token     string `json:"token"`
+	Timestamp int64  `json:"timestamp"`
+	Ver       string `json:"ver"`
+	Sign      string `json:"sign"`
+	MailId    int64  `json:"mailId"`
+}
+
+// GetUserMailsRequest 获取用户邮件请求
+type GetUserMailsRequest struct {
+	AppId     string `json:"appId"`
+	PlayerId  string `json:"playerId"`
+	Token     string `json:"token"`
+	Timestamp int64  `json:"timestamp"`
+	Ver       string `json:"ver"`
+	Sign      string `json:"sign"`
+	Page      int    `json:"page"`
+	PageSize  int    `json:"pageSize"`
+}
+
+// UpdateMailStatusRequest 更新邮件状态请求
+type UpdateMailStatusRequest struct {
+	AppId     string `json:"appId"`
+	PlayerId  string `json:"playerId"`
+	Token     string `json:"token"`
+	Timestamp int64  `json:"timestamp"`
+	Ver       string `json:"ver"`
+	Sign      string `json:"sign"`
+	MailId    int64  `json:"mailId"`
+	Status    string `json:"status"`
+}
+
+// parseRequest 解析请求参数
+func (c *MailController) parseRequest(req interface{}) error {
+	return json.Unmarshal(c.Ctx.Input.RequestBody, req)
 }
 
 // clearNewMailCache 清除用户新邮件缓存
@@ -22,28 +84,26 @@ func clearNewMailCache(appId, userId string) {
 
 // ReadMail 读取邮件
 func (c *MailController) ReadMail() {
-	// 验证签名
-	appId, userId, err := utils.ValidateSignature(c.Ctx.Request)
-	if err != nil {
-		utils.ErrorResponse(c.Ctx, 1001, "签名验证失败: "+err.Error(), nil)
+	// 从中间件获取已验证的appId
+	appId := c.Ctx.Input.GetData("app_id").(string)
+
+	// 解析请求参数
+	var req ReadMailRequest
+	if err := c.parseRequest(&req); err != nil {
+		utils.ErrorResponse(c.Ctx, 1002, "参数解析失败: "+err.Error(), nil)
 		return
 	}
 
-	// 获取参数
-	mailIdStr := c.GetString("mailId")
-	if mailIdStr == "" {
+	if req.MailId == 0 {
 		utils.ErrorResponse(c.Ctx, 1002, "mailId参数不能为空", nil)
 		return
 	}
 
-	mailId, err := strconv.ParseInt(mailIdStr, 10, 64)
-	if err != nil {
-		utils.ErrorResponse(c.Ctx, 1002, "mailId参数格式错误", nil)
-		return
-	}
+	mailId := req.MailId
+	userId := req.PlayerId
 
 	// 读取邮件
-	err = models.ReadMail(appId, userId, mailId)
+	err := models.ReadMail(appId, userId, mailId)
 	if err != nil {
 		utils.ErrorResponse(c.Ctx, 1003, "读取邮件失败: "+err.Error(), nil)
 		return
@@ -57,25 +117,23 @@ func (c *MailController) ReadMail() {
 
 // ClaimRewards 领取奖励
 func (c *MailController) ClaimRewards() {
-	// 验证签名
-	appId, userId, err := utils.ValidateSignature(c.Ctx.Request)
-	if err != nil {
-		utils.ErrorResponse(c.Ctx, 1001, "签名验证失败: "+err.Error(), nil)
+	// 从中间件获取已验证的appId
+	appId := c.Ctx.Input.GetData("app_id").(string)
+
+	// 解析请求参数
+	var req ClaimRewardsRequest
+	if err := c.parseRequest(&req); err != nil {
+		utils.ErrorResponse(c.Ctx, 1002, "参数解析失败: "+err.Error(), nil)
 		return
 	}
 
-	// 获取参数
-	mailIdStr := c.GetString("mailId")
-	if mailIdStr == "" {
+	if req.MailId == 0 {
 		utils.ErrorResponse(c.Ctx, 1002, "mailId参数不能为空", nil)
 		return
 	}
 
-	mailId, err := strconv.ParseInt(mailIdStr, 10, 64)
-	if err != nil {
-		utils.ErrorResponse(c.Ctx, 1002, "mailId参数格式错误", nil)
-		return
-	}
+	mailId := req.MailId
+	userId := req.PlayerId
 
 	// 领取奖励
 	rewards, err := models.ClaimRewards(appId, userId, mailId)
@@ -96,28 +154,26 @@ func (c *MailController) ClaimRewards() {
 
 // DeleteMail 删除邮件
 func (c *MailController) DeleteMail() {
-	// 验证签名
-	appId, userId, err := utils.ValidateSignature(c.Ctx.Request)
-	if err != nil {
-		utils.ErrorResponse(c.Ctx, 1001, "签名验证失败: "+err.Error(), nil)
+	// 从中间件获取已验证的appId
+	appId := c.Ctx.Input.GetData("app_id").(string)
+
+	// 解析请求参数
+	var req DeleteMailRequest
+	if err := c.parseRequest(&req); err != nil {
+		utils.ErrorResponse(c.Ctx, 1002, "参数解析失败: "+err.Error(), nil)
 		return
 	}
 
-	// 获取参数
-	mailIdStr := c.GetString("mailId")
-	if mailIdStr == "" {
+	if req.MailId == 0 {
 		utils.ErrorResponse(c.Ctx, 1002, "mailId参数不能为空", nil)
 		return
 	}
 
-	mailId, err := strconv.ParseInt(mailIdStr, 10, 64)
-	if err != nil {
-		utils.ErrorResponse(c.Ctx, 1002, "mailId参数格式错误", nil)
-		return
-	}
+	mailId := req.MailId
+	userId := req.PlayerId
 
 	// 删除邮件
-	err = models.DeleteMail(appId, userId, mailId)
+	err := models.DeleteMail(appId, userId, mailId)
 	if err != nil {
 		utils.ErrorResponse(c.Ctx, 1003, "删除邮件失败: "+err.Error(), nil)
 		return
@@ -133,26 +189,28 @@ func (c *MailController) DeleteMail() {
 
 // GetUserMails 获取用户邮件（zy-sdk接口）
 func (c *MailController) GetUserMails() {
-	// 验证签名
-	appId, userId, err := utils.ValidateSignature(c.Ctx.Request)
-	if err != nil {
-		utils.ErrorResponse(c.Ctx, 1001, "签名验证失败: "+err.Error(), nil)
+	// 从中间件获取已验证的appId
+	appId := c.Ctx.Input.GetData("app_id").(string)
+
+	// 解析请求参数
+	var req GetUserMailsRequest
+	if err := c.parseRequest(&req); err != nil {
+		utils.ErrorResponse(c.Ctx, 1002, "参数解析失败: "+err.Error(), nil)
 		return
 	}
 
-	// 获取分页参数
-	pageStr := c.GetString("page", "1")
-	pageSizeStr := c.GetString("pageSize", "10")
-
-	page, err := strconv.Atoi(pageStr)
-	if err != nil || page <= 0 {
+	// 设置默认值
+	page := req.Page
+	if page <= 0 {
 		page = 1
 	}
 
-	pageSize, err := strconv.Atoi(pageSizeStr)
-	if err != nil || pageSize <= 0 || pageSize > 50 {
+	pageSize := req.PageSize
+	if pageSize <= 0 || pageSize > 50 {
 		pageSize = 10
 	}
+
+	userId := req.PlayerId
 
 	// 获取邮件列表
 	mails, total, err := models.GetMailList(appId, userId, page, pageSize)
@@ -173,51 +231,49 @@ func (c *MailController) GetUserMails() {
 
 // UpdateMailStatus 更新邮件状态（zy-sdk接口）
 func (c *MailController) UpdateMailStatus() {
-	// 验证签名
-	appId, userId, err := utils.ValidateSignature(c.Ctx.Request)
-	if err != nil {
-		utils.ErrorResponse(c.Ctx, 1001, "签名验证失败: "+err.Error(), nil)
+	// 从中间件获取已验证的appId
+	appId := c.Ctx.Input.GetData("app_id").(string)
+
+	// 解析请求参数
+	var req UpdateMailStatusRequest
+	if err := c.parseRequest(&req); err != nil {
+		utils.ErrorResponse(c.Ctx, 1002, "参数解析失败: "+err.Error(), nil)
 		return
 	}
 
-	// 获取参数
-	mailIdStr := c.GetString("mailId")
-	if mailIdStr == "" {
+	if req.MailId == 0 {
 		utils.ErrorResponse(c.Ctx, 1002, "mailId参数不能为空", nil)
 		return
 	}
 
-	status := c.GetString("status")
-	if status == "" {
+	if req.Status == "" {
 		utils.ErrorResponse(c.Ctx, 1002, "status参数不能为空", nil)
 		return
 	}
 
-	mailId, err := strconv.ParseInt(mailIdStr, 10, 64)
-	if err != nil {
-		utils.ErrorResponse(c.Ctx, 1002, "mailId参数格式错误", nil)
-		return
-	}
+	mailId := req.MailId
+	status := req.Status
+	userId := req.PlayerId
 
 	// 根据状态执行相应操作
 	switch status {
 	case "read":
 		// 标记为已读
-		err = models.ReadMail(appId, userId, mailId)
+		err := models.ReadMail(appId, userId, mailId)
 		if err != nil {
 			utils.ErrorResponse(c.Ctx, 1003, "标记邮件已读失败: "+err.Error(), nil)
 			return
 		}
 	case "claimed":
 		// 领取奖励
-		_, err = models.ClaimRewards(appId, userId, mailId)
+		_, err := models.ClaimRewards(appId, userId, mailId)
 		if err != nil {
 			utils.ErrorResponse(c.Ctx, 1003, "领取奖励失败: "+err.Error(), nil)
 			return
 		}
 	case "deleted":
 		// 删除邮件
-		err = models.DeleteMail(appId, userId, mailId)
+		err := models.DeleteMail(appId, userId, mailId)
 		if err != nil {
 			utils.ErrorResponse(c.Ctx, 1003, "删除邮件失败: "+err.Error(), nil)
 			return

@@ -2,6 +2,7 @@ package routers
 
 import (
 	"game-service/controllers"
+	"game-service/controllers/login"
 	"game-service/middlewares"
 
 	"github.com/beego/beego/v2/server/web"
@@ -24,16 +25,20 @@ func init() {
 	web.Router("/health", &controllers.HealthController{}, "get:Health")
 
 	// 心跳接口
-	web.Router("/heartbeat", &controllers.HealthController{}, "get:Heartbeat")
+	web.Router("/heartbeat", &controllers.HealthController{}, "post:Heartbeat")
 
 	// ===== zy-sdk对齐接口 =====
+	// 登录接口（重构到login包）
+	web.Router("/user/login", &login.CommonLoginController{}, "post:CommonLogin")
+	web.Router("/user/login/wx", &login.WechatLoginController{}, "post:WxLogin")
+	web.Router("/user/login/alipay", &login.AlipayLoginController{}, "post:AlipayLogin")
+	web.Router("/user/login/douyin", &login.DouyinLoginController{}, "post:DouyinLogin")
+	web.Router("/user/login/qq", &login.QQLoginController{}, "post:QQLogin")
+
 	// 用户数据接口（对齐zy-sdk/user.ts）
-	web.Router("/user/login", &controllers.UserDataController{}, "post:Login")
-	web.Router("/user/login/wx", &controllers.UserDataController{}, "post:WxLogin")
-	web.Router("/user/getData", &controllers.UserDataController{}, "post:GetData")
-	web.Router("/user/saveData", &controllers.UserDataController{}, "post:SaveData")
-	web.Router("/user/saveUserInfo", &controllers.UserDataController{}, "post:SaveUserInfo")
-	web.Router("/user/deleteData", &controllers.UserDataController{}, "post:DeleteData")
+	web.Router("/user/getData", &controllers.UserController{}, "post:GetData")
+	web.Router("/user/saveData", &controllers.UserController{}, "post:SaveData")
+	web.Router("/user/saveUserInfo", &controllers.UserController{}, "post:SaveUserInfo")
 
 	// 排行榜接口（对齐zy-sdk/leaderboard.ts）
 	web.Router("/leaderboard/commit", &controllers.LeaderboardController{}, "post:CommitScore")
@@ -49,15 +54,8 @@ func init() {
 
 	// ===== 向后兼容接口（保留原有接口）=====
 	// 用户数据接口
-	web.Router("/saveData", &controllers.UserDataController{}, "post:SaveData")
-	web.Router("/getData", &controllers.UserDataController{}, "post:GetData")
-	web.Router("/deleteData", &controllers.UserDataController{}, "post:DeleteData")
-
-	// 排行榜接口
-	web.Router("/submitScore", &controllers.LeaderboardController{}, "post:SubmitScore")
-	web.Router("/getLeaderboard", &controllers.LeaderboardController{}, "post:GetLeaderboard")
-	web.Router("/getUserRank", &controllers.LeaderboardController{}, "post:GetUserRank")
-	web.Router("/resetLeaderboard", &controllers.LeaderboardController{}, "post:ResetLeaderboard")
+	web.Router("/saveData", &controllers.UserController{}, "post:SaveData")
+	web.Router("/getData", &controllers.UserController{}, "post:GetData")
 
 	// 计数器接口
 	web.Router("/getCounter", &controllers.CounterController{}, "post:GetCounter")

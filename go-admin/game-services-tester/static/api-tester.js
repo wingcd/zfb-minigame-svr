@@ -119,7 +119,7 @@ class ApiTester {
         this.config.baseUrl = document.getElementById('baseUrl').value;
         this.config.appId = document.getElementById('appId').value;
         this.config.appSecret = document.getElementById('appSecret').value;
-        this.config.playerId = document.getElementById('playerId').value;
+        this.config.code = document.getElementById('code').value;
         
         this.saveConfig();
         this.checkConnection();
@@ -129,7 +129,7 @@ class ApiTester {
         document.getElementById('baseUrl').value = this.config.baseUrl;
         document.getElementById('appId').value = this.config.appId;
         document.getElementById('appSecret').value = this.config.appSecret;
-        document.getElementById('playerId').value = this.config.playerId;
+        document.getElementById('code').value = this.config.code;
     }
 
     resetConfig() {
@@ -137,7 +137,7 @@ class ApiTester {
             baseUrl: 'http://localhost:8081',
             appId: 'test_app',
             appSecret: 'test_secret',
-            playerId: 'test_player_001'
+            code: 'test_code'
         };
         this.applyConfigToForm();
         this.saveConfig();
@@ -150,19 +150,19 @@ class ApiTester {
                 baseUrl: 'http://localhost:8081',
                 appId: 'test_app',
                 appSecret: 'test_secret',
-                playerId: 'test_player_001'
+                code: 'test_code'
             },
             staging: {
                 baseUrl: 'https://staging-api.example.com',
                 appId: 'staging_app',
                 appSecret: 'staging_secret',
-                playerId: 'staging_player_001'
+                code: 'staging_code'
             },
             production: {
                 baseUrl: 'https://api.example.com',
                 appId: 'prod_app',
                 appSecret: 'prod_secret',
-                playerId: 'prod_player_001'
+                code: 'prod_code'
             }
         };
 
@@ -370,35 +370,35 @@ class ApiTester {
                 }
             };
 
-            if (useAuth) {
-                if (url.includes('/user/') || url.includes('/leaderboard/') || url.includes('/mail/')) {
-                    // zy-sdk风格接口
-                    options.headers['App-Id'] = this.config.appId;
-                    options.headers['User-Id'] = this.config.playerId;
-                    options.headers['Sign'] = generateZySign(this.config.appId, this.config.playerId, this.config.appSecret);
-                } else {
-                    // 标准接口
-                    const sign = generateApiSign(data, timestamp, this.config.appSecret);
-                    options.headers['App-Id'] = this.config.appId;
-                    options.headers['Timestamp'] = timestamp.toString();
-                    options.headers['Sign'] = sign;
-                }
-            }
+            if(method === 'POST') {
+                data.appId = this.config.appId;
+                data.timestamp = timestamp;
 
+                if (useAuth) {                
+                    data.playerId = this.config.playerId;
+                    data.token = this.config.token;
+                }
+
+                data.ver = '1.0.0';
+                data.sign = generateZySign(data);
+            }
+            
             if (method === 'POST' && Object.keys(data).length > 0) {
+                data.appId = this.config.appId;
+                data.playerId = this.config.playerId;
                 options.body = JSON.stringify(data);
             }
 
             const fullUrl = method === 'GET' && Object.keys(data).length > 0 
-                ? `${this.config.baseUrl}${url}?${new URLSearchParams(data).toString()}`
-                : `${this.config.baseUrl}${url}`;
+                ? `${this.config.baseUrl}/${url}?${new URLSearchParams(data).toString()}`
+                : `${this.config.baseUrl}/${url}`;
 
             const response = await fetch(fullUrl, options);
             const result = await response.json();
             const duration = Date.now() - startTime;
 
             return {
-                success: response.ok,
+                success: response.ok && result.code == 0,
                 data: result,
                 status: response.status,
                 duration
@@ -551,7 +551,7 @@ class ApiTester {
     }
 
     async testHeartbeat() {
-        const result = await this.makeApiRequest('/heartbeat', 'GET', { userId: this.config.playerId }, false);
+        const result = await this.makeApiRequest('/heartbeat', 'POST', { playerId: this.config.playerId }, true);
         this.displayResult('heartbeat-result', result, '心跳检测');
     }
 
@@ -560,6 +560,14 @@ class ApiTester {
         const data = { code: code };
         
         const result = await this.makeApiRequest('/user/login', 'POST', data, true);
+
+        // 全局保存token和playerId
+        let resp = result.data.data;
+        if(resp) {
+            this.config.token = resp.token;
+            this.config.playerId = resp.playerId;
+        }
+
         this.displayResult('login-result', result, '用户登录');
     }
 
@@ -686,9 +694,9 @@ class ApiTester {
         this.stats = { success: 0, fail: 0, total: 0 };
         
         const tests = [
+            { name: '用户登录', func: () => this.testLogin() },
             { name: '健康检查', func: () => this.testHealth() },
             { name: '心跳检测', func: () => this.testHeartbeat() },
-            { name: '用户登录', func: () => this.testLogin() },
             { name: '保存游戏数据', func: () => this.testSaveData() },
             { name: '获取游戏数据', func: () => this.testGetData() },
             { name: '保存用户信息', func: () => this.testSaveUserInfo() },

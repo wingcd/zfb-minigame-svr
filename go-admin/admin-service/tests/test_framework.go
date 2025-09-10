@@ -70,7 +70,7 @@ type TestSuite struct {
 // NewTestFramework 创建新的测试框架
 func NewTestFramework() *TestFramework {
 	// 设置测试环境的JWT密钥，与app.conf中保持一致
-	utils.SetJWTSecret("minigame_admin_jwt_secret_key_2024")
+	utils.SetJWTSecret("minigame_game_jwt_secret_key_2024")
 
 	// 确保Beego配置正确
 	web.BConfig.CopyRequestBody = true

@@ -33,44 +33,15 @@ type LeaderboardConfig struct {
 	CreatedBy        string    `orm:"size(100);column(created_by)" json:"createdBy"`
 }
 
-// Leaderboard 排行榜配置结构（兼容性保持）
+// Leaderboard 排行榜数据结构
 type Leaderboard struct {
-	ID          int64     `orm:"pk;auto" json:"id"`
-	AppId       string    `orm:"size(100)" json:"appId"`
-	Type        string    `orm:"size(100)" json:"type"`
-	Name        string    `orm:"size(200)" json:"name"`
-	Description string    `orm:"type(text)" json:"description"`
-	ResetType   string    `orm:"size(50)" json:"resetType"` // never, daily, weekly, monthly
-	MaxEntries  int       `orm:"default(1000)" json:"maxEntries"`
-	ScoreType   string    `orm:"size(20);default(higher_better)" json:"scoreType"` // higher_better, lower_better
-	Status      int       `orm:"default(1)" json:"status"`                         // 1=启用, 0=禁用
-	CreatedAt   time.Time `orm:"auto_now_add;type(datetime)" json:"createdAt"`
-	UpdatedAt   time.Time `orm:"auto_now;type(datetime)" json:"updatedAt"`
-}
-
-// LeaderboardData 排行榜数据模型（动态表）
-type LeaderboardData struct {
-	Id              int64  `orm:"auto" json:"id"`
-	LeaderboardName string `orm:"size(100)" json:"leaderboardName"`
-	UserId          string `orm:"size(100)" json:"userId"`
-	Score           int64  `orm:"default(0)" json:"score"`
-	ExtraData       string `orm:"type(text)" json:"extraData"`
-	CreatedAt       string `orm:"auto_now_add;type(datetime)" json:"createdAt"`
-	UpdatedAt       string `orm:"auto_now;type(datetime)" json:"updatedAt"`
-}
-
-// LeaderboardScore 排行榜分数记录（兼容性保持）
-type LeaderboardScore struct {
-	ID            int64     `orm:"pk;auto" json:"id"`
-	AppId         string    `orm:"size(100)" json:"appId"`
-	LeaderboardId string    `orm:"size(100)" json:"leaderboardId"`
-	PlayerId      string    `orm:"size(100)" json:"playerId"`
-	OpenId        string    `orm:"size(100)" json:"openId"`
-	Score         int64     `json:"score"`
-	ExtraData     string    `orm:"type(text)" json:"extraData"`
-	HasUserInfo   int       `orm:"default(0)" json:"hasUserInfo"` // 0=无用户信息, 1=有用户信息
-	CreatedAt     time.Time `orm:"auto_now_add;type(datetime)" json:"createdAt"`
-	UpdatedAt     time.Time `orm:"auto_now;type(datetime)" json:"updatedAt"`
+	Id        int64  `orm:"auto" json:"id"`
+	Type      string `orm:"size(50)" json:"type"`
+	UserId    string `orm:"size(100);column(player_id)" json:"userId"`
+	Score     int64  `orm:"default(0)" json:"score"`
+	ExtraData string `orm:"type(text);column(extra_data)" json:"extraData"`
+	CreatedAt string `orm:"auto_now_add;type(datetime);column(created_at)" json:"createdAt"`
+	UpdatedAt string `orm:"auto_now;type(datetime);column(updated_at)" json:"updatedAt"`
 }
 
 // GetLeaderboardCount 获取排行榜数量统计
@@ -100,7 +71,7 @@ func GetLeaderboardList(appId string, page, pageSize int, leaderboardName string
 }
 
 // GetTableName 获取动态表名
-func (l *LeaderboardData) GetTableName(appId string) string {
+func (l *Leaderboard) GetTableName(appId string) string {
 	cleanAppId := utils.CleanAppId(appId)
 	return fmt.Sprintf("leaderboard_%s", cleanAppId)
 }
@@ -113,17 +84,11 @@ func (l *LeaderboardConfig) TableName() string {
 func init() {
 	orm.RegisterModel(new(LeaderboardConfig))
 	orm.RegisterModel(new(Leaderboard))
-	orm.RegisterModel(new(LeaderboardScore))
 }
 
 // TableName 获取表名
 func (l *Leaderboard) TableName() string {
 	return "leaderboard_config"
-}
-
-// TableName 获取表名
-func (ls *LeaderboardScore) TableName() string {
-	return "leaderboard_score"
 }
 
 // CreateLeaderboardConfig 创建排行榜配置
@@ -132,7 +97,7 @@ func CreateLeaderboardConfig(config *LeaderboardConfig) error {
 
 	// 检查是否已存在
 	exist := o.QueryTable("leaderboard_config").
-		Filter("appId", config.AppId).
+		Filter("app_id", config.AppId).
 		Filter("leaderboard_type", config.LeaderboardType).
 		Exist()
 
@@ -147,29 +112,6 @@ func CreateLeaderboardConfig(config *LeaderboardConfig) error {
 
 	// 创建动态排行榜表（如果不存在）
 	return createLeaderboardTable(config.AppId)
-}
-
-// CreateLeaderboard 创建排行榜（兼容性保持）
-func CreateLeaderboard(leaderboard *Leaderboard) error {
-	o := orm.NewOrm()
-
-	// 检查是否已存在
-	exist := o.QueryTable("leaderboard_config").
-		Filter("appId", leaderboard.AppId).
-		Filter("type", leaderboard.Type).
-		Exist()
-
-	if exist {
-		return fmt.Errorf("排行榜已存在")
-	}
-
-	_, err := o.Insert(leaderboard)
-	if err != nil {
-		return err
-	}
-
-	// 创建动态排行榜表（如果不存在）
-	return createLeaderboardTable(leaderboard.AppId)
 }
 
 // UpdateLeaderboard 更新排行榜配置
@@ -187,26 +129,42 @@ func UpdateLeaderboard(appId, leaderboardType string, fields map[string]interfac
 	return err
 }
 
+func getLeaderboardConfigId(appId, leaderboardType string) (uint64, error) {
+	o := orm.NewOrm()
+	var result []orm.Params
+	sql := `SELECT id FROM leaderboard_config WHERE app_id = ? AND leaderboard_type = ?`
+	_, err := o.Raw(sql, appId, leaderboardType).Values(&result)
+	if err != nil {
+		return 0, err
+	}
+	return result[0]["id"].(uint64), nil
+}
+
 // DeleteLeaderboard 删除排行榜
 func DeleteLeaderboard(appId, leaderboardType string) error {
 	o := orm.NewOrm()
 
-	// 删除排行榜配置
-	_, err := o.QueryTable("leaderboard_config").
-		Filter("appId", appId).
-		Filter("leaderboard_type", leaderboardType).
-		Delete()
-
+	// 先获取排行榜配置ID（在删除配置之前）
+	configId, err := getLeaderboardConfigId(appId, leaderboardType)
 	if err != nil {
 		return err
 	}
 
 	// 删除动态表中的排行榜数据
-	leaderboardData := &LeaderboardData{}
+	leaderboardData := &Leaderboard{}
 	tableName := leaderboardData.GetTableName(appId)
 
-	deleteSQL := fmt.Sprintf("DELETE FROM %s WHERE leaderboard_name = ?", tableName)
-	_, err = o.Raw(deleteSQL, leaderboardType).Exec()
+	deleteSQL := fmt.Sprintf("DELETE FROM %s WHERE type = ?", tableName)
+	_, err = o.Raw(deleteSQL, configId).Exec()
+	if err != nil {
+		return err
+	}
+
+	// 最后删除排行榜配置
+	_, err = o.QueryTable("leaderboard_config").
+		Filter("app_id", appId).
+		Filter("leaderboard_type", leaderboardType).
+		Delete()
 
 	return err
 }
@@ -215,14 +173,20 @@ func DeleteLeaderboard(appId, leaderboardType string) error {
 func GetLeaderboardData(appId, leaderboardType string, page, pageSize int) ([]map[string]interface{}, int64, error) {
 	o := orm.NewOrm()
 
+	// 获取排行榜配置ID
+	configId, err := getLeaderboardConfigId(appId, leaderboardType)
+	if err != nil {
+		return nil, 0, err
+	}
+
 	// 使用动态表
-	leaderboardData := &LeaderboardData{}
+	leaderboardData := &Leaderboard{}
 	tableName := leaderboardData.GetTableName(appId)
 
 	// 获取总数
-	countSQL := fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE leaderboard_name = ?", tableName)
+	countSQL := fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE type = ?", tableName)
 	var total int64
-	err := o.Raw(countSQL, leaderboardType).QueryRow(&total)
+	err = o.Raw(countSQL, configId).QueryRow(&total)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -230,15 +194,15 @@ func GetLeaderboardData(appId, leaderboardType string, page, pageSize int) ([]ma
 	// 获取分页数据
 	offset := (page - 1) * pageSize
 	querySQL := fmt.Sprintf(`
-		SELECT id, leaderboard_name, playerId, score, extraData, created_at as createdAt, updated_at as updatedAt 
+		SELECT id, type, player_id, score, extra_data, created_at as createdAt, updated_at as updatedAt 
 		FROM %s 
-		WHERE leaderboard_name = ? 
+		WHERE type = ? 
 		ORDER BY score DESC, created_at ASC 
 		LIMIT ? OFFSET ?
 	`, tableName)
 
 	var results []orm.Params
-	_, err = o.Raw(querySQL, leaderboardType, pageSize, offset).Values(&results)
+	_, err = o.Raw(querySQL, configId, pageSize, offset).Values(&results)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -336,29 +300,35 @@ func GetLeaderboardData(appId, leaderboardType string, page, pageSize int) ([]ma
 func UpdateLeaderboardScore(appId, leaderboardType, playerId string, score int64) error {
 	o := orm.NewOrm()
 
+	// 获取排行榜配置ID
+	configId, err := getLeaderboardConfigId(appId, leaderboardType)
+	if err != nil {
+		return err
+	}
+
 	// 使用动态表
-	leaderboardData := &LeaderboardData{}
+	leaderboardData := &Leaderboard{}
 	tableName := leaderboardData.GetTableName(appId)
 
 	// 检查记录是否存在
 	var existingId int64
-	checkSQL := fmt.Sprintf("SELECT id FROM %s WHERE leaderboard_name = ? AND playerId = ?", tableName)
-	err := o.Raw(checkSQL, leaderboardType, playerId).QueryRow(&existingId)
+	checkSQL := fmt.Sprintf("SELECT id FROM %s WHERE type = ? AND player_id = ?", tableName)
+	err = o.Raw(checkSQL, configId, playerId).QueryRow(&existingId)
 
 	if err == orm.ErrNoRows {
 		// 插入新记录
 		insertSQL := fmt.Sprintf(`
-			INSERT INTO %s (leaderboard_name, playerId, score, created_at, updated_at) 
-			VALUES (?, ?, ?, NOW(), NOW())
+			INSERT INTO %s (type, type, player_id, score, created_at, updated_at) 
+			VALUES (?, ?, ?, ?, NOW(), NOW())
 		`, tableName)
-		_, err = o.Raw(insertSQL, leaderboardType, playerId, score).Exec()
+		_, err = o.Raw(insertSQL, configId, leaderboardType, playerId, score).Exec()
 	} else if err == nil {
 		// 更新现有记录
 		updateSQL := fmt.Sprintf(`
 			UPDATE %s SET score = ?, updated_at = NOW() 
-			WHERE leaderboard_name = ? AND playerId = ?
+			WHERE type = ? AND player_id = ?
 		`, tableName)
-		_, err = o.Raw(updateSQL, score, leaderboardType, playerId).Exec()
+		_, err = o.Raw(updateSQL, score, configId, playerId).Exec()
 	}
 
 	return err
@@ -368,12 +338,18 @@ func UpdateLeaderboardScore(appId, leaderboardType, playerId string, score int64
 func DeleteLeaderboardScore(appId, leaderboardType, playerId string) error {
 	o := orm.NewOrm()
 
+	// 获取排行榜配置ID
+	configId, err := getLeaderboardConfigId(appId, leaderboardType)
+	if err != nil {
+		return err
+	}
+
 	// 使用动态表
-	leaderboardData := &LeaderboardData{}
+	leaderboardData := &Leaderboard{}
 	tableName := leaderboardData.GetTableName(appId)
 
-	deleteSQL := fmt.Sprintf("DELETE FROM %s WHERE leaderboard_name = ? AND playerId = ?", tableName)
-	_, err := o.Raw(deleteSQL, leaderboardType, playerId).Exec()
+	deleteSQL := fmt.Sprintf("DELETE FROM %s WHERE type = ? AND player_id = ?", tableName)
+	_, err = o.Raw(deleteSQL, configId, playerId).Exec()
 
 	return err
 }
@@ -398,30 +374,30 @@ func CommitLeaderboardScore(appId, leaderboardType, playerId string, score int64
 	}
 
 	// 使用动态表
-	leaderboardData := &LeaderboardData{}
+	leaderboardData := &Leaderboard{}
 	tableName := leaderboardData.GetTableName(appId)
 
 	// 查找现有记录
 	var existingScore int64
-	checkSQL := fmt.Sprintf("SELECT score FROM %s WHERE leaderboard_name = ? AND playerId = ?", tableName)
-	err = o.Raw(checkSQL, leaderboardType, playerId).QueryRow(&existingScore)
+	checkSQL := fmt.Sprintf("SELECT score FROM %s WHERE type = ? AND player_id = ?", tableName)
+	err = o.Raw(checkSQL, leaderboard.ID, playerId).QueryRow(&existingScore)
 
 	if err == orm.ErrNoRows {
 		// 检查是否超过最大条目数
 		if leaderboard.MaxRank > 0 {
-			countSQL := fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE leaderboard_name = ?", tableName)
+			countSQL := fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE type = ?", tableName)
 			var count int64
-			o.Raw(countSQL, leaderboardType).QueryRow(&count)
+			o.Raw(countSQL, leaderboard.ID).QueryRow(&count)
 
 			if count >= int64(leaderboard.MaxRank) {
 				// 删除最低分记录
-				lowestSQL := fmt.Sprintf("SELECT score FROM %s WHERE leaderboard_name = ? ORDER BY score ASC, created_at DESC LIMIT 1", tableName)
+				lowestSQL := fmt.Sprintf("SELECT score FROM %s WHERE type = ? ORDER BY score ASC, created_at DESC LIMIT 1", tableName)
 				var lowestScore int64
-				err = o.Raw(lowestSQL, leaderboardType).QueryRow(&lowestScore)
+				err = o.Raw(lowestSQL, leaderboard.ID).QueryRow(&lowestScore)
 
 				if err == nil && score > lowestScore {
-					deleteLowestSQL := fmt.Sprintf("DELETE FROM %s WHERE leaderboard_name = ? ORDER BY score ASC, created_at DESC LIMIT 1", tableName)
-					o.Raw(deleteLowestSQL, leaderboardType).Exec()
+					deleteLowestSQL := fmt.Sprintf("DELETE FROM %s WHERE type = ? ORDER BY score ASC, created_at DESC LIMIT 1", tableName)
+					o.Raw(deleteLowestSQL, leaderboard.ID).Exec()
 				} else if err == nil {
 					return fmt.Errorf("分数太低，无法进入排行榜")
 				}
@@ -430,10 +406,10 @@ func CommitLeaderboardScore(appId, leaderboardType, playerId string, score int64
 
 		// 创建新记录
 		insertSQL := fmt.Sprintf(`
-			INSERT INTO %s (leaderboard_name, playerId, score, created_at, updated_at) 
-			VALUES (?, ?, ?, NOW(), NOW())
+			INSERT INTO %s (type, type, player_id, score, created_at, updated_at) 
+			VALUES (?, ?, ?, ?, NOW(), NOW())
 		`, tableName)
-		_, err = o.Raw(insertSQL, leaderboardType, playerId, score).Exec()
+		_, err = o.Raw(insertSQL, leaderboard.ID, leaderboardType, playerId, score).Exec()
 		return err
 	} else if err != nil {
 		return err
@@ -450,9 +426,9 @@ func CommitLeaderboardScore(appId, leaderboardType, playerId string, score int64
 	if shouldUpdate {
 		updateSQL := fmt.Sprintf(`
 			UPDATE %s SET score = ?, updated_at = NOW() 
-			WHERE leaderboard_name = ? AND playerId = ?
+			WHERE type = ? AND player_id = ?
 		`, tableName)
-		_, err = o.Raw(updateSQL, score, leaderboardType, playerId).Exec()
+		_, err = o.Raw(updateSQL, score, leaderboard.ID, playerId).Exec()
 	}
 
 	return err
@@ -462,14 +438,20 @@ func CommitLeaderboardScore(appId, leaderboardType, playerId string, score int64
 func QueryLeaderboardScore(appId, leaderboardType, playerId string) (int64, int, error) {
 	o := orm.NewOrm()
 
+	// 获取排行榜配置ID
+	configId, err := getLeaderboardConfigId(appId, leaderboardType)
+	if err != nil {
+		return 0, 0, err
+	}
+
 	// 使用动态表
-	leaderboardData := &LeaderboardData{}
+	leaderboardData := &Leaderboard{}
 	tableName := leaderboardData.GetTableName(appId)
 
 	// 获取用户分数
 	var userScore int64
-	scoreSQL := fmt.Sprintf("SELECT score FROM %s WHERE leaderboard_name = ? AND playerId = ?", tableName)
-	err := o.Raw(scoreSQL, leaderboardType, playerId).QueryRow(&userScore)
+	scoreSQL := fmt.Sprintf("SELECT score FROM %s WHERE type = ? AND player_id = ?", tableName)
+	err = o.Raw(scoreSQL, configId, playerId).QueryRow(&userScore)
 
 	if err != nil {
 		if err == orm.ErrNoRows {
@@ -479,9 +461,9 @@ func QueryLeaderboardScore(appId, leaderboardType, playerId string) (int64, int,
 	}
 
 	// 计算排名
-	rankSQL := fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE leaderboard_name = ? AND score > ?", tableName)
+	rankSQL := fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE type = ? AND score > ?", tableName)
 	var rank int64
-	err = o.Raw(rankSQL, leaderboardType, userScore).QueryRow(&rank)
+	err = o.Raw(rankSQL, configId, userScore).QueryRow(&rank)
 
 	if err != nil {
 		return userScore, 0, err
@@ -518,7 +500,7 @@ func GetLeaderboardStatsByAppId(appId string) (map[string]interface{}, error) {
 	}
 
 	// 获取动态表名
-	leaderboardData := &LeaderboardData{}
+	leaderboardData := &Leaderboard{}
 	tableName := leaderboardData.GetTableName(appId)
 
 	// 检查表是否存在
@@ -536,7 +518,7 @@ func GetLeaderboardStatsByAppId(appId string) (map[string]interface{}, error) {
 
 	// 获取总玩家数（去重）
 	var totalPlayers int64
-	playerCountSQL := fmt.Sprintf("SELECT COUNT(DISTINCT playerId) FROM %s", tableName)
+	playerCountSQL := fmt.Sprintf("SELECT COUNT(DISTINCT player_id) FROM %s", tableName)
 	err = o.Raw(playerCountSQL).QueryRow(&totalPlayers)
 	if err != nil {
 		totalPlayers = 0
@@ -577,7 +559,7 @@ func GetLeaderboardStatsByAppId(appId string) (map[string]interface{}, error) {
 func createLeaderboardTable(appId string) error {
 	o := orm.NewOrm()
 
-	leaderboardData := &LeaderboardData{}
+	leaderboardData := &Leaderboard{}
 	tableName := leaderboardData.GetTableName(appId)
 
 	// 检查表是否存在
@@ -590,15 +572,18 @@ func createLeaderboardTable(appId string) error {
 		createSQL := fmt.Sprintf(`
 			CREATE TABLE %s (
 				id BIGINT AUTO_INCREMENT PRIMARY KEY,
-				leaderboard_name VARCHAR(100) NOT NULL,
-				playerId VARCHAR(100) NOT NULL,
+				type BIGINT NOT NULL COMMENT '排行榜配置ID，关联leaderboard_config.id',
+				type VARCHAR(50) NOT NULL COMMENT '排行榜类型',
+				player_id VARCHAR(100) NOT NULL,
 				score BIGINT DEFAULT 0,
-				extraData TEXT,
-				createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-				updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-				UNIQUE KEY uk_leaderboard_user (leaderboard_name, playerId),
-				KEY idx_leaderboard_score (leaderboard_name, score DESC),
-				KEY idx_updatedAt (updatedAt)
+				extra_data TEXT,
+				created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+				updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+				UNIQUE KEY uk_leaderboard_user (type, player_id),
+				KEY idx_leaderboard_score (type, score DESC),
+				KEY idx_leaderboard_type (type),
+				KEY idx_updated_at (updated_at),
+				KEY idx_type (type)
 			) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
 		`, tableName)
 
@@ -632,25 +617,32 @@ func UpdateLeaderboardScoreWithExtra(appId, leaderboardType, playerId string, sc
 	}
 
 	// 获取动态表名
-	leaderboardData := &LeaderboardData{}
+	leaderboardData := &Leaderboard{}
 	tableName := leaderboardData.GetTableName(appId)
+
+	// 获取排行榜配置ID
+	configId, err := getLeaderboardConfigId(appId, leaderboardType)
+	if err != nil {
+		return err
+	}
 
 	// 查找现有记录 - 使用原生SQL查询
 	var existingRecord struct {
-		ID              int64  `json:"id"`
-		LeaderboardName string `json:"leaderboard_name"`
-		PlayerId        string `json:"playerId"`
-		Score           int64  `json:"score"`
-		ExtraData       string `json:"extraData"`
-		CreatedAt       string `json:"created_at"`
-		UpdatedAt       string `json:"updated_at"`
+		ID        int64  `json:"id"`
+		ConfigId  int64  `json:"type"`
+		Type      string `json:"type"`
+		PlayerId  string `json:"player_id"`
+		Score     int64  `json:"score"`
+		ExtraData string `json:"extra_data"`
+		CreatedAt string `json:"created_at"`
+		UpdatedAt string `json:"updated_at"`
 	}
 
-	err = o.Raw(fmt.Sprintf("SELECT id, leaderboard_name, playerId, score, extraData, created_at, updated_at FROM %s WHERE leaderboard_name = ? AND playerId = ?", tableName), leaderboardType, playerId).QueryRow(&existingRecord)
+	err = o.Raw(fmt.Sprintf("SELECT id, type, type, player_id, score, extra_data, created_at, updated_at FROM %s WHERE type = ? AND player_id = ?", tableName), configId, playerId).QueryRow(&existingRecord)
 
 	if err == orm.ErrNoRows {
 		// 新增记录 - 使用原生SQL插入
-		_, err = o.Raw(fmt.Sprintf("INSERT INTO %s (leaderboard_name, playerId, score, extraData) VALUES (?, ?, ?, ?)", tableName), leaderboardType, playerId, score, extraDataJson).Exec()
+		_, err = o.Raw(fmt.Sprintf("INSERT INTO %s (type, type, player_id, score, extra_data) VALUES (?, ?, ?, ?, ?)", tableName), configId, leaderboardType, playerId, score, extraDataJson).Exec()
 		if err != nil {
 			return fmt.Errorf("插入排行榜数据失败: %v", err)
 		}
@@ -676,7 +668,7 @@ func UpdateLeaderboardScoreWithExtra(appId, leaderboardType, playerId string, sc
 
 		if shouldUpdate {
 			// 使用原生SQL更新
-			_, err = o.Raw(fmt.Sprintf("UPDATE %s SET score = ?, extraData = ?, updated_at = NOW() WHERE id = ?", tableName), score, extraDataJson, existingRecord.ID).Exec()
+			_, err = o.Raw(fmt.Sprintf("UPDATE %s SET score = ?, extra_data = ?, updated_at = NOW() WHERE id = ?", tableName), score, extraDataJson, existingRecord.ID).Exec()
 			if err != nil {
 				return fmt.Errorf("更新排行榜数据失败: %v", err)
 			}

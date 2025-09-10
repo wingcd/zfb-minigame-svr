@@ -19,3 +19,4 @@
 /go-admin/admin-service/admin-service
 /go-admin/game-service/game-service.exe
 /go-admin/game-service/test_redis.exe
+/go-admin/game-service/logs/game-service.log

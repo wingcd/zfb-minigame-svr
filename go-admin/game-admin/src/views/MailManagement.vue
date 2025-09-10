@@ -338,9 +338,9 @@
       </el-form>
       <template #footer>
         <span class="dialog-footer">
-          <el-button @click="mailDialog.visible = false">取消</el-button>
-          <el-button @click="saveMail(false)">保存草稿</el-button>
-          <el-button type="primary" @click="saveMail(true)">保存并发布</el-button>
+          <el-button @click="mailDialog.visible = false" :disabled="saving">取消</el-button>
+          <el-button @click="saveMail(false)" :loading="saving" :disabled="saving">保存草稿</el-button>
+          <el-button type="primary" @click="saveMail(true)" :loading="saving" :disabled="saving">保存并发布</el-button>
         </span>
       </template>
     </el-dialog>
@@ -450,6 +450,7 @@ export default {
   name: 'MailManagement',
   setup() {
     const loading = ref(false)
+    const saving = ref(false) // 添加保存状态
     const mailList = ref([])
     const mailStats = ref(null)
     const mailSystemInitialized = ref(false) // 邮件系统初始化状态，默认为未知，需要检测
@@ -693,7 +694,11 @@ export default {
     }
     
     const saveMail = async (publish = false) => {
+      if (saving.value) return // 防止重复提交
+      
       try {
+        saving.value = true
+        
         // 处理目标用户
         if (mailDialog.form.targetType === 'user' && targetUsersText.value) {
           mailDialog.form.targetUsers = targetUsersText.value.split('\n').filter(id => id.trim())
@@ -704,19 +709,57 @@ export default {
         
         let result
         if (mailDialog.isEdit) {
-          result = await mailAPI.update(data)
+          if (publish) {
+            // 编辑时如果需要发布，先更新再发布
+            result = await mailAPI.update(data)
+            if (result.code === 0) {
+              // 更新成功后，如果是草稿状态，则发布
+              if (data.status === 'draft' || data.status === 'pending') {
+                const publishResult = await mailAPI.publish({
+                  id: data.id,
+                  appId: selectedAppId.value
+                })
+                if (publishResult.code === 0) {
+                  ElMessage.success('更新并发布成功')
+                } else {
+                  ElMessage.error(publishResult.msg || '发布失败')
+                  return
+                }
+              } else {
+                ElMessage.success('更新成功')
+              }
+            }
+          } else {
+            result = await mailAPI.update(data)
+            if (result.code === 0) {
+              ElMessage.success('更新成功')
+            }
+          }
+        } else if (publish) {
+          // 如果需要立即发布，直接调用发布API而不是先创建再发布
+          const publishData = {
+            appId: selectedAppId.value,
+            title: data.title,
+            content: data.content,
+            type: data.type,
+            targetType: data.targetType,
+            targets: data.targets,
+            rewards: data.rewards ? data.rewards.map(r => `${r.type}:${r.amount}:${r.name}`).join(',') : '',
+            expireDays: data.expireDays || 7
+          }
+          
+          result = await mailAPI.publish(publishData)
+          if (result.code === 0) {
+            ElMessage.success('邮件发布成功')
+          }
         } else {
           result = await mailAPI.create(data)
+          if (result.code === 0) {
+            ElMessage.success('创建成功')
+          }
         }
         
         if (result.code === 0) {
-          ElMessage.success(mailDialog.isEdit ? '更新成功' : '创建成功')
-          
-          // 如果需要立即发布
-          if (publish && !mailDialog.isEdit) {
-            await publishMail(mailDialog.form)
-          }
-          
           mailDialog.visible = false
           await getMailList()
           await getMailStats()
@@ -726,6 +769,8 @@ export default {
       } catch (error) {
         console.error('保存邮件失败:', error)
         ElMessage.error('操作失败')
+      } finally {
+        saving.value = false
       }
     }
     
@@ -1127,6 +1172,7 @@ export default {
     
     return {
       loading,
+      saving,
       mailList,
       mailStats,
       mailSystemInitialized,

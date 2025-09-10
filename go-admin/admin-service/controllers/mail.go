@@ -366,28 +366,18 @@ func (c *MailController) DeleteMail() {
 		return
 	}
 
-	var err = models.DeleteSystemMail(requestData.AppId, requestData.MailId)
-	if err != nil {
-		c.Data["json"] = map[string]interface{}{
-			"code":      5001,
-			"msg":       "删除邮件失败: " + err.Error(),
-			"timestamp": utils.UnixMilli(),
-			"data":      nil,
+	// 根据邮件类型选择删除方法
+	var err error
+	if requestData.Type == "personal" {
+		// 删除个人邮件（只删除关联记录）
+		err = models.DeletePersonalMail(requestData.AppId, requestData.MailId)
+	} else {
+		// 删除系统邮件（删除邮件内容和所有关联记录）
+		err = models.DeleteSystemMail(requestData.AppId, requestData.MailId)
+		if err == nil {
+			// 同时删除所有相关的个人邮件关联记录
+			_ = models.DeletePersonalMail(requestData.AppId, requestData.MailId)
 		}
-		c.ServeJSON()
-		return
-	}
-
-	err = models.DeletePersonalMail(requestData.AppId, requestData.MailId)
-	if err != nil {
-		c.Data["json"] = map[string]interface{}{
-			"code":      5001,
-			"msg":       "删除邮件失败: " + err.Error(),
-			"timestamp": utils.UnixMilli(),
-			"data":      nil,
-		}
-		c.ServeJSON()
-		return
 	}
 
 	if err != nil {
@@ -436,9 +426,41 @@ func (c *MailController) PublishMail() {
 		requestData.ExpireDays = 7
 	}
 
-	if err := models.PublishMail(requestData.AppId, requestData.Title, requestData.Content, requestData.Rewards, requestData.ExpireDays); err != nil {
+	// 使用新的邮件系统创建并发布邮件
+	systemMail := &models.MailSystem{
+		AppId:      requestData.AppId,
+		MailId:     fmt.Sprintf("mail_%d", time.Now().Unix()),
+		Title:      requestData.Title,
+		Content:    requestData.Content,
+		Rewards:    requestData.Rewards,
+		Type:       "system",
+		TargetType: "all",
+		Status:     "draft",
+		CreatedBy:  "admin", // 默认创建者为admin
+	}
+
+	// 设置过期时间
+	if requestData.ExpireDays > 0 {
+		expireTime := time.Now().AddDate(0, 0, requestData.ExpireDays)
+		systemMail.ExpireTime = &expireTime
+	}
+
+	// 创建系统邮件
+	if err := models.CreateSystemMail(systemMail); err != nil {
 		c.Data["json"] = map[string]interface{}{
 			"code":      5001,
+			"msg":       "创建系统邮件失败",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	// 发布邮件
+	if err := models.PublishSystemMail(systemMail.ID, requestData.AppId); err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      5002,
 			"msg":       "发布邮件失败",
 			"timestamp": utils.UnixMilli(),
 			"data":      nil,

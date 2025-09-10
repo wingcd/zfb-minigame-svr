@@ -231,32 +231,42 @@ function generateApiSign(params, timestamp, appSecret) {
     return md5(signStr);
 }
 
+
+/**
+ * appId: this.appId,
+    playerId: this.playerId || '',
+    token: this.token || '',
+    timestamp: Date.now(),
+    ver: this.version,
+ */
+
 /**
  * 生成zy-sdk风格的签名 (基于用户的简单签名)
  * @param {string} appId - 应用ID
  * @param {string} playerId - 玩家ID  
- * @param {string} appSecret - 应用密钥
+ * @param {string} token - 登录token
  * @returns {string} MD5签名
  */
-function generateZySign(appId, playerId, appSecret) {
-    const params = {};
-    params['appId'] = appId;
-    if (playerId) {
-        params['userId'] = playerId;
-    }
-    params['appSecret'] = appSecret;
-    
-    // 按key排序
-    const keys = Object.keys(params).sort();
-    
-    // 拼接字符串
-    let signStr = '';
-    for (const key of keys) {
-        signStr += key + '=' + params[key] + '&';
-    }
-    
-    // 去掉最后的&
-    signStr = signStr.slice(0, -1);
+function generateZySign(obj) {
+   // 排除对象中的空值,0,undefined,null
+   let newObj = {};
+   for (let key in obj) {
+       if(key == 'sign' || key == "ver") {
+           continue;
+       }
+
+       if (obj[key] !== null && obj[key] !== undefined && obj[key] !== '' && obj[key] !== 0) {
+           newObj[key] = obj[key];
+       }
+   }
+
+   // 对象按key排序
+   let keys = Object.keys(newObj).sort();
+   // 生成hash
+   let signStr = '';
+   for (let key of keys) {
+        signStr += key + newObj[key];
+   }
     
     // 计算MD5
     return md5(signStr);

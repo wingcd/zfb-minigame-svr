@@ -1,0 +1,986 @@
+2025/09/09 19:07:54.022  [I] [server.go:281]  http server Running on http://:8081
+2025/09/09 19:25:34.987  [D] [router.go:1305]  |            ::1|[43m 404 [0m|           0s| nomatch|[47m OPTIONS [0m /health
+2025/09/09 19:25:47.910  [D] [router.go:1305]  |            ::1|[43m 404 [0m|           0s| nomatch|[47m OPTIONS [0m /health
+2025/09/09 19:25:51.138  [D] [router.go:1305]  |            ::1|[43m 404 [0m|           0s| nomatch|[47m OPTIONS [0m /health
+2025/09/09 19:25:51.949  [D] [router.go:1305]  |            ::1|[43m 404 [0m|           0s| nomatch|[47m OPTIONS [0m /heartbeat
+2025/09/09 19:25:52.771  [D] [router.go:1305]  |            ::1|[43m 404 [0m|           0s| nomatch|[47m OPTIONS [0m /user/login
+2025/09/09 19:25:53.591  [D] [router.go:1305]  |            ::1|[43m 404 [0m|           0s| nomatch|[47m OPTIONS [0m /user/saveData
+2025/09/09 19:25:54.404  [D] [router.go:1305]  |            ::1|[43m 404 [0m|           0s| nomatch|[47m OPTIONS [0m /user/getData
+2025/09/09 19:25:55.218  [D] [router.go:1305]  |            ::1|[43m 404 [0m|           0s| nomatch|[47m OPTIONS [0m /user/saveUserInfo
+2025/09/09 19:25:56.034  [D] [router.go:1305]  |            ::1|[43m 404 [0m|           0s| nomatch|[47m OPTIONS [0m /leaderboard/commit
+2025/09/09 19:25:56.857  [D] [router.go:1305]  |            ::1|[43m 404 [0m|       18.5µs| nomatch|[47m OPTIONS [0m /leaderboard/queryTopRank
+2025/09/09 19:25:57.668  [D] [router.go:1305]  |            ::1|[43m 404 [0m|           0s| nomatch|[47m OPTIONS [0m /counter/increment
+2025/09/09 19:25:58.489  [D] [router.go:1305]  |            ::1|[43m 404 [0m|           0s| nomatch|[47m OPTIONS [0m /counter/get
+2025/09/09 19:25:59.300  [D] [router.go:1305]  |            ::1|[43m 404 [0m|           0s| nomatch|[47m OPTIONS [0m /mail/getUserMails
+2025/09/09 19:26:00.124  [D] [router.go:1305]  |            ::1|[43m 404 [0m|           0s| nomatch|[47m OPTIONS [0m /mail/updateStatus
+2025/09/09 19:26:00.953  [D] [router.go:1305]  |            ::1|[43m 404 [0m|           0s| nomatch|[47m OPTIONS [0m /getConfig
+2025/09/09 19:26:01.765  [D] [router.go:1305]  |            ::1|[43m 404 [0m|           0s| nomatch|[47m OPTIONS [0m /getAllConfigs
+2025/09/09 19:27:46.873  [D] [router.go:1305]  |            ::1|[43m 404 [0m|      546.6µs| nomatch|[47m OPTIONS [0m /user/login
+2025/09/09 19:27:48.215  [D] [router.go:1305]  |            ::1|[43m 404 [0m|           0s| nomatch|[47m OPTIONS [0m /health
+2025/09/09 19:31:56.885  [I] [server.go:281]  http server Running on http://:8081
+2025/09/09 19:32:33.550  [I] [server.go:281]  http server Running on http://:8081
+2025/09/09 19:32:39.032  [I] [auth.go:120]  Request: GET /health from ::1
+2025/09/09 19:32:39.033  [D] [auth.go:131]  Rate limit check for key: ::1:<nil>
+2025/09/09 19:32:39.036  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     4.4773ms|   match|[44m GET     [0m /health   r:/health
+2025/09/09 19:35:25.376  [I] [server.go:281]  http server Running on http://:8081
+2025/09/09 19:35:25.382  [C] [server.go:298]  ListenAndServe:  listen tcp :8081: bind: Only one usage of each socket address (protocol/network address/port) is normally permitted.
+2025/09/09 19:36:48.713  [D] [router.go:1305]  |            ::1|[43m 404 [0m|           0s| nomatch|[47m OPTIONS [0m /health
+2025/09/09 19:37:05.481  [D] [router.go:1305]  |            ::1|[43m 404 [0m|           0s| nomatch|[47m OPTIONS [0m /health
+2025/09/09 19:37:29.896  [I] [auth.go:120]  Request: GET /health from ::1
+2025/09/09 19:37:29.897  [D] [auth.go:131]  Rate limit check for key: ::1:<nil>
+2025/09/09 19:37:29.897  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     1.0796ms|   match|[44m GET     [0m /health   r:/health
+2025/09/09 19:37:41.857  [D] [router.go:1305]  |            ::1|[43m 404 [0m|           0s| nomatch|[47m OPTIONS [0m /health
+2025/09/09 19:39:57.966  [D] [router.go:1305]  |            ::1|[43m 404 [0m|           0s| nomatch|[47m OPTIONS [0m /testpath
+2025/09/09 19:41:16.998  [I] [server.go:281]  http server Running on http://:8081
+2025/09/09 19:41:17.005  [C] [server.go:298]  ListenAndServe:  listen tcp :8081: bind: Only one usage of each socket address (protocol/network address/port) is normally permitted.
+2025/09/09 19:42:45.956  [D] [router.go:1305]  |            ::1|[43m 404 [0m|      515.4µs| nomatch|[47m OPTIONS [0m /health
+2025/09/09 19:42:50.286  [D] [router.go:1305]  |            ::1|[43m 404 [0m|           0s| nomatch|[47m OPTIONS [0m /health
+2025/09/09 19:44:24.669  [I] [server.go:281]  http server Running on http://:8081
+2025/09/09 19:44:24.677  [C] [server.go:298]  ListenAndServe:  listen tcp :8081: bind: Only one usage of each socket address (protocol/network address/port) is normally permitted.
+2025/09/09 19:45:50.666  [I] [server.go:281]  http server Running on http://:8081
+2025/09/09 19:45:50.676  [C] [server.go:298]  ListenAndServe:  listen tcp :8081: bind: Only one usage of each socket address (protocol/network address/port) is normally permitted.
+2025/09/09 19:47:01.383  [I] [server.go:281]  http server Running on http://:8081
+2025/09/09 19:47:01.390  [C] [server.go:298]  ListenAndServe:  listen tcp :8081: bind: Only one usage of each socket address (protocol/network address/port) is normally permitted.
+2025/09/09 19:47:59.402  [I] [server.go:281]  http server Running on http://:8081
+2025/09/09 19:49:59.674  [I] [server.go:281]  http server Running on http://:8081
+2025/09/09 19:50:04.298  [I] [server.go:281]  http server Running on http://:8081
+2025/09/09 19:50:34.664  [I] [server.go:281]  http server Running on http://:8081
+2025/09/09 19:51:26.573  [D] [router.go:1305]  |            ::1|[43m 404 [0m|     1.0011ms| nomatch|[47m OPTIONS [0m /health
+2025/09/09 19:55:46.087  [I] [server.go:281]  http server Running on http://:8081
+2025/09/09 19:55:53.018  [D] [router.go:1305]  |            ::1|[43m 404 [0m|      522.7µs| nomatch|[47m OPTIONS [0m /health
+2025/09/10 11:06:26.468  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 11:11:09.741  [D] [router.go:1305]  |            ::1|[43m 404 [0m|      518.1µs| nomatch|[47m OPTIONS [0m /health
+2025/09/10 11:16:27.844  [I] [auth.go:115]  Request: GET /health from ::1
+2025/09/10 11:16:27.845  [D] [auth.go:126]  Rate limit check for key: ::1:<nil>
+2025/09/10 11:16:27.848  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     3.9794ms|   match|[44m GET     [0m /health   r:/health
+2025/09/10 11:16:28.026  [D] [router.go:1305]  |            ::1|[43m 404 [0m|      788.1µs| nomatch|[44m GET     [0m /favicon.ico
+2025/09/10 11:18:24.630  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 11:18:32.958  [I] [auth.go:115]  Request: OPTIONS /health from ::1
+2025/09/10 11:18:32.958  [D] [auth.go:126]  Rate limit check for key: ::1:<nil>
+2025/09/10 11:18:32.959  [D] [router.go:1305]  |            ::1|[42m 200 [0m|      521.2µs|   match|[47m OPTIONS [0m /health   r:/health
+2025/09/10 11:18:32.962  [I] [auth.go:115]  Request: GET /health from ::1
+2025/09/10 11:18:32.962  [D] [auth.go:126]  Rate limit check for key: ::1:<nil>
+2025/09/10 11:18:32.968  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     5.4892ms|   match|[44m GET     [0m /health   r:/health
+2025/09/10 11:18:40.052  [I] [auth.go:115]  Request: GET /health from ::1
+2025/09/10 11:18:40.052  [D] [auth.go:126]  Rate limit check for key: ::1:<nil>
+2025/09/10 11:18:40.052  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s|   match|[44m GET     [0m /health   r:/health
+2025/09/10 11:18:40.865  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s|   match|[47m OPTIONS [0m /heartbeat   r:/heartbeat
+2025/09/10 11:18:40.869  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s|   match|[44m GET     [0m /heartbeat   r:/heartbeat
+2025/09/10 11:18:41.676  [D] [router.go:1305]  |            ::1|[43m 404 [0m|           0s| nomatch|[47m OPTIONS [0m /user/login
+2025/09/10 11:18:42.494  [D] [router.go:1305]  |            ::1|[43m 404 [0m|           0s| nomatch|[47m OPTIONS [0m /user/saveData
+2025/09/10 11:18:43.300  [D] [router.go:1305]  |            ::1|[43m 404 [0m|           0s| nomatch|[47m OPTIONS [0m /user/getData
+2025/09/10 11:18:44.114  [D] [router.go:1305]  |            ::1|[43m 404 [0m|           0s| nomatch|[47m OPTIONS [0m /user/saveUserInfo
+2025/09/10 11:18:44.927  [D] [router.go:1305]  |            ::1|[43m 404 [0m|           0s| nomatch|[47m OPTIONS [0m /leaderboard/commit
+2025/09/10 11:18:45.739  [D] [router.go:1305]  |            ::1|[43m 404 [0m|           0s| nomatch|[47m OPTIONS [0m /leaderboard/queryTopRank
+2025/09/10 11:18:46.555  [D] [router.go:1305]  |            ::1|[43m 404 [0m|           0s| nomatch|[47m OPTIONS [0m /counter/increment
+2025/09/10 11:18:47.381  [D] [router.go:1305]  |            ::1|[43m 404 [0m|           0s| nomatch|[47m OPTIONS [0m /counter/get
+2025/09/10 11:18:48.192  [D] [router.go:1305]  |            ::1|[43m 404 [0m|      999.3µs| nomatch|[47m OPTIONS [0m /mail/getUserMails
+2025/09/10 11:18:49.007  [D] [router.go:1305]  |            ::1|[43m 404 [0m|      521.2µs| nomatch|[47m OPTIONS [0m /mail/updateStatus
+2025/09/10 11:18:49.820  [D] [router.go:1305]  |            ::1|[43m 404 [0m|           0s| nomatch|[47m OPTIONS [0m /getConfig
+2025/09/10 11:18:50.631  [D] [router.go:1305]  |            ::1|[43m 404 [0m|           0s| nomatch|[47m OPTIONS [0m /getAllConfigs
+2025/09/10 11:24:36.164  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 11:25:13.125  [I] [auth.go:99]  Request: GET /health from ::1
+2025/09/10 11:25:13.125  [D] [auth.go:110]  Rate limit check for key: ::1:<nil>
+2025/09/10 11:25:13.129  [D] [router.go:1305]  |            ::1|[42m 200 [0m|  25.2780945s|   match|[44m GET     [0m /health   r:/health
+2025/09/10 11:25:23.583  [I] [auth.go:99]  Request: GET /health from ::1
+2025/09/10 11:25:23.583  [D] [auth.go:110]  Rate limit check for key: ::1:<nil>
+2025/09/10 11:25:23.583  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s|   match|[44m GET     [0m /health   r:/health
+2025/09/10 11:25:24.392  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s|   match|[44m GET     [0m /heartbeat   r:/heartbeat
+2025/09/10 11:25:25.205  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s| nomatch|[47m OPTIONS [0m /user/login
+2025/09/10 11:25:26.017  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s| nomatch|[47m OPTIONS [0m /user/saveData
+2025/09/10 11:25:26.829  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s| nomatch|[47m OPTIONS [0m /user/getData
+2025/09/10 11:25:27.635  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s| nomatch|[47m OPTIONS [0m /user/saveUserInfo
+2025/09/10 11:25:28.457  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s| nomatch|[47m OPTIONS [0m /leaderboard/commit
+2025/09/10 11:25:29.269  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s| nomatch|[47m OPTIONS [0m /leaderboard/queryTopRank
+2025/09/10 11:25:30.087  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s| nomatch|[47m OPTIONS [0m /counter/increment
+2025/09/10 11:25:30.900  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s| nomatch|[47m OPTIONS [0m /counter/get
+2025/09/10 11:25:31.715  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s| nomatch|[47m OPTIONS [0m /mail/getUserMails
+2025/09/10 11:25:32.536  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s| nomatch|[47m OPTIONS [0m /mail/updateStatus
+2025/09/10 11:25:33.358  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s| nomatch|[47m OPTIONS [0m /getConfig
+2025/09/10 11:25:34.167  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s| nomatch|[47m OPTIONS [0m /getAllConfigs
+2025/09/10 15:32:10.805  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 16:53:08.443  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 16:54:28.094  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s| nomatch|[47m OPTIONS [0m /health
+2025/09/10 16:54:28.103  [I] [auth.go:121]  Request: GET /health from ::1
+2025/09/10 16:54:28.106  [D] [auth.go:132]  Rate limit check for key: ::1:<nil>
+2025/09/10 16:54:28.114  [D] [router.go:1305]  |            ::1|[42m 200 [0m|    11.2585ms|   match|[44m GET     [0m /health   r:/health
+2025/09/10 17:03:17.478  [I] [auth.go:121]  Request: GET /health from ::1
+2025/09/10 17:03:17.479  [D] [auth.go:132]  Rate limit check for key: ::1:<nil>
+2025/09/10 17:03:17.482  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     3.7421ms|   match|[44m GET     [0m /health   r:/health
+2025/09/10 17:04:25.064  [I] [auth.go:121]  Request: GET /health from ::1
+2025/09/10 17:04:25.065  [D] [auth.go:132]  Rate limit check for key: ::1:<nil>
+2025/09/10 17:04:25.065  [D] [router.go:1305]  |            ::1|[42m 200 [0m|      524.7µs|   match|[44m GET     [0m /health   r:/health
+2025/09/10 17:04:31.992  [I] [auth.go:121]  Request: GET /health from ::1
+2025/09/10 17:04:31.992  [D] [auth.go:132]  Rate limit check for key: ::1:<nil>
+2025/09/10 17:04:31.993  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     1.1393ms|   match|[44m GET     [0m /health   r:/health
+2025/09/10 17:04:39.067  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s| nomatch|[47m OPTIONS [0m /heartbeat
+2025/09/10 17:04:39.073  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s|   match|[44m GET     [0m /heartbeat   r:/heartbeat
+2025/09/10 17:04:46.108  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s| nomatch|[47m OPTIONS [0m /user/login
+2025/09/10 17:09:29.642  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s| nomatch|[47m OPTIONS [0m /user/login
+2025/09/10 17:09:58.892  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 17:12:00.833  [D] [router.go:1305]  |            ::1|[42m 200 [0m|      514.2µs| nomatch|[47m OPTIONS [0m /user/login
+2025/09/10 17:12:00.836  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s|   match|[46m POST    [0m /user/login   r:/user/login
+2025/09/10 17:24:37.574  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     1.0005ms|   match|[46m POST    [0m /user/login   r:/user/login
+2025/09/10 17:25:19.808  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s|   match|[46m POST    [0m /user/login   r:/user/login
+2025/09/10 17:25:29.073  [I] [auth.go:121]  Request: GET /health from ::1
+2025/09/10 17:25:29.074  [D] [auth.go:132]  Rate limit check for key: ::1:<nil>
+2025/09/10 17:25:29.082  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     9.0002ms|   match|[44m GET     [0m /health   r:/health
+2025/09/10 17:25:34.923  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s|   match|[46m POST    [0m /user/login   r:/user/login
+2025/09/10 17:26:32.320  [I] [auth.go:121]  Request: GET /health from ::1
+2025/09/10 17:26:32.321  [D] [auth.go:132]  Rate limit check for key: ::1:<nil>
+2025/09/10 17:26:32.321  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     1.0657ms|   match|[44m GET     [0m /health   r:/health
+2025/09/10 17:26:33.721  [I] [auth.go:121]  Request: GET /health from ::1
+2025/09/10 17:26:33.724  [D] [auth.go:132]  Rate limit check for key: ::1:<nil>
+2025/09/10 17:26:33.724  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     3.0561ms|   match|[44m GET     [0m /health   r:/health
+2025/09/10 17:27:22.792  [I] [auth.go:121]  Request: GET /health from ::1
+2025/09/10 17:27:22.951  [D] [auth.go:132]  Rate limit check for key: ::1:<nil>
+2025/09/10 17:27:22.996  [D] [router.go:1305]  |            ::1|[42m 200 [0m|   204.5243ms|   match|[44m GET     [0m /health   r:/health
+2025/09/10 17:28:15.439  [I] [auth.go:121]  Request: GET /health from ::1
+2025/09/10 17:28:15.439  [D] [auth.go:132]  Rate limit check for key: ::1:<nil>
+2025/09/10 17:28:15.440  [D] [router.go:1305]  |            ::1|[42m 200 [0m|      522.4µs|   match|[44m GET     [0m /health   r:/health
+2025/09/10 17:28:15.764  [I] [auth.go:121]  Request: GET /health from ::1
+2025/09/10 17:28:15.764  [D] [auth.go:132]  Rate limit check for key: ::1:<nil>
+2025/09/10 17:28:15.764  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s|   match|[44m GET     [0m /health   r:/health
+2025/09/10 17:28:16.083  [I] [auth.go:121]  Request: GET /health from ::1
+2025/09/10 17:28:16.083  [D] [auth.go:132]  Rate limit check for key: ::1:<nil>
+2025/09/10 17:28:16.083  [D] [router.go:1305]  |            ::1|[42m 200 [0m|        524µs|   match|[44m GET     [0m /health   r:/health
+2025/09/10 17:28:16.462  [I] [auth.go:121]  Request: GET /health from ::1
+2025/09/10 17:28:16.474  [D] [auth.go:132]  Rate limit check for key: ::1:<nil>
+2025/09/10 17:28:16.476  [D] [router.go:1305]  |            ::1|[42m 200 [0m|    14.4428ms|   match|[44m GET     [0m /health   r:/health
+2025/09/10 17:28:16.757  [I] [auth.go:121]  Request: GET /health from ::1
+2025/09/10 17:28:16.782  [D] [auth.go:132]  Rate limit check for key: ::1:<nil>
+2025/09/10 17:28:16.862  [D] [router.go:1305]  |            ::1|[42m 200 [0m|   105.6521ms|   match|[44m GET     [0m /health   r:/health
+2025/09/10 17:28:17.568  [I] [auth.go:121]  Request: GET /health from ::1
+2025/09/10 17:28:17.569  [D] [auth.go:132]  Rate limit check for key: ::1:<nil>
+2025/09/10 17:28:17.569  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     1.5759ms|   match|[44m GET     [0m /health   r:/health
+2025/09/10 17:28:18.242  [I] [auth.go:121]  Request: GET /health from ::1
+2025/09/10 17:28:18.243  [D] [auth.go:132]  Rate limit check for key: ::1:<nil>
+2025/09/10 17:28:18.243  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     1.3332ms|   match|[44m GET     [0m /health   r:/health
+2025/09/10 17:28:18.824  [I] [auth.go:121]  Request: GET /health from ::1
+2025/09/10 17:28:18.825  [D] [auth.go:132]  Rate limit check for key: ::1:<nil>
+2025/09/10 17:28:18.825  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     1.0001ms|   match|[44m GET     [0m /health   r:/health
+2025/09/10 17:28:19.176  [I] [auth.go:121]  Request: GET /health from ::1
+2025/09/10 17:28:19.177  [D] [auth.go:132]  Rate limit check for key: ::1:<nil>
+2025/09/10 17:28:19.178  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     1.9978ms|   match|[44m GET     [0m /health   r:/health
+2025/09/10 17:28:19.557  [I] [auth.go:121]  Request: GET /health from ::1
+2025/09/10 17:28:19.557  [D] [auth.go:132]  Rate limit check for key: ::1:<nil>
+2025/09/10 17:28:19.559  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     1.3778ms|   match|[44m GET     [0m /health   r:/health
+2025/09/10 17:28:27.419  [I] [auth.go:121]  Request: GET /health from ::1
+2025/09/10 17:28:27.419  [D] [auth.go:132]  Rate limit check for key: ::1:<nil>
+2025/09/10 17:28:27.419  [D] [router.go:1305]  |            ::1|[42m 200 [0m|      521.2µs|   match|[44m GET     [0m /health   r:/health
+2025/09/10 17:29:47.487  [I] [auth.go:121]  Request: GET /health from ::1
+2025/09/10 17:29:47.487  [D] [auth.go:132]  Rate limit check for key: ::1:<nil>
+2025/09/10 17:29:47.488  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     1.0004ms|   match|[44m GET     [0m /health   r:/health
+2025/09/10 17:30:37.307  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s| nomatch|[47m OPTIONS [0m /health
+2025/09/10 17:30:37.309  [I] [auth.go:121]  Request: GET /health from ::1
+2025/09/10 17:30:37.310  [D] [auth.go:132]  Rate limit check for key: ::1:<nil>
+2025/09/10 17:30:37.311  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     1.3297ms|   match|[44m GET     [0m /health   r:/health
+2025/09/10 17:30:51.320  [I] [auth.go:121]  Request: GET /health from ::1
+2025/09/10 17:30:51.320  [D] [auth.go:132]  Rate limit check for key: ::1:<nil>
+2025/09/10 17:30:51.321  [D] [router.go:1305]  |            ::1|[42m 200 [0m|        529µs|   match|[44m GET     [0m /health   r:/health
+2025/09/10 17:30:55.972  [D] [router.go:1305]  |            ::1|[42m 200 [0m|      907.1µs| nomatch|[47m OPTIONS [0m //heartbeat
+2025/09/10 17:30:55.977  [D] [router.go:1305]  |            ::1|[42m 200 [0m|      507.9µs|   match|[44m GET     [0m //heartbeat   r:/heartbeat
+2025/09/10 17:30:57.792  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s| nomatch|[47m OPTIONS [0m //health
+2025/09/10 17:30:57.794  [I] [auth.go:121]  Request: GET //health from ::1
+2025/09/10 17:30:57.794  [D] [auth.go:132]  Rate limit check for key: ::1:<nil>
+2025/09/10 17:30:57.795  [D] [router.go:1305]  |            ::1|[42m 200 [0m|        513µs|   match|[44m GET     [0m //health   r:/health
+2025/09/10 17:31:17.467  [D] [router.go:1305]  |            ::1|[42m 200 [0m|      893.2µs|   match|[44m GET     [0m //heartbeat   r:/heartbeat
+2025/09/10 17:34:47.625  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s|   match|[46m POST    [0m /user/login   r:/user/login
+2025/09/10 17:48:43.809  [I] [auth.go:121]  Request: GET /health from ::1
+2025/09/10 17:48:43.821  [D] [auth.go:132]  Rate limit check for key: ::1:<nil>
+2025/09/10 17:48:43.833  [D] [router.go:1305]  |            ::1|[42m 200 [0m|    23.5601ms|   match|[44m GET     [0m /health   r:/health
+2025/09/10 17:49:48.523  [I] [auth.go:121]  Request: GET /health from ::1
+2025/09/10 17:49:48.526  [D] [auth.go:132]  Rate limit check for key: ::1:<nil>
+2025/09/10 17:49:48.531  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     8.0494ms|   match|[44m GET     [0m /health   r:/health
+2025/09/10 17:50:05.445  [I] [auth.go:121]  Request: GET /health from ::1
+2025/09/10 17:50:05.447  [D] [auth.go:132]  Rate limit check for key: ::1:<nil>
+2025/09/10 17:50:05.447  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     1.8414ms|   match|[44m GET     [0m /health   r:/health
+2025/09/10 17:50:43.823  [I] [auth.go:121]  Request: GET /health from ::1
+2025/09/10 17:50:43.828  [D] [auth.go:132]  Rate limit check for key: ::1:<nil>
+2025/09/10 17:50:43.836  [D] [router.go:1305]  |            ::1|[42m 200 [0m|    12.9175ms|   match|[44m GET     [0m /health   r:/health
+2025/09/10 17:50:55.690  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s| nomatch|[47m OPTIONS [0m /health
+2025/09/10 17:50:55.693  [I] [auth.go:121]  Request: GET /health from ::1
+2025/09/10 17:50:55.693  [D] [auth.go:132]  Rate limit check for key: ::1:<nil>
+2025/09/10 17:50:55.694  [D] [router.go:1305]  |            ::1|[42m 200 [0m|      999.2µs|   match|[44m GET     [0m /health   r:/health
+2025/09/10 17:51:10.825  [I] [auth.go:121]  Request: GET /health from ::1
+2025/09/10 17:51:10.826  [D] [auth.go:132]  Rate limit check for key: ::1:<nil>
+2025/09/10 17:51:10.827  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     1.7745ms|   match|[44m GET     [0m /health   r:/health
+2025/09/10 17:51:13.968  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s| nomatch|[47m OPTIONS [0m //health
+2025/09/10 17:51:13.970  [I] [auth.go:121]  Request: GET //health from ::1
+2025/09/10 17:51:13.971  [D] [auth.go:132]  Rate limit check for key: ::1:<nil>
+2025/09/10 17:51:13.972  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     1.5111ms|   match|[44m GET     [0m //health   r:/health
+2025/09/10 17:51:15.178  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s| nomatch|[47m OPTIONS [0m //heartbeat
+2025/09/10 17:51:15.181  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s|   match|[44m GET     [0m //heartbeat   r:/heartbeat
+2025/09/10 17:51:25.564  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s| nomatch|[47m OPTIONS [0m //user/login
+2025/09/10 17:51:25.567  [C] [config.go:500]  the request url is  //user/login
+2025/09/10 17:51:25.567  [C] [config.go:501]  Handler crashed with error <Ormer.QueryTable> table name: `applications` not exists
+2025/09/10 17:51:25.568  [C] [config.go:507]  D:/Program Files/go/src/runtime/panic.go:783
+2025/09/10 17:51:25.568  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/client/orm/orm.go:490
+2025/09/10 17:51:25.569  [C] [config.go:507]  H:/game_dev/minigame-server/go-admin/game-service/models/application.go:31
+2025/09/10 17:51:25.569  [C] [config.go:507]  H:/game_dev/minigame-server/go-admin/game-service/middlewares/auth.go:91
+2025/09/10 17:51:25.569  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/filter.go:83
+2025/09/10 17:51:25.571  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/router.go:986
+2025/09/10 17:51:25.571  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/router.go:1136
+2025/09/10 17:51:25.571  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/filter.go:83
+2025/09/10 17:51:25.572  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/router.go:1002
+2025/09/10 17:51:25.572  [C] [config.go:507]  D:/Program Files/go/src/net/http/server.go:3340
+2025/09/10 17:51:25.573  [C] [config.go:507]  D:/Program Files/go/src/net/http/server.go:2109
+2025/09/10 17:51:25.573  [C] [config.go:507]  D:/Program Files/go/src/runtime/asm_amd64.s:1693
+2025/09/10 17:53:01.112  [C] [config.go:500]  the request url is  //user/login
+2025/09/10 17:53:01.113  [C] [config.go:501]  Handler crashed with error <Ormer.QueryTable> table name: `applications` not exists
+2025/09/10 17:53:01.113  [C] [config.go:507]  D:/Program Files/go/src/runtime/panic.go:783
+2025/09/10 17:53:01.113  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/client/orm/orm.go:490
+2025/09/10 17:53:01.113  [C] [config.go:507]  H:/game_dev/minigame-server/go-admin/game-service/models/application.go:31
+2025/09/10 17:53:01.114  [C] [config.go:507]  H:/game_dev/minigame-server/go-admin/game-service/middlewares/auth.go:91
+2025/09/10 17:53:01.114  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/filter.go:83
+2025/09/10 17:53:01.115  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/router.go:986
+2025/09/10 17:53:01.115  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/router.go:1136
+2025/09/10 17:53:01.115  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/filter.go:83
+2025/09/10 17:53:01.116  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/router.go:1002
+2025/09/10 17:53:01.116  [C] [config.go:507]  D:/Program Files/go/src/net/http/server.go:3340
+2025/09/10 17:53:01.116  [C] [config.go:507]  D:/Program Files/go/src/net/http/server.go:2109
+2025/09/10 17:53:01.116  [C] [config.go:507]  D:/Program Files/go/src/runtime/asm_amd64.s:1693
+2025/09/10 17:53:42.449  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 17:53:49.977  [C] [config.go:500]  the request url is  //user/login
+2025/09/10 17:53:49.977  [C] [config.go:501]  Handler crashed with error <Ormer.QueryTable> table name: `applications` not exists
+2025/09/10 17:53:49.977  [C] [config.go:507]  D:/Program Files/go/src/runtime/panic.go:783
+2025/09/10 17:53:49.977  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/client/orm/orm.go:490
+2025/09/10 17:53:49.978  [C] [config.go:507]  h:/game_dev/minigame-server/go-admin/game-service/models/application.go:31
+2025/09/10 17:53:49.978  [C] [config.go:507]  h:/game_dev/minigame-server/go-admin/game-service/middlewares/auth.go:91
+2025/09/10 17:53:49.978  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/filter.go:83
+2025/09/10 17:53:49.978  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/router.go:986
+2025/09/10 17:53:49.978  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/router.go:1136
+2025/09/10 17:53:49.978  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/filter.go:83
+2025/09/10 17:53:49.978  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/router.go:1002
+2025/09/10 17:53:49.978  [C] [config.go:507]  D:/Program Files/go/src/net/http/server.go:3340
+2025/09/10 17:53:49.978  [C] [config.go:507]  D:/Program Files/go/src/net/http/server.go:2109
+2025/09/10 17:53:49.978  [C] [config.go:507]  D:/Program Files/go/src/runtime/asm_amd64.s:1693
+2025/09/10 17:54:56.226  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 17:55:11.770  [C] [config.go:500]  the request url is  //user/login
+2025/09/10 17:55:11.770  [C] [config.go:501]  Handler crashed with error <Ormer.QueryTable> table name: `apps` not exists
+2025/09/10 17:55:11.770  [C] [config.go:507]  D:/Program Files/go/src/runtime/panic.go:783
+2025/09/10 17:55:11.770  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/client/orm/orm.go:490
+2025/09/10 17:55:11.770  [C] [config.go:507]  h:/game_dev/minigame-server/go-admin/game-service/models/application.go:31
+2025/09/10 17:55:11.770  [C] [config.go:507]  h:/game_dev/minigame-server/go-admin/game-service/middlewares/auth.go:91
+2025/09/10 17:55:11.770  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/filter.go:83
+2025/09/10 17:55:11.771  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/router.go:986
+2025/09/10 17:55:11.771  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/router.go:1136
+2025/09/10 17:55:11.771  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/filter.go:83
+2025/09/10 17:55:11.771  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/router.go:1002
+2025/09/10 17:55:11.772  [C] [config.go:507]  D:/Program Files/go/src/net/http/server.go:3340
+2025/09/10 17:55:11.772  [C] [config.go:507]  D:/Program Files/go/src/net/http/server.go:2109
+2025/09/10 17:55:11.772  [C] [config.go:507]  D:/Program Files/go/src/runtime/asm_amd64.s:1693
+2025/09/10 17:55:44.599  [C] [config.go:500]  the request url is  //user/login
+2025/09/10 17:55:44.599  [C] [config.go:501]  Handler crashed with error <Ormer.QueryTable> table name: `apps` not exists
+2025/09/10 17:55:44.599  [C] [config.go:507]  D:/Program Files/go/src/runtime/panic.go:783
+2025/09/10 17:55:44.599  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/client/orm/orm.go:490
+2025/09/10 17:55:44.599  [C] [config.go:507]  h:/game_dev/minigame-server/go-admin/game-service/models/application.go:31
+2025/09/10 17:55:44.599  [C] [config.go:507]  h:/game_dev/minigame-server/go-admin/game-service/middlewares/auth.go:91
+2025/09/10 17:55:44.599  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/filter.go:83
+2025/09/10 17:55:44.599  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/router.go:986
+2025/09/10 17:55:44.599  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/router.go:1136
+2025/09/10 17:55:44.599  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/filter.go:83
+2025/09/10 17:55:44.599  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/router.go:1002
+2025/09/10 17:55:44.599  [C] [config.go:507]  D:/Program Files/go/src/net/http/server.go:3340
+2025/09/10 17:55:44.599  [C] [config.go:507]  D:/Program Files/go/src/net/http/server.go:2109
+2025/09/10 17:55:44.599  [C] [config.go:507]  D:/Program Files/go/src/runtime/asm_amd64.s:1693
+2025/09/10 17:57:01.967  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 17:57:15.091  [C] [config.go:500]  the request url is  //user/login
+2025/09/10 17:57:15.091  [C] [config.go:501]  Handler crashed with error <Ormer.QueryTable> table name: `apps` not exists
+2025/09/10 17:57:15.091  [C] [config.go:507]  D:/Program Files/go/src/runtime/panic.go:783
+2025/09/10 17:57:15.091  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/client/orm/orm.go:490
+2025/09/10 17:57:15.091  [C] [config.go:507]  h:/game_dev/minigame-server/go-admin/game-service/models/application.go:31
+2025/09/10 17:57:15.091  [C] [config.go:507]  h:/game_dev/minigame-server/go-admin/game-service/middlewares/auth.go:91
+2025/09/10 17:57:15.091  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/filter.go:83
+2025/09/10 17:57:15.091  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/router.go:986
+2025/09/10 17:57:15.091  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/router.go:1136
+2025/09/10 17:57:15.091  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/filter.go:83
+2025/09/10 17:57:15.091  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/router.go:1002
+2025/09/10 17:57:15.091  [C] [config.go:507]  D:/Program Files/go/src/net/http/server.go:3340
+2025/09/10 17:57:15.091  [C] [config.go:507]  D:/Program Files/go/src/net/http/server.go:2109
+2025/09/10 17:57:15.091  [C] [config.go:507]  D:/Program Files/go/src/runtime/asm_amd64.s:1693
+2025/09/10 17:57:50.272  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 18:09:10.464  [C] [config.go:500]  the request url is  //user/login
+2025/09/10 18:09:10.464  [C] [config.go:501]  Handler crashed with error <Ormer.QueryTable> table name: `apps` not exists
+2025/09/10 18:09:10.464  [C] [config.go:507]  D:/Program Files/go/src/runtime/panic.go:783
+2025/09/10 18:09:10.464  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/client/orm/orm.go:490
+2025/09/10 18:09:10.464  [C] [config.go:507]  h:/game_dev/minigame-server/go-admin/game-service/models/application.go:31
+2025/09/10 18:09:10.464  [C] [config.go:507]  h:/game_dev/minigame-server/go-admin/game-service/middlewares/auth.go:91
+2025/09/10 18:09:10.464  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/filter.go:83
+2025/09/10 18:09:10.464  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/router.go:986
+2025/09/10 18:09:10.464  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/router.go:1136
+2025/09/10 18:09:10.464  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/filter.go:83
+2025/09/10 18:09:10.464  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/router.go:1002
+2025/09/10 18:09:10.464  [C] [config.go:507]  D:/Program Files/go/src/net/http/server.go:3340
+2025/09/10 18:09:10.464  [C] [config.go:507]  D:/Program Files/go/src/net/http/server.go:2109
+2025/09/10 18:09:10.464  [C] [config.go:507]  D:/Program Files/go/src/runtime/asm_amd64.s:1693
+2025/09/10 18:09:30.609  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 18:09:30.617  [C] [server.go:298]  ListenAndServe:  listen tcp :8081: bind: Only one usage of each socket address (protocol/network address/port) is normally permitted.
+2025/09/10 18:11:39.069  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 18:11:52.451  [C] [config.go:500]  the request url is  //user/login
+2025/09/10 18:11:52.451  [C] [config.go:501]  Handler crashed with error <Ormer.QueryTable> table name: `apps` not exists
+2025/09/10 18:11:52.451  [C] [config.go:507]  D:/Program Files/go/src/runtime/panic.go:783
+2025/09/10 18:11:52.451  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/client/orm/orm.go:490
+2025/09/10 18:11:52.451  [C] [config.go:507]  h:/game_dev/minigame-server/go-admin/game-service/models/application.go:31
+2025/09/10 18:11:52.451  [C] [config.go:507]  h:/game_dev/minigame-server/go-admin/game-service/middlewares/auth.go:91
+2025/09/10 18:11:52.451  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/filter.go:83
+2025/09/10 18:11:52.451  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/router.go:986
+2025/09/10 18:11:52.451  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/router.go:1136
+2025/09/10 18:11:52.451  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/filter.go:83
+2025/09/10 18:11:52.451  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/router.go:1002
+2025/09/10 18:11:52.451  [C] [config.go:507]  D:/Program Files/go/src/net/http/server.go:3340
+2025/09/10 18:11:52.451  [C] [config.go:507]  D:/Program Files/go/src/net/http/server.go:2109
+2025/09/10 18:11:52.451  [C] [config.go:507]  D:/Program Files/go/src/runtime/asm_amd64.s:1693
+2025/09/10 18:13:45.521  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 18:13:56.206  [C] [config.go:500]  the request url is  //user/login
+2025/09/10 18:13:56.206  [C] [config.go:501]  Handler crashed with error <Ormer.QueryTable> table name: `apps` not exists
+2025/09/10 18:13:56.206  [C] [config.go:507]  D:/Program Files/go/src/runtime/panic.go:783
+2025/09/10 18:13:56.206  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/client/orm/orm.go:490
+2025/09/10 18:13:56.206  [C] [config.go:507]  h:/game_dev/minigame-server/go-admin/game-service/models/application.go:31
+2025/09/10 18:13:56.206  [C] [config.go:507]  h:/game_dev/minigame-server/go-admin/game-service/middlewares/auth.go:91
+2025/09/10 18:13:56.206  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/filter.go:83
+2025/09/10 18:13:56.206  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/router.go:986
+2025/09/10 18:13:56.206  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/router.go:1136
+2025/09/10 18:13:56.206  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/filter.go:83
+2025/09/10 18:13:56.206  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/router.go:1002
+2025/09/10 18:13:56.206  [C] [config.go:507]  D:/Program Files/go/src/net/http/server.go:3340
+2025/09/10 18:13:56.207  [C] [config.go:507]  D:/Program Files/go/src/net/http/server.go:2109
+2025/09/10 18:13:56.207  [C] [config.go:507]  D:/Program Files/go/src/runtime/asm_amd64.s:1693
+2025/09/10 18:17:22.427  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 18:18:27.332  [C] [config.go:500]  the request url is  //user/login
+2025/09/10 18:18:27.332  [C] [config.go:501]  Handler crashed with error <Ormer.QueryTable> table name: `apps` not exists
+2025/09/10 18:18:27.332  [C] [config.go:507]  D:/Program Files/go/src/runtime/panic.go:783
+2025/09/10 18:18:27.332  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/client/orm/orm.go:490
+2025/09/10 18:18:27.332  [C] [config.go:507]  h:/game_dev/minigame-server/go-admin/game-service/models/application.go:31
+2025/09/10 18:18:27.332  [C] [config.go:507]  h:/game_dev/minigame-server/go-admin/game-service/middlewares/auth.go:91
+2025/09/10 18:18:27.332  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/filter.go:83
+2025/09/10 18:18:27.332  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/router.go:986
+2025/09/10 18:18:27.332  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/router.go:1136
+2025/09/10 18:18:27.332  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/filter.go:83
+2025/09/10 18:18:27.332  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/router.go:1002
+2025/09/10 18:18:27.332  [C] [config.go:507]  D:/Program Files/go/src/net/http/server.go:3340
+2025/09/10 18:18:27.332  [C] [config.go:507]  D:/Program Files/go/src/net/http/server.go:2109
+2025/09/10 18:18:27.332  [C] [config.go:507]  D:/Program Files/go/src/runtime/asm_amd64.s:1693
+2025/09/10 18:19:37.575  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 18:19:37.581  [C] [server.go:298]  ListenAndServe:  listen tcp :8081: bind: Only one usage of each socket address (protocol/network address/port) is normally permitted.
+2025/09/10 18:20:59.414  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 18:25:36.521  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 18:29:17.126  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     2.0001ms|   match|[46m POST    [0m //user/login   r:/user/login
+2025/09/10 18:29:48.338  [I] [auth.go:121]  Request: GET /health from ::1
+2025/09/10 18:29:48.338  [D] [auth.go:132]  Rate limit check for key: ::1:<nil>
+2025/09/10 18:29:48.342  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     4.0196ms|   match|[44m GET     [0m /health   r:/health
+2025/09/10 18:29:51.221  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     1.3823ms|   match|[46m POST    [0m //user/login   r:/user/login
+2025/09/10 18:31:15.056  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 18:31:29.262  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     1.1874ms|   match|[46m POST    [0m //user/login   r:/user/login
+2025/09/10 18:34:55.401  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 18:35:25.151  [D] [router.go:1305]  |      127.0.0.1|[42m 200 [0m|  29.6562433s|   match|[46m POST    [0m //user/login   r:/user/login
+2025/09/10 18:35:43.301  [D] [router.go:1305]  |      127.0.0.1|[42m 200 [0m|  10.1196739s|   match|[46m POST    [0m //user/login   r:/user/login
+2025/09/10 18:35:43.301  [D] [router.go:1305]  |      127.0.0.1|[42m 200 [0m|      516.2µs|   match|[46m POST    [0m //user/login   r:/user/login
+2025/09/10 18:35:47.253  [D] [router.go:1305]  |      127.0.0.1|[42m 200 [0m|     1.6531ms|   match|[46m POST    [0m //user/login   r:/user/login
+2025/09/10 18:35:58.725  [D] [router.go:1305]  |      127.0.0.1|[42m 200 [0m|      734.3µs|   match|[46m POST    [0m //user/login   r:/user/login
+2025/09/10 18:36:32.704  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 18:36:53.348  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 18:36:56.195  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     1.8012ms|   match|[46m POST    [0m //user/login   r:/user/login
+2025/09/10 18:37:34.640  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 18:37:38.598  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 18:37:43.283  [C] [config.go:500]  the request url is  //user/login
+2025/09/10 18:37:43.283  [C] [config.go:501]  Handler crashed with error interface conversion: interface {} is float64, not string
+2025/09/10 18:37:43.283  [C] [config.go:507]  D:/Program Files/go/src/runtime/panic.go:783
+2025/09/10 18:37:43.283  [C] [config.go:507]  D:/Program Files/go/src/runtime/iface.go:275
+2025/09/10 18:37:43.283  [C] [config.go:507]  h:/game_dev/minigame-server/go-admin/game-service/middlewares/auth.go:155
+2025/09/10 18:37:43.283  [C] [config.go:507]  h:/game_dev/minigame-server/go-admin/game-service/middlewares/auth.go:103
+2025/09/10 18:37:43.283  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/filter.go:83
+2025/09/10 18:37:43.283  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/router.go:986
+2025/09/10 18:37:43.283  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/router.go:1136
+2025/09/10 18:37:43.283  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/filter.go:83
+2025/09/10 18:37:43.284  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/router.go:1002
+2025/09/10 18:37:43.284  [C] [config.go:507]  D:/Program Files/go/src/net/http/server.go:3340
+2025/09/10 18:37:43.284  [C] [config.go:507]  D:/Program Files/go/src/net/http/server.go:2109
+2025/09/10 18:37:43.284  [C] [config.go:507]  D:/Program Files/go/src/runtime/asm_amd64.s:1693
+2025/09/10 18:38:30.414  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 18:42:48.891  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 18:42:52.390  [C] [config.go:500]  the request url is  //user/login
+2025/09/10 18:42:52.390  [C] [config.go:501]  Handler crashed with error interface conversion: interface {} is float64, not int64
+2025/09/10 18:42:52.391  [C] [config.go:507]  D:/Program Files/go/src/runtime/panic.go:783
+2025/09/10 18:42:52.391  [C] [config.go:507]  D:/Program Files/go/src/runtime/iface.go:275
+2025/09/10 18:42:52.391  [C] [config.go:507]  h:/game_dev/minigame-server/go-admin/game-service/middlewares/auth.go:156
+2025/09/10 18:42:52.391  [C] [config.go:507]  h:/game_dev/minigame-server/go-admin/game-service/middlewares/auth.go:103
+2025/09/10 18:42:52.391  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/filter.go:83
+2025/09/10 18:42:52.391  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/router.go:986
+2025/09/10 18:42:52.391  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/router.go:1136
+2025/09/10 18:42:52.391  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/filter.go:83
+2025/09/10 18:42:52.391  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/router.go:1002
+2025/09/10 18:42:52.391  [C] [config.go:507]  D:/Program Files/go/src/net/http/server.go:3340
+2025/09/10 18:42:52.391  [C] [config.go:507]  D:/Program Files/go/src/net/http/server.go:2109
+2025/09/10 18:42:52.391  [C] [config.go:507]  D:/Program Files/go/src/runtime/asm_amd64.s:1693
+2025/09/10 18:44:26.080  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 18:44:48.454  [I] [auth.go:120]  Game API Request: App[0a45a99e52] POST //user/login from ::1
+2025/09/10 18:44:48.454  [D] [auth.go:133]  Rate limit check for key: ::1:0a45a99e52
+2025/09/10 18:44:56.352  [D] [router.go:1305]  |            ::1|[42m 200 [0m|  27.2809535s|   match|[46m POST    [0m //user/login   r:/user/login
+2025/09/10 18:45:11.724  [I] [auth.go:120]  Game API Request: App[0a45a99e52] POST //user/login from ::1
+2025/09/10 18:45:11.724  [D] [auth.go:133]  Rate limit check for key: ::1:0a45a99e52
+2025/09/10 18:45:11.725  [D] [router.go:1305]  |            ::1|[42m 200 [0m|   9.9125147s|   match|[46m POST    [0m //user/login   r:/user/login
+2025/09/10 18:48:27.836  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 18:48:34.602  [I] [auth.go:120]  Game API Request: App[0a45a99e52] POST //user/login from ::1
+2025/09/10 18:48:34.602  [D] [auth.go:133]  Rate limit check for key: ::1:0a45a99e52
+2025/09/10 18:48:34.603  [C] [config.go:500]  the request url is  //user/login
+2025/09/10 18:48:34.603  [C] [config.go:501]  Handler crashed with error runtime error: invalid memory address or nil pointer dereference
+2025/09/10 18:48:34.603  [C] [config.go:507]  D:/Program Files/go/src/runtime/panic.go:783
+2025/09/10 18:48:34.603  [C] [config.go:507]  D:/Program Files/go/src/runtime/panic.go:262
+2025/09/10 18:48:34.603  [C] [config.go:507]  D:/Program Files/go/src/runtime/signal_windows.go:393
+2025/09/10 18:48:34.603  [C] [config.go:507]  h:/game_dev/minigame-server/go-admin/game-service/controllers/login/common.go:75
+2025/09/10 18:48:34.603  [C] [config.go:507]  h:/game_dev/minigame-server/go-admin/game-service/controllers/login/common.go:55
+2025/09/10 18:48:34.603  [C] [config.go:507]  D:/Program Files/go/src/reflect/value.go:581
+2025/09/10 18:48:34.603  [C] [config.go:507]  D:/Program Files/go/src/reflect/value.go:365
+2025/09/10 18:48:34.603  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/router.go:1233
+2025/09/10 18:48:34.603  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/filter.go:83
+2025/09/10 18:48:34.603  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/router.go:1002
+2025/09/10 18:48:34.603  [C] [config.go:507]  D:/Program Files/go/src/net/http/server.go:3340
+2025/09/10 18:48:34.604  [C] [config.go:507]  D:/Program Files/go/src/net/http/server.go:2109
+2025/09/10 18:48:34.604  [C] [config.go:507]  D:/Program Files/go/src/runtime/asm_amd64.s:1693
+2025/09/10 18:48:53.158  [I] [auth.go:120]  Game API Request: App[0a45a99e52] POST //user/login from ::1
+2025/09/10 18:48:53.158  [D] [auth.go:133]  Rate limit check for key: ::1:0a45a99e52
+2025/09/10 18:49:27.580  [C] [config.go:500]  the request url is  //user/login
+2025/09/10 18:49:27.580  [C] [config.go:501]  Handler crashed with error runtime error: invalid memory address or nil pointer dereference
+2025/09/10 18:49:27.580  [C] [config.go:507]  D:/Program Files/go/src/runtime/panic.go:783
+2025/09/10 18:49:27.580  [C] [config.go:507]  D:/Program Files/go/src/runtime/panic.go:262
+2025/09/10 18:49:27.580  [C] [config.go:507]  D:/Program Files/go/src/runtime/signal_windows.go:393
+2025/09/10 18:49:27.580  [C] [config.go:507]  h:/game_dev/minigame-server/go-admin/game-service/controllers/login/common.go:75
+2025/09/10 18:49:27.580  [C] [config.go:507]  h:/game_dev/minigame-server/go-admin/game-service/controllers/login/common.go:55
+2025/09/10 18:49:27.580  [C] [config.go:507]  D:/Program Files/go/src/reflect/value.go:581
+2025/09/10 18:49:27.580  [C] [config.go:507]  D:/Program Files/go/src/reflect/value.go:365
+2025/09/10 18:49:27.580  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/router.go:1233
+2025/09/10 18:49:27.581  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/filter.go:83
+2025/09/10 18:49:27.581  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/router.go:1002
+2025/09/10 18:49:27.581  [C] [config.go:507]  D:/Program Files/go/src/net/http/server.go:3340
+2025/09/10 18:49:27.581  [C] [config.go:507]  D:/Program Files/go/src/net/http/server.go:2109
+2025/09/10 18:49:27.581  [C] [config.go:507]  D:/Program Files/go/src/runtime/asm_amd64.s:1693
+2025/09/10 18:49:48.745  [I] [auth.go:120]  Game API Request: App[0a45a99e52] POST //user/login from ::1
+2025/09/10 18:49:48.745  [D] [auth.go:133]  Rate limit check for key: ::1:0a45a99e52
+2025/09/10 18:50:06.491  [C] [config.go:500]  the request url is  //user/login
+2025/09/10 18:50:06.491  [C] [config.go:501]  Handler crashed with error runtime error: invalid memory address or nil pointer dereference
+2025/09/10 18:50:06.491  [C] [config.go:507]  D:/Program Files/go/src/runtime/panic.go:783
+2025/09/10 18:50:06.491  [C] [config.go:507]  D:/Program Files/go/src/runtime/panic.go:262
+2025/09/10 18:50:06.491  [C] [config.go:507]  D:/Program Files/go/src/runtime/signal_windows.go:393
+2025/09/10 18:50:06.491  [C] [config.go:507]  h:/game_dev/minigame-server/go-admin/game-service/controllers/login/common.go:75
+2025/09/10 18:50:06.491  [C] [config.go:507]  h:/game_dev/minigame-server/go-admin/game-service/controllers/login/common.go:55
+2025/09/10 18:50:06.491  [C] [config.go:507]  D:/Program Files/go/src/reflect/value.go:581
+2025/09/10 18:50:06.491  [C] [config.go:507]  D:/Program Files/go/src/reflect/value.go:365
+2025/09/10 18:50:06.491  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/router.go:1233
+2025/09/10 18:50:06.491  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/filter.go:83
+2025/09/10 18:50:06.491  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/router.go:1002
+2025/09/10 18:50:06.491  [C] [config.go:507]  D:/Program Files/go/src/net/http/server.go:3340
+2025/09/10 18:50:06.493  [C] [config.go:507]  D:/Program Files/go/src/net/http/server.go:2109
+2025/09/10 18:50:06.493  [C] [config.go:507]  D:/Program Files/go/src/runtime/asm_amd64.s:1693
+2025/09/10 18:51:06.525  [I] [auth.go:120]  Game API Request: App[0a45a99e52] POST //user/login from ::1
+2025/09/10 18:51:06.525  [D] [auth.go:133]  Rate limit check for key: ::1:0a45a99e52
+2025/09/10 18:51:21.617  [C] [config.go:500]  the request url is  //user/login
+2025/09/10 18:51:21.617  [C] [config.go:501]  Handler crashed with error runtime error: invalid memory address or nil pointer dereference
+2025/09/10 18:51:21.617  [C] [config.go:507]  D:/Program Files/go/src/runtime/panic.go:783
+2025/09/10 18:51:21.617  [C] [config.go:507]  D:/Program Files/go/src/runtime/panic.go:262
+2025/09/10 18:51:21.617  [C] [config.go:507]  D:/Program Files/go/src/runtime/signal_windows.go:393
+2025/09/10 18:51:21.617  [C] [config.go:507]  h:/game_dev/minigame-server/go-admin/game-service/controllers/login/common.go:75
+2025/09/10 18:51:21.617  [C] [config.go:507]  h:/game_dev/minigame-server/go-admin/game-service/controllers/login/common.go:55
+2025/09/10 18:51:21.617  [C] [config.go:507]  D:/Program Files/go/src/reflect/value.go:581
+2025/09/10 18:51:21.617  [C] [config.go:507]  D:/Program Files/go/src/reflect/value.go:365
+2025/09/10 18:51:21.617  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/router.go:1233
+2025/09/10 18:51:21.617  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/filter.go:83
+2025/09/10 18:51:21.617  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/router.go:1002
+2025/09/10 18:51:21.617  [C] [config.go:507]  D:/Program Files/go/src/net/http/server.go:3340
+2025/09/10 18:51:21.617  [C] [config.go:507]  D:/Program Files/go/src/net/http/server.go:2109
+2025/09/10 18:51:21.618  [C] [config.go:507]  D:/Program Files/go/src/runtime/asm_amd64.s:1693
+2025/09/10 18:56:41.420  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 18:56:48.101  [I] [auth.go:120]  Game API Request: App[0a45a99e52] POST //user/login from ::1
+2025/09/10 18:56:48.101  [D] [auth.go:133]  Rate limit check for key: ::1:0a45a99e52
+2025/09/10 18:57:12.954  [E] [user_data.go:125]  创建用户失败: sql: expected 17 arguments, got 18
+2025/09/10 18:57:12.955  [D] [router.go:1305]  |            ::1|[42m 200 [0m|  24.8565821s|   match|[46m POST    [0m //user/login   r:/user/login
+2025/09/10 18:57:21.771  [I] [auth.go:120]  Game API Request: App[0a45a99e52] POST //user/login from ::1
+2025/09/10 18:57:21.771  [D] [auth.go:133]  Rate limit check for key: ::1:0a45a99e52
+2025/09/10 18:57:28.431  [E] [user_data.go:125]  创建用户失败: sql: expected 17 arguments, got 18
+2025/09/10 18:57:28.431  [D] [router.go:1305]  |            ::1|[42m 200 [0m|   6.6605811s|   match|[46m POST    [0m //user/login   r:/user/login
+2025/09/10 19:00:20.829  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 19:00:22.603  [I] [auth.go:120]  Game API Request: App[0a45a99e52] POST //user/login from ::1
+2025/09/10 19:00:22.603  [D] [auth.go:133]  Rate limit check for key: ::1:0a45a99e52
+2025/09/10 19:00:22.607  [E] [user_data.go:125]  创建用户失败: Error 1054 (42S22): Unknown column 'openId' in 'field list'
+2025/09/10 19:00:22.607  [D] [router.go:1305]  |            ::1|[42m 200 [0m|      4.271ms|   match|[46m POST    [0m //user/login   r:/user/login
+2025/09/10 19:01:08.055  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 19:01:14.278  [I] [auth.go:120]  Game API Request: App[0a45a99e52] POST //user/login from ::1
+2025/09/10 19:01:14.278  [D] [auth.go:133]  Rate limit check for key: ::1:0a45a99e52
+2025/09/10 19:01:14.283  [I] [user_data.go:129]  用户创建成功: openId=test_code_123, playerId=6074279391
+2025/09/10 19:01:14.283  [I] [common.go:115]  创建新用户成功, appId: 0a45a99e52 playerId: 6074279391 openId: test_code_123
+2025/09/10 19:01:24.830  [D] [router.go:1305]  |            ::1|[42m 200 [0m|  10.5527391s|   match|[46m POST    [0m //user/login   r:/user/login
+2025/09/10 19:01:30.984  [I] [auth.go:120]  Game API Request: App[0a45a99e52] POST //user/login from ::1
+2025/09/10 19:01:30.984  [D] [auth.go:133]  Rate limit check for key: ::1:0a45a99e52
+2025/09/10 19:01:30.985  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     2.1152ms|   match|[46m POST    [0m //user/login   r:/user/login
+2025/09/10 19:01:32.440  [I] [auth.go:120]  Game API Request: App[0a45a99e52] POST //user/login from ::1
+2025/09/10 19:01:32.440  [D] [auth.go:133]  Rate limit check for key: ::1:0a45a99e52
+2025/09/10 19:01:32.441  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     2.1323ms|   match|[46m POST    [0m //user/login   r:/user/login
+2025/09/10 19:01:35.132  [I] [auth.go:120]  Game API Request: App[0a45a99e52] POST //user/login from ::1
+2025/09/10 19:01:35.132  [D] [auth.go:133]  Rate limit check for key: ::1:0a45a99e52
+2025/09/10 19:01:35.134  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     2.5405ms|   match|[46m POST    [0m //user/login   r:/user/login
+2025/09/10 19:01:39.291  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s| nomatch|[47m OPTIONS [0m //user/saveData
+2025/09/10 19:01:39.293  [I] [auth.go:120]  Game API Request: App[0a45a99e52] POST //user/saveData from ::1
+2025/09/10 19:01:39.293  [D] [auth.go:133]  Rate limit check for key: ::1:0a45a99e52
+2025/09/10 19:01:39.293  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     1.2299ms|   match|[46m POST    [0m //user/saveData   r:/user/saveData
+2025/09/10 19:01:44.288  [I] [auth.go:120]  Game API Request: App[0a45a99e52] POST //user/saveData from ::1
+2025/09/10 19:01:44.290  [D] [auth.go:133]  Rate limit check for key: ::1:0a45a99e52
+2025/09/10 19:01:44.291  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     6.0005ms|   match|[46m POST    [0m //user/saveData   r:/user/saveData
+2025/09/10 19:01:45.742  [I] [auth.go:120]  Game API Request: App[0a45a99e52] POST //user/saveData from ::1
+2025/09/10 19:01:45.742  [D] [auth.go:133]  Rate limit check for key: ::1:0a45a99e52
+2025/09/10 19:01:45.743  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     1.1858ms|   match|[46m POST    [0m //user/saveData   r:/user/saveData
+2025/09/10 19:01:47.843  [I] [auth.go:120]  Game API Request: App[0a45a99e52] POST //user/saveData from ::1
+2025/09/10 19:01:47.843  [D] [auth.go:133]  Rate limit check for key: ::1:0a45a99e52
+2025/09/10 19:01:47.844  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     1.1728ms|   match|[46m POST    [0m //user/saveData   r:/user/saveData
+2025/09/10 19:01:52.959  [I] [auth.go:120]  Game API Request: App[0a45a99e52] POST //user/saveData from ::1
+2025/09/10 19:01:52.959  [D] [auth.go:133]  Rate limit check for key: ::1:0a45a99e52
+2025/09/10 19:01:52.960  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     1.1261ms|   match|[46m POST    [0m //user/saveData   r:/user/saveData
+2025/09/10 19:01:57.674  [I] [auth.go:120]  Game API Request: App[0a45a99e52] POST //user/saveData from ::1
+2025/09/10 19:01:57.674  [D] [auth.go:133]  Rate limit check for key: ::1:0a45a99e52
+2025/09/10 19:01:57.675  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     2.9895ms|   match|[46m POST    [0m //user/saveData   r:/user/saveData
+2025/09/10 19:02:58.340  [I] [auth.go:120]  Game API Request: App[0a45a99e52] POST //user/saveData from ::1
+2025/09/10 19:02:58.340  [D] [auth.go:133]  Rate limit check for key: ::1:0a45a99e52
+2025/09/10 19:03:30.141  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 19:04:32.139  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 19:06:58.855  [I] [auth.go:120]  Game API Request: App[0a45a99e52] POST //user/saveData from ::1
+2025/09/10 19:06:58.855  [D] [auth.go:133]  Rate limit check for key: ::1:0a45a99e52
+2025/09/10 19:06:58.857  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     2.7012ms|   match|[46m POST    [0m //user/saveData   r:/user/saveData
+2025/09/10 19:07:02.336  [D] [router.go:1305]  |            ::1|[42m 200 [0m|        7.6µs| nomatch|[47m OPTIONS [0m //user/getData
+2025/09/10 19:07:02.338  [I] [auth.go:120]  Game API Request: App[0a45a99e52] POST //user/getData from ::1
+2025/09/10 19:07:02.338  [D] [auth.go:133]  Rate limit check for key: ::1:0a45a99e52
+2025/09/10 19:07:02.339  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     1.1574ms|   match|[46m POST    [0m //user/getData   r:/user/getData
+2025/09/10 19:07:19.472  [I] [auth.go:120]  Game API Request: App[0a45a99e52] POST //user/saveData from ::1
+2025/09/10 19:07:19.472  [D] [auth.go:133]  Rate limit check for key: ::1:0a45a99e52
+2025/09/10 19:07:54.461  [D] [router.go:1305]  |            ::1|[42m 200 [0m|  34.9906012s|   match|[46m POST    [0m //user/saveData   r:/user/saveData
+2025/09/10 19:15:36.062  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s| nomatch|[47m OPTIONS [0m //user/saveUserInfo
+2025/09/10 19:15:36.065  [I] [auth.go:120]  Game API Request: App[0a45a99e52] POST //user/saveUserInfo from ::1
+2025/09/10 19:15:36.065  [D] [auth.go:133]  Rate limit check for key: ::1:0a45a99e52
+2025/09/10 19:15:36.066  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     2.0025ms|   match|[46m POST    [0m //user/saveUserInfo   r:/user/saveUserInfo
+2025/09/10 19:16:33.467  [I] [auth.go:120]  Game API Request: App[0a45a99e52] POST //user/saveUserInfo from ::1
+2025/09/10 19:16:33.467  [D] [auth.go:133]  Rate limit check for key: ::1:0a45a99e52
+2025/09/10 19:16:33.468  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     2.3972ms|   match|[46m POST    [0m //user/saveUserInfo   r:/user/saveUserInfo
+2025/09/10 19:17:02.784  [I] [auth.go:120]  Game API Request: App[0a45a99e52] POST //user/login from ::1
+2025/09/10 19:17:02.784  [D] [auth.go:133]  Rate limit check for key: ::1:0a45a99e52
+2025/09/10 19:17:02.787  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     3.0231ms|   match|[46m POST    [0m //user/login   r:/user/login
+2025/09/10 19:17:36.140  [I] [auth.go:120]  Game API Request: App[0a45a99e52] POST //user/saveData from ::1
+2025/09/10 19:17:36.140  [D] [auth.go:133]  Rate limit check for key: ::1:0a45a99e52
+2025/09/10 19:17:36.140  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     1.2341ms|   match|[46m POST    [0m //user/saveData   r:/user/saveData
+2025/09/10 19:22:09.810  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 19:28:12.453  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 19:28:20.434  [I] [auth.go:134]  Request: GET //health from ::1
+2025/09/10 19:28:20.435  [D] [auth.go:145]  Rate limit check for key: ::1:<nil>
+2025/09/10 19:28:20.439  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     4.7915ms|   match|[44m GET     [0m //health   r:/health
+2025/09/10 19:28:23.826  [D] [router.go:1305]  |            ::1|[43m 404 [0m|           0s| nomatch|[44m GET     [0m //heartbeat
+2025/09/10 19:28:37.132  [D] [router.go:1305]  |            ::1|[43m 404 [0m|           0s| nomatch|[44m GET     [0m //heartbeat
+2025/09/10 19:28:51.231  [D] [router.go:1305]  |            ::1|[43m 404 [0m|           0s| nomatch|[44m GET     [0m //heartbeat
+2025/09/10 19:29:13.692  [D] [router.go:1305]  |            ::1|[43m 404 [0m|           0s| nomatch|[44m GET     [0m //heartbeat
+2025/09/10 19:29:43.631  [D] [router.go:1305]  |            ::1|[43m 404 [0m|           0s| nomatch|[44m GET     [0m //heartbeat
+2025/09/10 19:29:44.682  [D] [router.go:1305]  |            ::1|[43m 404 [0m|           0s| nomatch|[44m GET     [0m //heartbeat
+2025/09/10 19:30:23.644  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 19:30:41.209  [D] [router.go:1305]  |            ::1|[42m 200 [0m|   3.9024077s| nomatch|[47m OPTIONS [0m //heartbeat
+2025/09/10 19:30:43.671  [I] [auth.go:134]  Request: GET /health from ::1
+2025/09/10 19:30:43.671  [D] [auth.go:145]  Rate limit check for key: ::1:<nil>
+2025/09/10 19:30:43.677  [D] [router.go:1305]  |            ::1|[42m 200 [0m|  17.9491493s|   match|[44m GET     [0m /health   r:/health
+2025/09/10 19:30:43.687  [D] [router.go:1305]  |            ::1|[42m 200 [0m|      534.1µs|   match|[46m POST    [0m //heartbeat   r:/heartbeat
+2025/09/10 19:34:30.027  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 19:34:31.308  [I] [auth.go:134]  Request: GET /health from ::1
+2025/09/10 19:34:31.308  [D] [auth.go:145]  Rate limit check for key: ::1:<nil>
+2025/09/10 19:34:31.321  [D] [router.go:1305]  |            ::1|[42m 200 [0m|    13.3893ms|   match|[44m GET     [0m /health   r:/health
+2025/09/10 19:34:35.255  [I] [auth.go:132]  Game API Request: App[0a45a99e52] POST //heartbeat from ::1
+2025/09/10 19:34:35.255  [D] [auth.go:145]  Rate limit check for key: ::1:0a45a99e52
+2025/09/10 19:34:39.208  [D] [router.go:1305]  |            ::1|[42m 200 [0m|   3.9535538s|   match|[46m POST    [0m //heartbeat   r:/heartbeat
+2025/09/10 19:34:49.869  [I] [auth.go:132]  Game API Request: App[0a45a99e52] POST //user/login from ::1
+2025/09/10 19:34:49.869  [D] [auth.go:145]  Rate limit check for key: ::1:0a45a99e52
+2025/09/10 19:34:49.870  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     1.2643ms|   match|[46m POST    [0m //user/login   r:/user/login
+2025/09/10 19:34:53.250  [I] [auth.go:132]  Game API Request: App[0a45a99e52] POST //heartbeat from ::1
+2025/09/10 19:34:53.250  [D] [auth.go:145]  Rate limit check for key: ::1:0a45a99e52
+2025/09/10 19:34:53.251  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     8.7372ms|   match|[46m POST    [0m //heartbeat   r:/heartbeat
+2025/09/10 19:35:18.695  [I] [auth.go:132]  Game API Request: App[0a45a99e52] POST //heartbeat from ::1
+2025/09/10 19:35:18.695  [D] [auth.go:145]  Rate limit check for key: ::1:0a45a99e52
+2025/09/10 19:35:18.695  [D] [router.go:1305]  |            ::1|[42m 200 [0m|      734.1µs|   match|[46m POST    [0m //heartbeat   r:/heartbeat
+2025/09/10 19:37:29.476  [I] [auth.go:132]  Game API Request: App[0a45a99e52] POST //user/login from ::1
+2025/09/10 19:37:29.476  [D] [auth.go:145]  Rate limit check for key: ::1:0a45a99e52
+2025/09/10 19:37:29.478  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     2.5172ms|   match|[46m POST    [0m //user/login   r:/user/login
+2025/09/10 19:39:11.309  [I] [auth.go:132]  Game API Request: App[0a45a99e52] POST //user/login from ::1
+2025/09/10 19:39:11.309  [D] [auth.go:145]  Rate limit check for key: ::1:0a45a99e52
+2025/09/10 19:40:28.391  [D] [router.go:1305]  |            ::1|[42m 200 [0m|1m17.0827757s|   match|[46m POST    [0m //user/login   r:/user/login
+2025/09/10 19:41:43.292  [I] [auth.go:134]  Request: GET /health from ::1
+2025/09/10 19:41:43.292  [D] [auth.go:145]  Rate limit check for key: ::1:<nil>
+2025/09/10 19:41:43.294  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     2.0009ms|   match|[44m GET     [0m /health   r:/health
+2025/09/10 19:41:57.634  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s| nomatch|[47m OPTIONS [0m /health
+2025/09/10 19:41:57.644  [I] [auth.go:134]  Request: GET /health from ::1
+2025/09/10 19:41:57.644  [D] [auth.go:145]  Rate limit check for key: ::1:<nil>
+2025/09/10 19:41:57.645  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s|   match|[44m GET     [0m /health   r:/health
+2025/09/10 19:42:02.205  [I] [auth.go:134]  Request: GET /health from ::1
+2025/09/10 19:42:02.206  [D] [auth.go:145]  Rate limit check for key: ::1:<nil>
+2025/09/10 19:42:02.207  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     1.9292ms|   match|[44m GET     [0m /health   r:/health
+2025/09/10 19:43:43.968  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s| nomatch|[47m OPTIONS [0m //user/login
+2025/09/10 19:43:43.971  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     1.3226ms|   match|[46m POST    [0m //user/login   r:/user/login
+2025/09/10 19:43:47.856  [I] [auth.go:134]  Request: GET /health from ::1
+2025/09/10 19:43:47.856  [D] [auth.go:145]  Rate limit check for key: ::1:<nil>
+2025/09/10 19:43:47.858  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     2.0752ms|   match|[44m GET     [0m /health   r:/health
+2025/09/10 19:44:07.120  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     1.0001ms|   match|[46m POST    [0m //user/login   r:/user/login
+2025/09/10 19:44:28.712  [I] [auth.go:134]  Request: GET /health from ::1
+2025/09/10 19:44:28.712  [D] [auth.go:145]  Rate limit check for key: ::1:<nil>
+2025/09/10 19:44:28.712  [D] [router.go:1305]  |            ::1|[42m 200 [0m|      516.4µs|   match|[44m GET     [0m /health   r:/health
+2025/09/10 19:44:30.719  [I] [auth.go:132]  Game API Request: App[0a45a99e52] POST //user/login from ::1
+2025/09/10 19:44:30.719  [D] [auth.go:145]  Rate limit check for key: ::1:0a45a99e52
+2025/09/10 19:44:39.087  [D] [router.go:1305]  |            ::1|[42m 200 [0m|   8.3684482s|   match|[46m POST    [0m //user/login   r:/user/login
+2025/09/10 19:44:54.991  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s| nomatch|[47m OPTIONS [0m //heartbeat
+2025/09/10 19:44:54.993  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s|   match|[46m POST    [0m //heartbeat   r:/heartbeat
+2025/09/10 19:46:03.598  [D] [router.go:1305]  |            ::1|[42m 200 [0m|  25.8441654s|   match|[46m POST    [0m //heartbeat   r:/heartbeat
+2025/09/10 19:46:06.389  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     1.0004ms|   match|[46m POST    [0m //heartbeat   r:/heartbeat
+2025/09/10 19:46:12.672  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s|   match|[46m POST    [0m //user/login   r:/user/login
+2025/09/10 19:46:17.274  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s|   match|[46m POST    [0m //user/login   r:/user/login
+2025/09/10 19:51:26.754  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 19:51:28.668  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 19:51:38.627  [I] [auth.go:150]  Game API Request: App[0a45a99e52] POST //user/login from ::1
+2025/09/10 19:51:38.627  [D] [auth.go:163]  Rate limit check for key: ::1:0a45a99e52
+2025/09/10 19:51:54.406  [D] [router.go:1305]  |            ::1|[42m 200 [0m|  15.7802827s|   match|[46m POST    [0m //user/login   r:/user/login
+2025/09/10 19:53:03.945  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 19:53:19.630  [I] [auth.go:156]  Game API Request: App[0a45a99e52] POST //heartbeat from 127.0.0.1
+2025/09/10 19:53:19.630  [D] [auth.go:169]  Rate limit check for key: 127.0.0.1:0a45a99e52
+2025/09/10 19:53:19.634  [D] [router.go:1305]  |      127.0.0.1|[42m 200 [0m|  12.4939371s|   match|[46m POST    [0m //heartbeat   r:/heartbeat
+2025/09/10 19:54:38.594  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 19:54:45.185  [I] [auth.go:156]  Game API Request: App[0a45a99e52] POST //heartbeat from ::1
+2025/09/10 19:54:45.185  [D] [auth.go:169]  Rate limit check for key: ::1:0a45a99e52
+2025/09/10 19:54:45.209  [D] [router.go:1305]  |            ::1|[42m 200 [0m|    54.7895ms|   match|[46m POST    [0m //heartbeat   r:/heartbeat
+2025/09/10 19:54:54.846  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s| nomatch|[47m OPTIONS [0m //user/saveData
+2025/09/10 19:54:54.848  [I] [auth.go:156]  Game API Request: App[0a45a99e52] POST //user/saveData from ::1
+2025/09/10 19:54:54.848  [D] [auth.go:169]  Rate limit check for key: ::1:0a45a99e52
+2025/09/10 19:54:54.853  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     5.1206ms|   match|[46m POST    [0m //user/saveData   r:/user/saveData
+2025/09/10 19:55:06.879  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s| nomatch|[47m OPTIONS [0m //user/saveUserInfo
+2025/09/10 19:55:06.881  [I] [auth.go:156]  Game API Request: App[0a45a99e52] POST //user/saveUserInfo from ::1
+2025/09/10 19:55:06.881  [D] [auth.go:169]  Rate limit check for key: ::1:0a45a99e52
+2025/09/10 19:55:06.910  [D] [router.go:1305]  |            ::1|[42m 200 [0m|    29.2837ms|   match|[46m POST    [0m //user/saveUserInfo   r:/user/saveUserInfo
+2025/09/10 19:56:24.270  [I] [auth.go:156]  Game API Request: App[0a45a99e52] POST //user/saveUserInfo from ::1
+2025/09/10 19:56:24.270  [D] [auth.go:169]  Rate limit check for key: ::1:0a45a99e52
+2025/09/10 19:59:19.553  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 19:59:20.355  [I] [auth.go:156]  Game API Request: App[0a45a99e52] POST //user/saveData from ::1
+2025/09/10 19:59:20.356  [D] [auth.go:169]  Rate limit check for key: ::1:0a45a99e52
+2025/09/10 19:59:20.360  [D] [router.go:1305]  |            ::1|[42m 200 [0m|    10.0844ms|   match|[46m POST    [0m //user/saveData   r:/user/saveData
+2025/09/10 19:59:26.593  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 19:59:28.333  [I] [auth.go:156]  Game API Request: App[0a45a99e52] POST //user/saveData from ::1
+2025/09/10 19:59:28.338  [D] [auth.go:169]  Rate limit check for key: ::1:0a45a99e52
+2025/09/10 19:59:28.344  [D] [router.go:1305]  |            ::1|[42m 200 [0m|    44.4576ms|   match|[46m POST    [0m //user/saveData   r:/user/saveData
+2025/09/10 19:59:33.975  [I] [auth.go:156]  Game API Request: App[0a45a99e52] POST //user/login from ::1
+2025/09/10 19:59:33.975  [D] [auth.go:169]  Rate limit check for key: ::1:0a45a99e52
+2025/09/10 19:59:33.976  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     2.7211ms|   match|[46m POST    [0m //user/login   r:/user/login
+2025/09/10 19:59:37.150  [I] [auth.go:156]  Game API Request: App[0a45a99e52] POST //user/saveData from ::1
+2025/09/10 19:59:37.150  [D] [auth.go:169]  Rate limit check for key: ::1:0a45a99e52
+2025/09/10 19:59:37.155  [D] [router.go:1305]  |            ::1|[42m 200 [0m|      4.813ms|   match|[46m POST    [0m //user/saveData   r:/user/saveData
+2025/09/10 19:59:45.335  [I] [auth.go:156]  Game API Request: App[0a45a99e52] POST //user/saveData from ::1
+2025/09/10 19:59:45.335  [D] [auth.go:169]  Rate limit check for key: ::1:0a45a99e52
+2025/09/10 19:59:45.340  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     5.3692ms|   match|[46m POST    [0m //user/saveData   r:/user/saveData
+2025/09/10 20:00:07.043  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 20:00:07.152  [I] [auth.go:156]  Game API Request: App[0a45a99e52] POST //user/saveData from ::1
+2025/09/10 20:00:07.152  [D] [auth.go:169]  Rate limit check for key: ::1:0a45a99e52
+2025/09/10 20:00:07.156  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     8.2535ms|   match|[46m POST    [0m //user/saveData   r:/user/saveData
+2025/09/10 20:00:10.648  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s| nomatch|[47m OPTIONS [0m //user/getData
+2025/09/10 20:00:10.650  [I] [auth.go:156]  Game API Request: App[0a45a99e52] POST //user/getData from ::1
+2025/09/10 20:00:10.650  [D] [auth.go:169]  Rate limit check for key: ::1:0a45a99e52
+2025/09/10 20:00:10.651  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     1.7036ms|   match|[46m POST    [0m //user/getData   r:/user/getData
+2025/09/10 20:00:29.571  [I] [auth.go:156]  Game API Request: App[0a45a99e52] POST //user/saveUserInfo from ::1
+2025/09/10 20:00:29.571  [D] [auth.go:169]  Rate limit check for key: ::1:0a45a99e52
+2025/09/10 20:00:29.577  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     6.5857ms|   match|[46m POST    [0m //user/saveUserInfo   r:/user/saveUserInfo
+2025/09/10 20:00:43.903  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s| nomatch|[47m OPTIONS [0m //leaderboard/commit
+2025/09/10 20:00:43.905  [D] [router.go:1305]  |            ::1|[42m 200 [0m|      656.9µs|   match|[46m POST    [0m //leaderboard/commit   r:/leaderboard/commit
+2025/09/10 20:00:49.241  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s| nomatch|[47m OPTIONS [0m //leaderboard/queryTopRank
+2025/09/10 20:00:49.243  [D] [router.go:1305]  |            ::1|[42m 200 [0m|      1.035ms|   match|[46m POST    [0m //leaderboard/queryTopRank   r:/leaderboard/queryTopRank
+2025/09/10 20:34:09.976  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s| nomatch|[47m OPTIONS [0m //counter/increment
+2025/09/10 20:34:09.983  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     5.8496ms|   match|[46m POST    [0m //counter/increment   r:/counter/increment
+2025/09/10 20:34:11.960  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s| nomatch|[47m OPTIONS [0m //counter/get
+2025/09/10 20:34:11.963  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s|   match|[44m GET     [0m //counter/get   r:/counter/get
+2025/09/10 20:34:20.257  [D] [router.go:1305]  |            ::1|[42m 200 [0m|      166.6µs| nomatch|[47m OPTIONS [0m //mail/getUserMails
+2025/09/10 20:34:20.258  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s|   match|[44m GET     [0m //mail/getUserMails   r:/mail/getUserMails
+2025/09/10 20:34:21.904  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s| nomatch|[47m OPTIONS [0m //mail/updateStatus
+2025/09/10 20:34:21.910  [I] [auth.go:156]  Game API Request: App[0a45a99e52] POST //mail/updateStatus from ::1
+2025/09/10 20:34:21.910  [D] [auth.go:169]  Rate limit check for key: ::1:0a45a99e52
+2025/09/10 20:34:21.911  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     4.5123ms|   match|[46m POST    [0m //mail/updateStatus   r:/mail/updateStatus
+2025/09/10 20:34:21.912  [M] [log.go:267]  [HTTP] http: superfluous response.WriteHeader call from github.com/beego/beego/v2/server/web/context.(*Response).WriteHeader (context.go:366)
+2025/09/10 20:38:36.130  [I] [auth.go:158]  Request: GET /health from ::1
+2025/09/10 20:38:36.131  [D] [auth.go:169]  Rate limit check for key: ::1:<nil>
+2025/09/10 20:38:36.143  [D] [router.go:1305]  |            ::1|[42m 200 [0m|    12.7296ms|   match|[44m GET     [0m /health   r:/health
+2025/09/10 20:38:44.356  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s| nomatch|[47m OPTIONS [0m /health
+2025/09/10 20:38:44.358  [I] [auth.go:158]  Request: GET /health from ::1
+2025/09/10 20:38:44.358  [D] [auth.go:169]  Rate limit check for key: ::1:<nil>
+2025/09/10 20:38:44.360  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     1.9986ms|   match|[44m GET     [0m /health   r:/health
+2025/09/10 20:38:56.930  [I] [auth.go:158]  Request: GET /health from ::1
+2025/09/10 20:38:56.930  [D] [auth.go:169]  Rate limit check for key: ::1:<nil>
+2025/09/10 20:38:56.930  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s|   match|[44m GET     [0m /health   r:/health
+2025/09/10 20:39:00.878  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s| nomatch|[47m OPTIONS [0m //heartbeat
+2025/09/10 20:39:00.880  [I] [auth.go:156]  Game API Request: App[0a45a99e52] POST //heartbeat from ::1
+2025/09/10 20:39:00.880  [D] [auth.go:169]  Rate limit check for key: ::1:0a45a99e52
+2025/09/10 20:39:00.880  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     1.0014ms|   match|[46m POST    [0m //heartbeat   r:/heartbeat
+2025/09/10 20:39:04.344  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s| nomatch|[47m OPTIONS [0m //health
+2025/09/10 20:39:04.347  [I] [auth.go:158]  Request: GET //health from ::1
+2025/09/10 20:39:04.347  [D] [auth.go:169]  Rate limit check for key: ::1:<nil>
+2025/09/10 20:39:04.347  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s|   match|[44m GET     [0m //health   r:/health
+2025/09/10 20:39:32.893  [I] [auth.go:158]  Request: GET //health from ::1
+2025/09/10 20:39:32.893  [D] [auth.go:169]  Rate limit check for key: ::1:<nil>
+2025/09/10 20:39:32.894  [D] [router.go:1305]  |            ::1|[42m 200 [0m|      692.8µs|   match|[44m GET     [0m //health   r:/health
+2025/09/10 20:39:45.690  [I] [auth.go:156]  Game API Request: App[0a45a99e52] POST //heartbeat from ::1
+2025/09/10 20:39:45.690  [D] [auth.go:169]  Rate limit check for key: ::1:0a45a99e52
+2025/09/10 20:39:45.690  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     1.0003ms|   match|[46m POST    [0m //heartbeat   r:/heartbeat
+2025/09/10 20:40:00.518  [I] [auth.go:158]  Request: GET //health from ::1
+2025/09/10 20:40:00.518  [D] [auth.go:169]  Rate limit check for key: ::1:<nil>
+2025/09/10 20:40:00.522  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     4.1637ms|   match|[44m GET     [0m //health   r:/health
+2025/09/10 20:41:58.308  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 20:42:02.735  [I] [auth.go:158]  Request: GET //health from ::1
+2025/09/10 20:42:02.736  [D] [auth.go:169]  Rate limit check for key: ::1:<nil>
+2025/09/10 20:42:02.740  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     5.2891ms|   match|[44m GET     [0m //health   r:/health
+2025/09/10 20:42:06.637  [I] [auth.go:156]  Game API Request: App[0a45a99e52] POST //heartbeat from ::1
+2025/09/10 20:42:06.637  [D] [auth.go:169]  Rate limit check for key: ::1:0a45a99e52
+2025/09/10 20:42:06.637  [D] [router.go:1305]  |            ::1|[42m 200 [0m|      695.6µs|   match|[46m POST    [0m //heartbeat   r:/heartbeat
+2025/09/10 20:43:17.656  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 20:43:36.014  [I] [auth.go:158]  Request: GET //health from ::1
+2025/09/10 20:43:36.014  [D] [auth.go:169]  Rate limit check for key: ::1:<nil>
+2025/09/10 20:43:36.019  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     5.3501ms|   match|[44m GET     [0m //health   r:/health
+2025/09/10 20:43:37.509  [I] [auth.go:158]  Request: GET //health from ::1
+2025/09/10 20:43:37.509  [D] [auth.go:169]  Rate limit check for key: ::1:<nil>
+2025/09/10 20:43:37.509  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s|   match|[44m GET     [0m //health   r:/health
+2025/09/10 20:43:49.463  [I] [auth.go:158]  Request: GET //health from ::1
+2025/09/10 20:43:49.463  [D] [auth.go:169]  Rate limit check for key: ::1:<nil>
+2025/09/10 20:43:49.463  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s|   match|[44m GET     [0m //health   r:/health
+2025/09/10 20:44:10.614  [I] [auth.go:158]  Request: GET /health from ::1
+2025/09/10 20:44:10.615  [D] [auth.go:169]  Rate limit check for key: ::1:<nil>
+2025/09/10 20:44:10.616  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     2.0004ms|   match|[44m GET     [0m /health   r:/health
+2025/09/10 20:44:16.495  [I] [auth.go:158]  Request: GET //health from ::1
+2025/09/10 20:44:16.495  [D] [auth.go:169]  Rate limit check for key: ::1:<nil>
+2025/09/10 20:44:16.495  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s|   match|[44m GET     [0m //health   r:/health
+2025/09/10 20:44:17.810  [I] [auth.go:156]  Game API Request: App[0a45a99e52] POST //heartbeat from ::1
+2025/09/10 20:44:17.810  [D] [auth.go:169]  Rate limit check for key: ::1:0a45a99e52
+2025/09/10 20:44:17.811  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     1.8081ms|   match|[46m POST    [0m //heartbeat   r:/heartbeat
+2025/09/10 20:44:24.836  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s| nomatch|[47m OPTIONS [0m //user/login
+2025/09/10 20:44:24.838  [I] [auth.go:156]  Game API Request: App[0a45a99e52] POST //user/login from ::1
+2025/09/10 20:44:24.838  [D] [auth.go:169]  Rate limit check for key: ::1:0a45a99e52
+2025/09/10 20:44:24.839  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     1.9981ms|   match|[46m POST    [0m //user/login   r:/user/login
+2025/09/10 20:44:27.153  [I] [auth.go:156]  Game API Request: App[0a45a99e52] POST //heartbeat from ::1
+2025/09/10 20:44:27.153  [D] [auth.go:169]  Rate limit check for key: ::1:0a45a99e52
+2025/09/10 20:44:27.155  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     2.9806ms|   match|[46m POST    [0m //heartbeat   r:/heartbeat
+2025/09/10 20:44:33.932  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s| nomatch|[47m OPTIONS [0m //leaderboard/commit
+2025/09/10 20:44:33.935  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     1.8488ms|   match|[46m POST    [0m //leaderboard/commit   r:/leaderboard/commit
+2025/09/10 20:47:20.546  [D] [router.go:1305]  |            ::1|[42m 200 [0m|1m34.5118287s|   match|[46m POST    [0m //leaderboard/commit   r:/leaderboard/commit
+2025/09/10 20:48:42.557  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 20:49:37.769  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 20:50:13.637  [I] [auth.go:156]  Game API Request: App[0a45a99e52] POST //leaderboard/commit from ::1
+2025/09/10 20:50:13.637  [D] [auth.go:169]  Rate limit check for key: ::1:0a45a99e52
+2025/09/10 20:50:13.638  [D] [router.go:1305]  |            ::1|[42m 200 [0m|  24.4042487s|   match|[46m POST    [0m //leaderboard/commit   r:/leaderboard/commit
+2025/09/10 20:50:13.638  [M] [log.go:267]  [HTTP] http: superfluous response.WriteHeader call from github.com/beego/beego/v2/server/web/context.(*Response).WriteHeader (context.go:366)
+2025/09/10 20:50:20.653  [I] [auth.go:156]  Game API Request: App[0a45a99e52] POST //leaderboard/commit from ::1
+2025/09/10 20:50:20.653  [D] [auth.go:169]  Rate limit check for key: ::1:0a45a99e52
+2025/09/10 20:50:20.653  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     1.5849ms|   match|[46m POST    [0m //leaderboard/commit   r:/leaderboard/commit
+2025/09/10 20:50:20.653  [M] [log.go:267]  [HTTP] http: superfluous response.WriteHeader call from github.com/beego/beego/v2/server/web/context.(*Response).WriteHeader (context.go:366)
+2025/09/10 20:51:05.993  [I] [auth.go:156]  Game API Request: App[0a45a99e52] POST //leaderboard/commit from ::1
+2025/09/10 20:51:05.994  [D] [auth.go:169]  Rate limit check for key: ::1:0a45a99e52
+2025/09/10 20:51:08.070  [D] [router.go:1305]  |            ::1|[42m 200 [0m|  32.2297993s|   match|[46m POST    [0m //leaderboard/commit   r:/leaderboard/commit
+2025/09/10 20:51:08.070  [M] [log.go:267]  [HTTP] http: superfluous response.WriteHeader call from github.com/beego/beego/v2/server/web/context.(*Response).WriteHeader (context.go:366)
+2025/09/10 20:51:15.754  [I] [auth.go:156]  Game API Request: App[0a45a99e52] POST //leaderboard/commit from ::1
+2025/09/10 20:51:15.754  [D] [auth.go:169]  Rate limit check for key: ::1:0a45a99e52
+2025/09/10 20:51:15.754  [D] [router.go:1305]  |            ::1|[42m 200 [0m|   3.6831598s|   match|[46m POST    [0m //leaderboard/commit   r:/leaderboard/commit
+2025/09/10 20:51:15.754  [M] [log.go:267]  [HTTP] http: superfluous response.WriteHeader call from github.com/beego/beego/v2/server/web/context.(*Response).WriteHeader (context.go:366)
+2025/09/10 20:51:18.625  [I] [auth.go:156]  Game API Request: App[0a45a99e52] POST //leaderboard/commit from ::1
+2025/09/10 20:51:18.625  [D] [auth.go:169]  Rate limit check for key: ::1:0a45a99e52
+2025/09/10 20:51:18.625  [D] [router.go:1305]  |            ::1|[42m 200 [0m|      732.8µs|   match|[46m POST    [0m //leaderboard/commit   r:/leaderboard/commit
+2025/09/10 20:51:18.625  [M] [log.go:267]  [HTTP] http: superfluous response.WriteHeader call from github.com/beego/beego/v2/server/web/context.(*Response).WriteHeader (context.go:366)
+2025/09/10 21:14:25.143  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 21:14:30.848  [I] [auth.go:157]  Game API Request: App[0a45a99e52] POST //leaderboard/commit from ::1
+2025/09/10 21:14:30.850  [D] [auth.go:170]  Rate limit check for key: ::1:0a45a99e52
+2025/09/10 21:14:30.850  [D] [router.go:1305]  |            ::1|[42m 200 [0m|    17.4531ms|   match|[46m POST    [0m //leaderboard/commit   r:/leaderboard/commit
+2025/09/10 21:14:30.851  [M] [log.go:267]  [HTTP] http: superfluous response.WriteHeader call from github.com/beego/beego/v2/server/web/context.(*Response).WriteHeader (context.go:366)
+2025/09/10 21:16:30.470  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 21:16:32.826  [I] [auth.go:157]  Game API Request: App[0a45a99e52] POST //leaderboard/commit from ::1
+2025/09/10 21:16:32.826  [D] [auth.go:170]  Rate limit check for key: ::1:0a45a99e52
+2025/09/10 21:16:32.828  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     7.5155ms|   match|[46m POST    [0m //leaderboard/commit   r:/leaderboard/commit
+2025/09/10 21:16:32.828  [M] [log.go:267]  [HTTP] http: superfluous response.WriteHeader call from github.com/beego/beego/v2/server/web/context.(*Response).WriteHeader (context.go:366)
+2025/09/10 21:36:51.317  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s| nomatch|[47m OPTIONS [0m /user/login
+2025/09/10 21:36:51.324  [D] [router.go:1305]  |            ::1|[42m 200 [0m|      524.8µs|   match|[46m POST    [0m /user/login   r:/user/login
+2025/09/10 21:37:14.880  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s| nomatch|[47m OPTIONS [0m /health
+2025/09/10 21:37:14.882  [I] [auth.go:159]  Request: GET /health from ::1
+2025/09/10 21:37:14.882  [D] [auth.go:170]  Rate limit check for key: ::1:<nil>
+2025/09/10 21:37:14.886  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     3.8987ms|   match|[44m GET     [0m /health   r:/health
+2025/09/10 21:37:20.785  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s|   match|[46m POST    [0m /user/login   r:/user/login
+2025/09/10 21:39:50.902  [I] [auth.go:159]  Request: GET /health from ::1
+2025/09/10 21:39:50.902  [D] [auth.go:170]  Rate limit check for key: ::1:<nil>
+2025/09/10 21:39:50.904  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     2.0285ms|   match|[44m GET     [0m /health   r:/health
+2025/09/10 21:39:56.688  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     1.0966ms|   match|[46m POST    [0m //user/login   r:/user/login
+2025/09/10 21:40:38.179  [I] [auth.go:159]  Request: GET /health from ::1
+2025/09/10 21:40:38.179  [D] [auth.go:170]  Rate limit check for key: ::1:<nil>
+2025/09/10 21:40:38.182  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     3.0009ms|   match|[44m GET     [0m /health   r:/health
+2025/09/10 21:40:43.838  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     1.0002ms|   match|[46m POST    [0m //user/login   r:/user/login
+2025/09/10 21:40:59.284  [I] [auth.go:159]  Request: GET /health from ::1
+2025/09/10 21:40:59.284  [D] [auth.go:170]  Rate limit check for key: ::1:<nil>
+2025/09/10 21:40:59.284  [D] [router.go:1305]  |            ::1|[42m 200 [0m|      748.4µs|   match|[44m GET     [0m /health   r:/health
+2025/09/10 21:41:01.894  [I] [auth.go:157]  Game API Request: App[7c46b41327] POST //user/login from ::1
+2025/09/10 21:41:01.894  [D] [auth.go:170]  Rate limit check for key: ::1:7c46b41327
+2025/09/10 21:41:07.369  [I] [user_data.go:130]  用户创建成功: openId=test_code_123, playerId=6667365774
+2025/09/10 21:41:07.369  [I] [common.go:119]  创建新用户成功, appId: 7c46b41327 playerId: 6667365774 openId: test_code_123
+2025/09/10 21:41:07.369  [D] [router.go:1305]  |            ::1|[42m 200 [0m|   5.4760965s|   match|[46m POST    [0m //user/login   r:/user/login
+2025/09/10 21:41:58.854  [I] [auth.go:157]  Game API Request: App[7c46b41327] POST //user/login from ::1
+2025/09/10 21:41:58.854  [D] [auth.go:170]  Rate limit check for key: ::1:7c46b41327
+2025/09/10 21:41:58.855  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     3.1599ms|   match|[46m POST    [0m //user/login   r:/user/login
+2025/09/10 21:42:13.282  [D] [router.go:1305]  |            ::1|[42m 200 [0m|       95.9µs| nomatch|[47m OPTIONS [0m //user/saveData
+2025/09/10 21:42:13.285  [I] [auth.go:157]  Game API Request: App[7c46b41327] POST //user/saveData from ::1
+2025/09/10 21:42:13.285  [D] [auth.go:170]  Rate limit check for key: ::1:7c46b41327
+2025/09/10 21:42:13.289  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     4.7523ms|   match|[46m POST    [0m //user/saveData   r:/user/saveData
+2025/09/10 21:42:17.228  [I] [auth.go:157]  Game API Request: App[7c46b41327] POST //leaderboard/commit from ::1
+2025/09/10 21:42:17.228  [D] [auth.go:170]  Rate limit check for key: ::1:7c46b41327
+2025/09/10 21:42:17.228  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     1.0016ms|   match|[46m POST    [0m //leaderboard/commit   r:/leaderboard/commit
+2025/09/10 21:42:17.228  [M] [log.go:267]  [HTTP] http: superfluous response.WriteHeader call from github.com/beego/beego/v2/server/web/context.(*Response).WriteHeader (context.go:366)
+2025/09/10 21:47:02.347  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 21:47:08.952  [I] [auth.go:157]  Game API Request: App[7c46b41327] POST //leaderboard/commit from ::1
+2025/09/10 21:47:08.952  [D] [auth.go:170]  Rate limit check for key: ::1:7c46b41327
+2025/09/10 21:47:50.475  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 21:47:59.604  [D] [router.go:1305]  |            ::1|[42m 200 [0m|      693.1µs|   match|[46m POST    [0m /user/login   r:/user/login
+2025/09/10 21:48:05.248  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s|   match|[46m POST    [0m /user/login   r:/user/login
+2025/09/10 21:49:17.017  [D] [router.go:1305]  |            ::1|[42m 200 [0m|  32.1065849s|   match|[46m POST    [0m /user/login   r:/user/login
+2025/09/10 21:49:21.095  [I] [auth.go:157]  Game API Request: App[7c46b41327] POST //leaderboard/commit from ::1
+2025/09/10 21:49:21.095  [D] [auth.go:170]  Rate limit check for key: ::1:7c46b41327
+2025/09/10 21:49:21.095  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     4.7513ms|   match|[46m POST    [0m //leaderboard/commit   r:/leaderboard/commit
+2025/09/10 21:49:21.095  [M] [log.go:267]  [HTTP] http: superfluous response.WriteHeader call from github.com/beego/beego/v2/server/web/context.(*Response).WriteHeader (context.go:366)
+2025/09/10 21:49:24.823  [I] [auth.go:157]  Game API Request: App[7c46b41327] POST //user/login from ::1
+2025/09/10 21:49:24.823  [D] [auth.go:170]  Rate limit check for key: ::1:7c46b41327
+2025/09/10 21:49:24.824  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     2.2017ms|   match|[46m POST    [0m //user/login   r:/user/login
+2025/09/10 21:49:27.327  [I] [auth.go:157]  Game API Request: App[7c46b41327] POST //leaderboard/commit from ::1
+2025/09/10 21:49:27.327  [D] [auth.go:170]  Rate limit check for key: ::1:7c46b41327
+2025/09/10 21:49:27.327  [D] [router.go:1305]  |            ::1|[42m 200 [0m|      999.4µs|   match|[46m POST    [0m //leaderboard/commit   r:/leaderboard/commit
+2025/09/10 21:49:27.327  [M] [log.go:267]  [HTTP] http: superfluous response.WriteHeader call from github.com/beego/beego/v2/server/web/context.(*Response).WriteHeader (context.go:366)
+2025/09/10 21:50:05.655  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 21:50:07.464  [I] [auth.go:157]  Game API Request: App[7c46b41327] POST //leaderboard/commit from ::1
+2025/09/10 21:50:07.464  [D] [auth.go:170]  Rate limit check for key: ::1:7c46b41327
+2025/09/10 21:50:07.464  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     5.6544ms|   match|[46m POST    [0m //leaderboard/commit   r:/leaderboard/commit
+2025/09/10 21:50:07.464  [M] [log.go:267]  [HTTP] http: superfluous response.WriteHeader call from github.com/beego/beego/v2/server/web/context.(*Response).WriteHeader (context.go:366)
+2025/09/10 21:50:59.992  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 21:51:02.988  [I] [auth.go:157]  Game API Request: App[7c46b41327] POST //leaderboard/commit from ::1
+2025/09/10 21:51:02.988  [D] [auth.go:170]  Rate limit check for key: ::1:7c46b41327
+2025/09/10 21:51:02.992  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     9.0541ms|   match|[46m POST    [0m //leaderboard/commit   r:/leaderboard/commit
+2025/09/10 21:51:02.992  [M] [log.go:267]  [HTTP] http: superfluous response.WriteHeader call from github.com/beego/beego/v2/server/web/context.(*Response).WriteHeader (context.go:366)
+2025/09/10 21:52:53.859  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 21:52:58.807  [I] [auth.go:157]  Game API Request: App[7c46b41327] POST //leaderboard/commit from ::1
+2025/09/10 21:52:58.807  [D] [auth.go:170]  Rate limit check for key: ::1:7c46b41327
+2025/09/10 21:52:58.812  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     9.9905ms|   match|[46m POST    [0m //leaderboard/commit   r:/leaderboard/commit
+2025/09/10 21:52:58.812  [M] [log.go:267]  [HTTP] http: superfluous response.WriteHeader call from github.com/beego/beego/v2/server/web/context.(*Response).WriteHeader (context.go:366)
+2025/09/10 21:53:03.760  [I] [auth.go:159]  Request: GET /health from ::1
+2025/09/10 21:53:03.760  [D] [auth.go:170]  Rate limit check for key: ::1:<nil>
+2025/09/10 21:53:03.761  [D] [router.go:1305]  |            ::1|[42m 200 [0m|      999.9µs|   match|[44m GET     [0m /health   r:/health
+2025/09/10 21:53:09.561  [I] [auth.go:157]  Game API Request: App[7c46b41327] POST //leaderboard/commit from ::1
+2025/09/10 21:53:09.561  [D] [auth.go:170]  Rate limit check for key: ::1:7c46b41327
+2025/09/10 21:53:09.565  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     4.1888ms|   match|[46m POST    [0m //leaderboard/commit   r:/leaderboard/commit
+2025/09/10 21:53:09.565  [M] [log.go:267]  [HTTP] http: superfluous response.WriteHeader call from github.com/beego/beego/v2/server/web/context.(*Response).WriteHeader (context.go:366)
+2025/09/10 21:54:03.332  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 21:54:16.616  [D] [router.go:1305]  |            ::1|[42m 200 [0m|        511µs|   match|[46m POST    [0m /user/login   r:/user/login
+2025/09/10 21:54:19.550  [I] [auth.go:157]  Game API Request: App[7c46b41327] POST //leaderboard/commit from ::1
+2025/09/10 21:54:19.550  [D] [auth.go:170]  Rate limit check for key: ::1:7c46b41327
+2025/09/10 21:54:19.565  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     15.943ms|   match|[46m POST    [0m //leaderboard/commit   r:/leaderboard/commit
+2025/09/10 21:54:19.565  [M] [log.go:267]  [HTTP] http: superfluous response.WriteHeader call from github.com/beego/beego/v2/server/web/context.(*Response).WriteHeader (context.go:366)
+2025/09/10 21:59:20.095  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 21:59:30.428  [I] [auth.go:157]  Game API Request: App[7c46b41327] POST //leaderboard/commit from ::1
+2025/09/10 21:59:30.428  [D] [auth.go:170]  Rate limit check for key: ::1:7c46b41327
+2025/09/10 21:59:30.436  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     8.8119ms|   match|[46m POST    [0m //leaderboard/commit   r:/leaderboard/commit
+2025/09/10 21:59:30.436  [M] [log.go:267]  [HTTP] http: superfluous response.WriteHeader call from github.com/beego/beego/v2/server/web/context.(*Response).WriteHeader (context.go:366)
+2025/09/10 22:38:24.583  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 22:47:51.949  [D] [router.go:1305]  |            ::1|[42m 200 [0m|       23.6µs| nomatch|[47m OPTIONS [0m //leaderboard/commit
+2025/09/10 22:47:51.951  [D] [router.go:1305]  |            ::1|[42m 200 [0m|      760.7µs|   match|[46m POST    [0m //leaderboard/commit   r:/leaderboard/commit
+2025/09/10 22:48:11.417  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s| nomatch|[47m OPTIONS [0m /health
+2025/09/10 22:48:11.422  [I] [auth.go:159]  Request: GET /health from ::1
+2025/09/10 22:48:11.422  [D] [auth.go:170]  Rate limit check for key: ::1:<nil>
+2025/09/10 22:48:11.426  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     4.5493ms|   match|[44m GET     [0m /health   r:/health
+2025/09/10 22:48:17.233  [I] [auth.go:157]  Game API Request: App[d41f04922f] POST //leaderboard/commit from ::1
+2025/09/10 22:48:17.233  [D] [auth.go:170]  Rate limit check for key: ::1:d41f04922f
+2025/09/10 22:48:17.234  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     2.1519ms|   match|[46m POST    [0m //leaderboard/commit   r:/leaderboard/commit
+2025/09/10 22:48:17.234  [M] [log.go:267]  [HTTP] http: superfluous response.WriteHeader call from github.com/beego/beego/v2/server/web/context.(*Response).WriteHeader (context.go:366)
+2025/09/10 23:14:43.011  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 23:16:23.399  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     1.5182ms|   match|[46m POST    [0m //leaderboard/commit   r:/leaderboard/commit
+2025/09/10 23:16:42.016  [I] [auth.go:159]  Request: GET /health from ::1
+2025/09/10 23:16:42.016  [D] [auth.go:170]  Rate limit check for key: ::1:<nil>
+2025/09/10 23:16:42.022  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     5.2729ms|   match|[44m GET     [0m /health   r:/health
+2025/09/10 23:16:50.796  [D] [router.go:1305]  |            ::1|[42m 200 [0m|           0s| nomatch|[47m OPTIONS [0m //user/login
+2025/09/10 23:16:50.798  [I] [auth.go:157]  Game API Request: App[98693894f4] POST //user/login from ::1
+2025/09/10 23:16:50.798  [D] [auth.go:170]  Rate limit check for key: ::1:98693894f4
+2025/09/10 23:16:50.803  [I] [user_data.go:130]  用户创建成功: openId=test_code_123, playerId=6410799109
+2025/09/10 23:16:50.803  [I] [common.go:119]  创建新用户成功, appId: 98693894f4 playerId: 6410799109 openId: test_code_123
+2025/09/10 23:16:50.803  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     5.4624ms|   match|[46m POST    [0m //user/login   r:/user/login
+2025/09/10 23:16:56.055  [I] [auth.go:157]  Game API Request: App[98693894f4] POST //leaderboard/commit from ::1
+2025/09/10 23:16:56.056  [D] [auth.go:170]  Rate limit check for key: ::1:98693894f4
+2025/09/10 23:16:56.057  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     2.6255ms|   match|[46m POST    [0m //leaderboard/commit   r:/leaderboard/commit
+2025/09/10 23:16:56.057  [M] [log.go:267]  [HTTP] http: superfluous response.WriteHeader call from github.com/beego/beego/v2/server/web/context.(*Response).WriteHeader (context.go:366)
+2025/09/10 23:17:38.749  [I] [auth.go:157]  Game API Request: App[98693894f4] POST //leaderboard/commit from ::1
+2025/09/10 23:17:38.749  [D] [auth.go:170]  Rate limit check for key: ::1:98693894f4
+2025/09/10 23:17:38.749  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     1.3219ms|   match|[46m POST    [0m //leaderboard/commit   r:/leaderboard/commit
+2025/09/10 23:17:38.749  [M] [log.go:267]  [HTTP] http: superfluous response.WriteHeader call from github.com/beego/beego/v2/server/web/context.(*Response).WriteHeader (context.go:366)
+2025/09/10 23:18:43.259  [I] [auth.go:157]  Game API Request: App[98693894f4] POST //leaderboard/commit from ::1
+2025/09/10 23:18:43.259  [D] [auth.go:170]  Rate limit check for key: ::1:98693894f4
+2025/09/10 23:20:21.244  [D] [router.go:1305]  |            ::1|[42m 200 [0m|1m37.9855771s|   match|[46m POST    [0m //leaderboard/commit   r:/leaderboard/commit
+2025/09/10 23:20:21.245  [M] [log.go:267]  [HTTP] http: superfluous response.WriteHeader call from github.com/beego/beego/v2/server/web/context.(*Response).WriteHeader (context.go:366)
+2025/09/10 23:20:25.542  [I] [auth.go:157]  Game API Request: App[98693894f4] POST //leaderboard/commit from ::1
+2025/09/10 23:20:25.542  [D] [auth.go:170]  Rate limit check for key: ::1:98693894f4
+2025/09/10 23:23:47.148  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 23:24:18.385  [I] [auth.go:157]  Game API Request: App[98693894f4] POST //leaderboard/commit from ::1
+2025/09/10 23:24:18.385  [D] [auth.go:170]  Rate limit check for key: ::1:98693894f4
+2025/09/10 23:24:52.746  [D] [router.go:1305]  |            ::1|[42m 200 [0m|  34.3647439s|   match|[46m POST    [0m //leaderboard/commit   r:/leaderboard/commit
+2025/09/10 23:24:52.746  [M] [log.go:267]  [HTTP] http: superfluous response.WriteHeader call from github.com/beego/beego/v2/server/web/context.(*Response).WriteHeader (context.go:366)
+2025/09/10 23:26:19.142  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 23:26:19.148  [C] [server.go:298]  ListenAndServe:  listen tcp :8081: bind: Only one usage of each socket address (protocol/network address/port) is normally permitted.
+2025/09/10 23:32:36.252  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 23:32:40.842  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     4.9985ms|   match|[46m POST    [0m //leaderboard/commit   r:/leaderboard/commit
+2025/09/10 23:32:52.887  [I] [auth.go:159]  Request: GET /health from ::1
+2025/09/10 23:32:52.887  [D] [auth.go:170]  Rate limit check for key: ::1:<nil>
+2025/09/10 23:32:52.888  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     1.0016ms|   match|[44m GET     [0m /health   r:/health
+2025/09/10 23:32:58.734  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     1.1358ms|   match|[46m POST    [0m //leaderboard/commit   r:/leaderboard/commit
+2025/09/10 23:33:05.675  [I] [auth.go:157]  Game API Request: App[6e6d2199ed] POST //user/login from ::1
+2025/09/10 23:33:05.675  [D] [auth.go:170]  Rate limit check for key: ::1:6e6d2199ed
+2025/09/10 23:33:05.682  [I] [user_data.go:130]  用户创建成功: openId=test_code_123, playerId=6385678738
+2025/09/10 23:33:05.682  [I] [common.go:119]  创建新用户成功, appId: 6e6d2199ed playerId: 6385678738 openId: test_code_123
+2025/09/10 23:33:05.682  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     7.8053ms|   match|[46m POST    [0m //user/login   r:/user/login
+2025/09/10 23:33:08.023  [I] [auth.go:157]  Game API Request: App[6e6d2199ed] POST //leaderboard/commit from ::1
+2025/09/10 23:33:08.023  [D] [auth.go:170]  Rate limit check for key: ::1:6e6d2199ed
+2025/09/10 23:33:24.060  [D] [router.go:1305]  |            ::1|[42m 200 [0m|  16.0382819s|   match|[46m POST    [0m //leaderboard/commit   r:/leaderboard/commit
+2025/09/10 23:33:24.060  [M] [log.go:267]  [HTTP] http: superfluous response.WriteHeader call from github.com/beego/beego/v2/server/web/context.(*Response).WriteHeader (context.go:366)
+2025/09/10 23:33:29.943  [I] [auth.go:157]  Game API Request: App[6e6d2199ed] POST //leaderboard/commit from ::1
+2025/09/10 23:33:29.944  [D] [auth.go:170]  Rate limit check for key: ::1:6e6d2199ed
+2025/09/10 23:34:20.993  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 23:35:23.840  [I] [auth.go:157]  Game API Request: App[6e6d2199ed] POST //leaderboard/commit from ::1
+2025/09/10 23:35:23.840  [D] [auth.go:170]  Rate limit check for key: ::1:6e6d2199ed
+2025/09/10 23:35:32.464  [D] [router.go:1305]  |            ::1|[42m 200 [0m|   8.6286635s|   match|[46m POST    [0m //leaderboard/commit   r:/leaderboard/commit
+2025/09/10 23:35:32.464  [M] [log.go:267]  [HTTP] http: superfluous response.WriteHeader call from github.com/beego/beego/v2/server/web/context.(*Response).WriteHeader (context.go:366)
+2025/09/10 23:36:00.108  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 23:36:12.266  [I] [auth.go:157]  Game API Request: App[6e6d2199ed] POST //leaderboard/commit from ::1
+2025/09/10 23:36:12.266  [D] [auth.go:170]  Rate limit check for key: ::1:6e6d2199ed
+2025/09/10 23:38:40.881  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 23:38:53.034  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 23:38:56.524  [I] [auth.go:157]  Game API Request: App[6e6d2199ed] POST //leaderboard/commit from ::1
+2025/09/10 23:38:56.524  [D] [auth.go:170]  Rate limit check for key: ::1:6e6d2199ed
+2025/09/10 23:39:03.715  [D] [router.go:1305]  |            ::1|[42m 200 [0m|   7.1954589s|   match|[46m POST    [0m //leaderboard/commit   r:/leaderboard/commit
+2025/09/10 23:39:03.715  [M] [log.go:267]  [HTTP] http: superfluous response.WriteHeader call from github.com/beego/beego/v2/server/web/context.(*Response).WriteHeader (context.go:366)
+2025/09/10 23:39:07.128  [D] [router.go:1305]  |            ::1|[42m 200 [0m|      362.1µs| nomatch|[47m OPTIONS [0m //leaderboard/queryTopRank
+2025/09/10 23:39:07.131  [I] [auth.go:157]  Game API Request: App[6e6d2199ed] POST //leaderboard/queryTopRank from ::1
+2025/09/10 23:39:07.131  [D] [auth.go:170]  Rate limit check for key: ::1:6e6d2199ed
+2025/09/10 23:39:07.131  [D] [router.go:1305]  |            ::1|[42m 200 [0m|     1.4897ms|   match|[46m POST    [0m //leaderboard/queryTopRank   r:/leaderboard/queryTopRank
+2025/09/10 23:39:07.131  [M] [log.go:267]  [HTTP] http: superfluous response.WriteHeader call from github.com/beego/beego/v2/server/web/context.(*Response).WriteHeader (context.go:366)
+2025/09/10 23:52:51.505  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 23:53:20.756  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 23:53:55.950  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 23:54:17.502  [I] [auth.go:157]  Game API Request: App[6e6d2199ed] POST //leaderboard/queryTopRank from ::1
+2025/09/10 23:54:17.502  [D] [auth.go:170]  Rate limit check for key: ::1:6e6d2199ed
+2025/09/10 23:54:35.232  [D] [router.go:1305]  |            ::1|[42m 200 [0m|  17.7364523s|   match|[46m POST    [0m //leaderboard/queryTopRank   r:/leaderboard/queryTopRank
+2025/09/10 23:54:35.232  [M] [log.go:267]  [HTTP] http: superfluous response.WriteHeader call from github.com/beego/beego/v2/server/web/context.(*Response).WriteHeader (context.go:366)
+2025/09/10 23:55:04.315  [I] [auth.go:157]  Game API Request: App[6e6d2199ed] POST //leaderboard/commit from ::1
+2025/09/10 23:55:04.315  [D] [auth.go:170]  Rate limit check for key: ::1:6e6d2199ed
+2025/09/10 23:55:04.318  [C] [config.go:500]  the request url is  //leaderboard/commit
+2025/09/10 23:55:04.318  [C] [config.go:501]  Handler crashed with error interface conversion: interface {} is string, not int64
+2025/09/10 23:55:04.318  [C] [config.go:507]  D:/Program Files/go/src/runtime/panic.go:783
+2025/09/10 23:55:04.318  [C] [config.go:507]  D:/Program Files/go/src/runtime/iface.go:275
+2025/09/10 23:55:04.318  [C] [config.go:507]  H:/game_dev/minigame-server/go-admin/game-service/models/leaderboard.go:292
+2025/09/10 23:55:04.318  [C] [config.go:507]  H:/game_dev/minigame-server/go-admin/game-service/controllers/leaderboard.go:97
+2025/09/10 23:55:04.318  [C] [config.go:507]  D:/Program Files/go/src/reflect/value.go:581
+2025/09/10 23:55:04.318  [C] [config.go:507]  D:/Program Files/go/src/reflect/value.go:365
+2025/09/10 23:55:04.318  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/router.go:1233
+2025/09/10 23:55:04.318  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/filter.go:83
+2025/09/10 23:55:04.318  [C] [config.go:507]  D:/go/pkg/mod/github.com/beego/beego/v2@v2.0.7/server/web/router.go:1002
+2025/09/10 23:55:04.318  [C] [config.go:507]  D:/Program Files/go/src/net/http/server.go:3340
+2025/09/10 23:55:04.318  [C] [config.go:507]  D:/Program Files/go/src/net/http/server.go:2109
+2025/09/10 23:55:04.318  [C] [config.go:507]  D:/Program Files/go/src/runtime/asm_amd64.s:1693
+2025/09/10 23:59:53.317  [I] [server.go:281]  http server Running on http://:8081
+2025/09/10 23:59:57.991  [I] [auth.go:157]  Game API Request: App[6e6d2199ed] POST //leaderboard/commit from ::1
+2025/09/10 23:59:57.991  [D] [auth.go:170]  Rate limit check for key: ::1:6e6d2199ed
+2025/09/10 23:59:57.997  [D] [router.go:1305]  |            ::1|[42m 200 [0m|    16.0901ms|   match|[46m POST    [0m //leaderboard/commit   r:/leaderboard/commit
+2025/09/10 23:59:57.997  [M] [log.go:267]  [HTTP] http: superfluous response.WriteHeader call from github.com/beego/beego/v2/server/web/context.(*Response).WriteHeader (context.go:366)

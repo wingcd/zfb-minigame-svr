@@ -25,9 +25,7 @@ async function checkPermission(event, requiredPermissions) {
             if (authHeader.startsWith('Bearer ')) {
                 token = authHeader.substring(7);
             }
-        }
-        
-        if (!token) {
+        } else if (event.token) {
             // 直接从参数获取
             token = event.token;
         }
@@ -61,34 +59,47 @@ async function checkPermission(event, requiredPermissions) {
         const admin = adminList[0];
 
         // 检查token是否过期
-        if (admin.tokenExpire && moment(admin.tokenExpire).isBefore(moment())) {
-            result.error = {
-                code: 4002,
-                msg: "token已过期"
-            };
-            return result;
+        if (admin.tokenExpire) {
+            const now = moment();
+            const tokenExpire = moment(admin.tokenExpire);
+            
+            if (now.isAfter(tokenExpire)) {
+                result.error = {
+                    code: 4001,
+                    msg: "token已过期"
+                };
+                return result;
+            }
         }
 
-        // 获取管理员角色和权限
+        // 获取管理员角色权限
         const roleList = await db.collection('admin_roles')
-            .where({ roleId: admin.roleId })
+            .where({ roleCode: admin.role })
             .get();
+        
+        let permissions = [];
+        if (roleList.length > 0) {
+            permissions = roleList[0].permissions || [];
+        }
 
-        if (roleList.length === 0) {
-            result.error = {
-                code: 4003,
-                msg: "用户角色不存在"
+        // 超级管理员拥有所有权限
+        if (admin.role === 'super_admin') {
+            result.valid = true;
+            result.adminInfo = {
+                id: admin._id,
+                username: admin.username,
+                role: admin.role,
+                permissions: permissions
             };
             return result;
         }
 
-        const role = roleList[0];
-        const permissions = role.permissions || [];
-
-        // 检查权限
+        // 检查特定权限
         if (requiredPermissions) {
-            const required = Array.isArray(requiredPermissions) ? requiredPermissions : [requiredPermissions];
-            const hasPermission = required.some(perm => permissions.includes(perm) || permissions.includes('*'));
+            const permsToCheck = Array.isArray(requiredPermissions) ? requiredPermissions : [requiredPermissions];
+            
+            // 检查是否有任意一个权限
+            const hasPermission = permsToCheck.some(permission => permissions.includes(permission));
             
             if (!hasPermission) {
                 result.error = {
@@ -99,20 +110,18 @@ async function checkPermission(event, requiredPermissions) {
             }
         }
 
-        // 验证成功
         result.valid = true;
         result.adminInfo = {
             id: admin._id,
             username: admin.username,
-            roleId: admin.roleId,
-            roleName: role.roleName,
+            role: admin.role,
             permissions: permissions
         };
 
     } catch (e) {
         result.error = {
             code: 5001,
-            msg: e.message
+            msg: "权限验证失败: " + e.message
         };
     }
 
@@ -120,14 +129,14 @@ async function checkPermission(event, requiredPermissions) {
 }
 
 /**
- * 权限装饰器
+ * 权限装饰器 - 包装云函数以添加权限检查
  * @param {Function} handler - 原始处理函数
  * @param {Array|String} requiredPermissions - 需要的权限
- * @returns {Function} - 包装后的函数
+ * @returns {Function} - 包装后的处理函数
  */
 function requirePermission(handler, requiredPermissions) {
     return async (event, context) => {
-        // 权限校验
+        // 权限检查
         const authResult = await checkPermission(event, requiredPermissions);
         
         if (!authResult.valid) {
@@ -135,11 +144,11 @@ function requirePermission(handler, requiredPermissions) {
                 code: authResult.error.code,
                 msg: authResult.error.msg,
                 timestamp: Date.now(),
-                data: null
+                data: {}
             };
         }
 
-        // 将管理员信息添加到event中
+        // 将管理员信息添加到event中，供业务函数使用
         event.adminInfo = authResult.adminInfo;
 
         // 调用原始处理函数

@@ -1,5 +1,5 @@
 -- 使用管理后台数据库
-USE `minigame_admin`;
+USE `minigame_game`;
 
 -- 插入默认管理员角色
 INSERT INTO `admin_roles` (`id`, `name`, `description`, `permissions`, `status`) VALUES
@@ -28,22 +28,36 @@ INSERT INTO `game_configs` (`app_id`, `config_key`, `config_value`, `config_type
 -- 使用游戏SDK数据库
 USE `minigame_game`;
 
--- 为示例应用创建用户数据表
-CREATE TABLE IF NOT EXISTS `user_data_demo_app_001` (
+-- 为示例应用创建用户数据表（单一数据字段存储格式）
+CREATE TABLE IF NOT EXISTS `user_demo_app_001` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
-  `user_id` varchar(50) NOT NULL COMMENT '用户ID',
-  `platform` varchar(20) DEFAULT '' COMMENT '平台类型',
-  `platform_user_id` varchar(100) DEFAULT '' COMMENT '平台用户ID',
-  `nickname` varchar(100) DEFAULT '' COMMENT '用户昵称',
-  `avatar` varchar(255) DEFAULT '' COMMENT '用户头像',
-  `data` longtext COMMENT '用户数据(JSON格式)',
-  `last_login_at` datetime DEFAULT NULL COMMENT '最后登录时间',
-  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `openId` varchar(100) NOT NULL COMMENT '用户唯一标识',
+  `playerId` varchar(100) NOT NULL COMMENT '玩家ID（唯一，自动生成）',
+  `token` varchar(255) COMMENT '登录Token',
+  `nickname` varchar(100) COMMENT '昵称',
+  `avatar` varchar(500) COMMENT '头像URL',
+  `data` longtext COMMENT '游戏数据（JSON格式）',
+  `level` int(11) NOT NULL DEFAULT 1 COMMENT '等级',
+  `exp` bigint(20) NOT NULL DEFAULT 0 COMMENT '经验值',
+  `coin` bigint(20) NOT NULL DEFAULT 0 COMMENT '金币',
+  `diamond` bigint(20) NOT NULL DEFAULT 0 COMMENT '钻石',
+  `vipLevel` int(11) NOT NULL DEFAULT 0 COMMENT 'VIP等级',
+  `banned` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否封禁',
+  `banReason` varchar(500) COMMENT '封禁原因',
+  `banExpire` datetime COMMENT '封禁到期时间',
+  `loginCount` int(11) NOT NULL DEFAULT 0 COMMENT '登录次数',
+  `lastLoginTime` datetime COMMENT '最后登录时间',
+  `lastLoginIp` varchar(50) COMMENT '最后登录IP',
+  `registerTime` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '注册时间',
+  `CreatedAt` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `gmtModify` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `user_id` (`user_id`),
-  KEY `idx_platform` (`platform`),
-  KEY `idx_last_login_at` (`last_login_at`)
+  UNIQUE KEY `uk_openId` (`openId`),
+  UNIQUE KEY `uk_playerId` (`playerId`),
+  KEY `idx_token` (`token`),
+  KEY `idx_gmtModify` (`gmtModify`),
+  KEY `idx_CreatedAt` (`CreatedAt`),
+  KEY `idx_banned_banExpire` (`banned`, `banExpire`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='示例应用用户数据表';
 
 -- 为示例应用创建排行榜表

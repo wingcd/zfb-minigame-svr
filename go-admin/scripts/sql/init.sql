@@ -107,16 +107,36 @@ INSERT IGNORE INTO `admin_user_roles` (`user_id`, `role_id`) VALUES
 -- ================================
 
 /*
--- 用户数据表模板 (user_data_{app_id})
-CREATE TABLE `user_data_{app_id}` (
+-- 用户数据表模板 (user_{app_id}) - 单一数据字段存储格式
+CREATE TABLE `user_{app_id}` (
   `id` bigint(20) NOT NULL AUTO_INCREMENT,
-  `user_id` varchar(100) NOT NULL COMMENT '用户ID',
-  `data` longtext COMMENT '用户数据（JSON格式）',
-  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `openId` varchar(100) NOT NULL COMMENT '用户唯一标识',
+  `playerId` varchar(100) NOT NULL COMMENT '玩家ID（唯一，自动生成）',
+  `token` varchar(255) COMMENT '登录Token',
+  `nickname` varchar(100) COMMENT '昵称',
+  `avatar` varchar(500) COMMENT '头像URL',
+  `data` longtext COMMENT '游戏数据（JSON格式）',
+  `level` int(11) NOT NULL DEFAULT 1 COMMENT '等级',
+  `exp` bigint(20) NOT NULL DEFAULT 0 COMMENT '经验值',
+  `coin` bigint(20) NOT NULL DEFAULT 0 COMMENT '金币',
+  `diamond` bigint(20) NOT NULL DEFAULT 0 COMMENT '钻石',
+  `vipLevel` int(11) NOT NULL DEFAULT 0 COMMENT 'VIP等级',
+  `banned` tinyint(1) NOT NULL DEFAULT 0 COMMENT '是否封禁',
+  `banReason` varchar(500) COMMENT '封禁原因',
+  `banExpire` datetime COMMENT '封禁到期时间',
+  `loginCount` int(11) NOT NULL DEFAULT 0 COMMENT '登录次数',
+  `lastLoginTime` datetime COMMENT '最后登录时间',
+  `lastLoginIp` varchar(50) COMMENT '最后登录IP',
+  `registerTime` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '注册时间',
+  `CreatedAt` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `gmtModify` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_user_id` (`user_id`),
-  KEY `idx_update_time` (`update_time`)
+  UNIQUE KEY `uk_openId` (`openId`),
+  UNIQUE KEY `uk_playerId` (`playerId`),
+  KEY `idx_token` (`token`),
+  KEY `idx_gmtModify` (`gmtModify`),
+  KEY `idx_CreatedAt` (`CreatedAt`),
+  KEY `idx_banned_banExpire` (`banned`, `banExpire`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户数据表';
 
 -- 排行榜表模板 (leaderboard_{app_id})

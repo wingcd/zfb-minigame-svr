@@ -89,7 +89,7 @@
           </el-button>
         </template>
       </el-table-column>
-      <el-table-column prop="gmtCreate" label="注册时间" width="160" sortable="custom">
+      <el-table-column prop="CreatedAt" label="注册时间" width="160" sortable="custom">
       </el-table-column>
       <el-table-column prop="gmtModify" label="最后登录" width="160" sortable="custom">
       </el-table-column>
@@ -138,7 +138,7 @@
           <h3>基本信息</h3>
           <p>玩家ID: {{ userDataDialog.user.playerId }}</p>
           <p>OpenID: {{ userDataDialog.user.openId }}</p>
-          <p>注册时间: {{ userDataDialog.user.gmtCreate }}</p>
+          <p>注册时间: {{ userDataDialog.user.CreatedAt }}</p>
         </div>
         <div class="game-data">
           <h3>游戏数据</h3>

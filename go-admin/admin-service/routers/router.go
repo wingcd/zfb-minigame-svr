@@ -145,7 +145,6 @@ func init() {
 	web.Router("/mail/delete", &controllers.MailController{}, "post:DeleteMail")
 	web.Router("/mail/publish", &controllers.MailController{}, "post:PublishMail")
 	web.Router("/mail/send", &controllers.MailController{}, "post:SendMail")
-	web.Router("/mail/sendBroadcast", &controllers.MailController{}, "post:SendBroadcastMail")
 	web.Router("/mail/getStats", &controllers.MailController{}, "post:GetMailStats")
 	web.Router("/mail/getUserMails", &controllers.MailController{}, "post:GetUserMails")
 	web.Router("/mail/initSystem", &controllers.MailController{}, "post:InitMailSystem")
@@ -164,11 +163,6 @@ func init() {
 	web.Router("/gameConfig/batchUpdate", &controllers.GameConfigController{}, "post:BatchUpdateGameConfigs")
 	web.Router("/gameConfig/deleteByAppId", &controllers.GameConfigController{}, "post:DeleteGameConfigsByAppId")
 
-	// 游戏数据管理模块（新路由 - 对齐云函数格式）
-	web.Router("/api/game-data/leaderboard", &controllers.GameDataController{}, "post:GetUserDataList")
-	web.Router("/api/game-data/mail", &controllers.GameDataController{}, "post:GetUserDataList")
-	web.Router("/api/game-data/mail/send", &controllers.GameDataController{}, "post:SendMail")
-
 	apiNamespace := web.NewNamespace("/api",
 		// 认证相关
 		web.NSRouter("/auth/login", &controllers.AuthController{}, "post:AdminLogin"),
@@ -183,19 +177,6 @@ func init() {
 		web.NSRouter("/applications/:id", &controllers.ApplicationController{}, "get:GetApplication"),
 		web.NSRouter("/applications/:id", &controllers.ApplicationController{}, "put:UpdateApplication"),
 		web.NSRouter("/applications/:id", &controllers.ApplicationController{}, "delete:DeleteApplication"),
-
-		// 游戏数据管理
-		web.NSRouter("/game-data/user-data", &controllers.GameDataController{}, "get:GetUserDataList"),
-		web.NSRouter("/game-data/leaderboard", &controllers.GameDataController{}, "get:GetLeaderboardList"),
-
-		// 用户管理模块
-		web.NSRouter("/game-data/counter", &controllers.GameDataController{}, "get:GetCounterList"),
-		web.NSRouter("/game-data/mail", &controllers.GameDataController{}, "get:GetMailList"),
-		web.NSRouter("/game-data/mail", &controllers.GameDataController{}, "post:SendMail"),
-		web.NSRouter("/game-data/mail/broadcast", &controllers.GameDataController{}, "post:SendBroadcastMail"),
-		web.NSRouter("/game-data/config", &controllers.GameDataController{}, "get:GetConfigList"),
-		web.NSRouter("/game-data/config", &controllers.GameDataController{}, "put:UpdateConfig"),
-		web.NSRouter("/game-data/config", &controllers.GameDataController{}, "delete:DeleteConfig"),
 
 		// 统计分析
 		web.NSRouter("/statistics/dashboard", &controllers.StatisticsController{}, "get:GetDashboard"),

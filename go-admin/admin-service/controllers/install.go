@@ -26,7 +26,7 @@ func (c *InstallController) CheckStatus() {
 	status := utils.CheckInstallStatus()
 
 	c.Data["json"] = InstallResponse{
-		Code:    200,
+		Code:    0,
 		Message: "success",
 		Data:    status,
 	}
@@ -58,7 +58,7 @@ func (c *InstallController) AutoInstall() {
 	}
 
 	c.Data["json"] = InstallResponse{
-		Code:    200,
+		Code:    0,
 		Message: "安装成功",
 		Data: map[string]interface{}{
 			"redirect": "/admin/login",
@@ -113,7 +113,7 @@ func (c *InstallController) ManualInstall() {
 	}
 
 	c.Data["json"] = InstallResponse{
-		Code:    200,
+		Code:    0,
 		Message: "安装成功",
 		Data: map[string]interface{}{
 			"redirect": "/admin/login",
@@ -138,7 +138,7 @@ func (c *InstallController) TestConnection() {
 	success, message := testDatabaseConnection(&config)
 
 	c.Data["json"] = InstallResponse{
-		Code:    200,
+		Code:    0,
 		Message: "测试完成",
 		Data: map[string]interface{}{
 			"success": success,
@@ -172,7 +172,7 @@ func (c *InstallController) Uninstall() {
 	}
 
 	c.Data["json"] = InstallResponse{
-		Code:    200,
+		Code:    0,
 		Message: "卸载成功",
 	}
 	c.ServeJSON()
@@ -209,7 +209,7 @@ func validateInstallConfig(config *utils.InstallConfig) error {
 			return fmt.Errorf("MySQL用户名不能为空")
 		}
 		if config.MySQLDatabase == "" {
-			config.MySQLDatabase = "minigame_admin"
+			config.MySQLDatabase = "minigame_game"
 		}
 	}
 
@@ -288,7 +288,7 @@ func (c *InstallController) InitSystem() {
 	}
 
 	c.Data["json"] = InstallResponse{
-		Code:    200,
+		Code:    0,
 		Message: "初始化成功",
 		Data: map[string]interface{}{
 			"createdCollections": 3,
@@ -372,7 +372,7 @@ func (c *InstallController) ChangePassword() {
 	}
 
 	c.Data["json"] = InstallResponse{
-		Code:    200,
+		Code:    0,
 		Message: "密码修改成功",
 	}
 	c.ServeJSON()
@@ -446,7 +446,7 @@ func (c *InstallController) ResetPassword() {
 	}
 
 	c.Data["json"] = InstallResponse{
-		Code:    200,
+		Code:    0,
 		Message: "密码重置成功",
 		Data: map[string]interface{}{
 			"username": req.Username,
@@ -471,7 +471,7 @@ func (c *InstallController) ListAdmins() {
 	}
 
 	c.Data["json"] = InstallResponse{
-		Code:    200,
+		Code:    0,
 		Message: "获取用户列表成功",
 		Data: map[string]interface{}{
 			"users": users,

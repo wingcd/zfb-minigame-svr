@@ -54,7 +54,7 @@ func InitDB() error {
 	mysqlPort := getConfigString(appconf, "mysql_port", "3306")
 	mysqlUser := getConfigString(appconf, "mysql_user", "root")
 	mysqlPassword := getConfigString(appconf, "mysql_password", "")
-	mysqlDatabase := getConfigString(appconf, "mysql_database", "minigame_admin")
+	mysqlDatabase := getConfigString(appconf, "mysql_database", "minigame_game")
 	mysqlCharset := getConfigString(appconf, "mysql_charset", "utf8mb4")
 
 	// 先连接到MySQL根目录，确保数据库存在

@@ -57,6 +57,9 @@ func init() {
 	dataSource := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=%s&parseTime=true&loc=Local",
 		mysqlUser, mysqlPassword, mysqlHost, mysqlPort, mysqlDatabase, mysqlCharset)
 
+	// 注册模型
+	orm.RegisterModel(new(Application))
+
 	// 注册数据库
 	orm.RegisterDataBase("default", "mysql", dataSource)
 
@@ -90,7 +93,7 @@ func initRedis() {
 // SuccessResponse 成功响应
 func SuccessResponse(data interface{}) Response {
 	return Response{
-		Code:    200,
+		Code:    0,
 		Message: "success",
 		Data:    data,
 	}
@@ -107,7 +110,7 @@ func ErrorResponse(code int, message string) Response {
 // PageResponse 分页响应
 func PageResponse(list interface{}, total int64, page, pageSize int) Response {
 	return Response{
-		Code:    200,
+		Code:    0,
 		Message: "success",
 		Data: PageData{
 			List:     list,

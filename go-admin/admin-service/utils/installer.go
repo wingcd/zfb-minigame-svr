@@ -105,7 +105,7 @@ func testCeateMySQLDB() bool {
 	mysqlPort := getConfigString(appconf, "mysql_port", "3306")
 	mysqlUser := getConfigString(appconf, "mysql_user", "root")
 	mysqlPassword := getConfigString(appconf, "mysql_password", "")
-	mysqlDatabase := getConfigString(appconf, "mysql_database", "minigame_admin")
+	mysqlDatabase := getConfigString(appconf, "mysql_database", "minigame_game")
 
 	// 先连接到MySQL根目录，不指定数据库
 	dataSource := fmt.Sprintf("%s:%s@tcp(%s:%s)/?charset=utf8mb4&parseTime=true&loc=Local",
@@ -157,7 +157,7 @@ func testMySQLConnection() bool {
 	mysqlPort := getConfigString(appconf, "mysql_port", "3306")
 	mysqlUser := getConfigString(appconf, "mysql_user", "root")
 	mysqlPassword := getConfigString(appconf, "mysql_password", "")
-	mysqlDatabase := getConfigString(appconf, "mysql_database", "minigame_admin")
+	mysqlDatabase := getConfigString(appconf, "mysql_database", "minigame_game")
 
 	// 先连接到MySQL根目录，不指定数据库
 	dataSource := fmt.Sprintf("%s:%s@tcp(%s:%s)/?charset=utf8mb4&parseTime=true&loc=Local",
@@ -224,7 +224,7 @@ func getMySQLDB() (*sql.DB, error) {
 	mysqlPort := getConfigString(appconf, "mysql_port", "3306")
 	mysqlUser := getConfigString(appconf, "mysql_user", "root")
 	mysqlPassword := getConfigString(appconf, "mysql_password", "")
-	mysqlDatabase := getConfigString(appconf, "mysql_database", "minigame_admin")
+	mysqlDatabase := getConfigString(appconf, "mysql_database", "minigame_game")
 
 	// 先连接到MySQL根目录，确保数据库存在
 	rootDataSource := fmt.Sprintf("%s:%s@tcp(%s:%s)/?charset=utf8mb4&parseTime=true&loc=Local",
@@ -359,13 +359,13 @@ func installWithMySQL() error {
 	defer db.Close()
 
 	// 创建数据库
-	_, err = db.Exec(fmt.Sprintf("CREATE DATABASE IF NOT EXISTS %s CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci", "minigame_admin"))
+	_, err = db.Exec(fmt.Sprintf("CREATE DATABASE IF NOT EXISTS %s CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci", "minigame_game"))
 	if err != nil {
 		return fmt.Errorf("创建数据库失败: %v", err)
 	}
 
 	// 选择数据库
-	_, err = db.Exec(fmt.Sprintf("USE %s", "minigame_admin"))
+	_, err = db.Exec(fmt.Sprintf("USE %s", "minigame_game"))
 	if err != nil {
 		return err
 	}
@@ -496,7 +496,7 @@ func migrateMySQLDatabase(cfg config.Configer) error {
 func migrateSQLiteDatabase(cfg config.Configer) error {
 	dbPath, _ := cfg.String("database::path")
 	if dbPath == "" {
-		dbPath = "./data/minigame_admin.db"
+		dbPath = "./data/minigame_game.db"
 	}
 
 	db, err := sql.Open("sqlite3", dbPath)
@@ -1285,7 +1285,7 @@ func cleanupMySQLDatabase() error {
 	defer db.Close()
 
 	// 获取数据库名称
-	var dbName string = "minigame_admin"
+	var dbName string = "minigame_game"
 	// 删除数据库
 	_, err = db.Exec(fmt.Sprintf("DROP DATABASE IF EXISTS %s", dbName))
 	if err != nil {
@@ -1313,7 +1313,7 @@ func cleanupSQLiteDatabase() error {
 	}
 	defer db.Close()
 
-	dbName := "minigame_admin"
+	dbName := "minigame_game"
 	_, err = db.Exec(fmt.Sprintf("DROP DATABASE IF EXISTS %s", dbName))
 	if err != nil {
 		return fmt.Errorf("删除数据库失败: %v", err)
