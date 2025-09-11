@@ -223,7 +223,7 @@ class ApiTester {
         try {
             const startTime = Date.now();
             const response = await fetch(`${this.config.baseUrl}/health`, {
-                method: 'GET',
+                method: 'POST',
                 headers: { 'Content-Type': 'application/json' }
             });
             
@@ -370,23 +370,22 @@ class ApiTester {
                 }
             };
 
-            if(method === 'POST') {
-                data.appId = this.config.appId;
-                data.timestamp = timestamp;
+            data = data || {};
 
-                if (useAuth) {                
-                    data.playerId = this.config.playerId;
-                    data.token = this.config.token;
-                }
+            data.appId = this.config.appId;
+            data.playerId = this.config.playerId;
+            data.timestamp = timestamp;
+            data.token = this.config.token;
 
-                data.ver = '1.0.0';
-                data.sign = generateZySign(data);
-            }
+            data.ver = '1.0.0';
+            data.sign = generateZySign(data);
             
-            if (method === 'POST' && Object.keys(data).length > 0) {
-                data.appId = this.config.appId;
-                data.playerId = this.config.playerId;
+            if (method === 'POST' && Object.keys(data).length > 0) {                
                 options.body = JSON.stringify(data);
+            }
+
+            if(url.startsWith('/')) {
+                url = url.slice(1);
             }
 
             const fullUrl = method === 'GET' && Object.keys(data).length > 0 
@@ -546,7 +545,7 @@ class ApiTester {
 
     // 具体测试方法
     async testHealth() {
-        const result = await this.makeApiRequest('/health', 'GET', {}, false);
+        const result = await this.makeApiRequest('/health', 'POST', {}, false);
         this.displayResult('health-result', result, '健康检查');
     }
 
@@ -633,19 +632,26 @@ class ApiTester {
     }
 
     async testIncrementCounter() {
-        const counterName = document.getElementById('counterName').value || 'test_counter';
+        const counterKey = document.getElementById('counterName').value || 'test_counter';
+        const location = document.getElementById('counterLocation').value || 'default';
         const increment = parseInt(document.getElementById('increment').value) || 1;
         
-        const data = { counterName: counterName, increment: increment };
+        const data = { 
+            key: counterKey, 
+            location: location,
+            increment: increment 
+        };
         const result = await this.makeApiRequest('/counter/increment', 'POST', data, true);
         this.displayResult('incrementCounter-result', result, '增加计数器');
     }
 
     async testGetCounter() {
-        const counterName = document.getElementById('getCounterName').value || 'test_counter';
-        const data = { counterName: counterName };
+        const counterKey = document.getElementById('getCounterName').value || 'test_counter';
         
-        const result = await this.makeApiRequest('/counter/get', 'GET', data, true);
+        const data = { 
+            key: counterKey,
+        };
+        const result = await this.makeApiRequest('/counter/get', 'POST', data, true);
         this.displayResult('getCounter-result', result, '获取计数器');
     }
 
@@ -654,7 +660,7 @@ class ApiTester {
         const pageSize = parseInt(document.getElementById('mailPageSize').value) || 10;
         
         const data = { page: page, pageSize: pageSize };
-        const result = await this.makeApiRequest('/mail/getUserMails', 'GET', data, true);
+        const result = await this.makeApiRequest('/mail/getUserMails', 'POST', data, true);
         this.displayResult('getUserMails-result', result, '获取邮件列表');
     }
 

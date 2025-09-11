@@ -20,14 +20,16 @@ func ValidateSignature(request *http.Request) (string, string) {
 }
 
 var (
-	apiSecret string
-	md5Salt   string
+	apiSecret       string
+	md5Salt         string
+	adminServiceURL string
 )
 
 func init() {
 	appconf, _ := config.NewConfig("ini", "conf/app.conf")
 	apiSecret = getConfigString(appconf, "api_secret", "default_api_secret")
 	md5Salt = getConfigString(appconf, "md5_salt", "default_md5_salt")
+	adminServiceURL = getConfigString(appconf, "admin_service_url", "")
 }
 
 // getConfigString 获取配置字符串，支持默认值
@@ -130,4 +132,9 @@ func GenerateSessionToken(userId, appId string) string {
 func GenerateUUID() string {
 	randomStr := GenerateRandomString(32)
 	return MD5(fmt.Sprintf("uuid_%d_%s", time.Now().UnixNano(), randomStr))
+}
+
+// GetAdminServiceURL 获取admin-service的URL
+func GetAdminServiceURL() string {
+	return adminServiceURL
 }

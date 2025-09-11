@@ -5,7 +5,7 @@ import (
 	"admin-service/utils"
 	"encoding/json"
 	"fmt"
-	"strings"
+	"log"
 	"time"
 
 	"github.com/beego/beego/v2/client/orm"
@@ -134,14 +134,18 @@ func (c *MailController) GetAllMails() {
 // CreateMail 创建邮件
 func (c *MailController) CreateMail() {
 	var requestData struct {
-		CreateBy   int64    `json:"createBy"`
-		AppId      string   `json:"appId"`
-		UserId     string   `json:"userId"`
-		Title      string   `json:"title"`
-		Content    string   `json:"content"`
-		Rewards    []string `json:"rewards"`
-		ExpireDays int      `json:"expireDays"`
-		MailType   int      `json:"mailType"` // 0: 个人邮件, 1: 系统广播邮件
+		CreateBy   int64  `json:"createBy"`
+		AppId      string `json:"appId"`
+		Type       string `json:"type"`
+		TargetType string `json:"targetType"`
+		UserId     string `json:"userId"`
+		Title      string `json:"title"`
+		Content    string `json:"content"`
+		Rewards    string `json:"rewards"`
+		ExpireDays int    `json:"expireDays"`
+		MailType   int    `json:"mailType"` // 0: 个人邮件, 1: 系统广播邮件
+		Status     string `json:"status"`
+		ExpireTime string `json:"expireTime"`
 	}
 
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &requestData); err != nil {
@@ -151,7 +155,7 @@ func (c *MailController) CreateMail() {
 			"timestamp": utils.UnixMilli(),
 			"data":      nil,
 		}
-		fmt.Println("参数错误", err)
+		log.Println("参数错误", err)
 		c.ServeJSON()
 		return
 	}
@@ -168,20 +172,22 @@ func (c *MailController) CreateMail() {
 		return
 	}
 
-	// 使用新的邮件系统 - expireAt变量已移除
+	var rewardsString = requestData.Rewards
 
 	// 使用新的邮件系统
 	if requestData.MailType == 1 || requestData.UserId == "" {
 		// 系统广播邮件
+		// 调试信息
+		fmt.Printf("DEBUG: 收到创建邮件请求，状态参数: %s\n", requestData.Status)
+
 		systemMail := &models.MailSystem{
 			AppId:      requestData.AppId,
-			MailId:     fmt.Sprintf("mail_%d", time.Now().Unix()),
 			Title:      requestData.Title,
 			Content:    requestData.Content,
-			Rewards:    strings.Join(requestData.Rewards, ","),
-			Type:       "system",
-			TargetType: "all",
-			Status:     "draft",
+			Rewards:    rewardsString,
+			Type:       requestData.Type,
+			TargetType: requestData.TargetType,
+			Status:     requestData.Status,
 			CreatedBy:  "admin", // 默认创建者为admin
 		}
 
@@ -217,19 +223,6 @@ func (c *MailController) CreateMail() {
 			return
 		}
 
-		// 发布邮件给所有用户
-		if err := models.PublishSystemMail(systemMail.ID, requestData.AppId); err != nil {
-			fmt.Printf("DEBUG: PublishSystemMail failed: %v\n", err)
-			c.Data["json"] = map[string]interface{}{
-				"code":      5002,
-				"msg":       "发布邮件失败",
-				"timestamp": utils.UnixMilli(),
-				"data":      nil,
-			}
-			c.ServeJSON()
-			return
-		}
-
 		c.Data["json"] = map[string]interface{}{
 			"code":      0,
 			"msg":       "系统邮件创建并发布成功",
@@ -238,8 +231,7 @@ func (c *MailController) CreateMail() {
 		}
 	} else {
 		// 个人邮件 - 使用SendPersonalMail
-		rewards := strings.Join(requestData.Rewards, ",")
-		if err := models.SendPersonalMail(requestData.AppId, requestData.UserId, requestData.Title, requestData.Content, rewards); err != nil {
+		if err := models.SendPersonalMail(requestData.AppId, requestData.UserId, requestData.Title, requestData.Content, requestData.Rewards); err != nil {
 			c.Data["json"] = map[string]interface{}{
 				"code":      5001,
 				"msg":       "发送个人邮件失败",
@@ -263,17 +255,21 @@ func (c *MailController) CreateMail() {
 // UpdateMail 更新邮件（支持动态邮件系统）
 func (c *MailController) UpdateMail() {
 	var requestData struct {
-		AppId      string `json:"appId"`
-		MailId     string `json:"mailId"`
-		Title      string `json:"title"`
-		Content    string `json:"content"`
-		Rewards    string `json:"rewards"`
-		Status     string `json:"status"`
-		TargetType string `json:"targetType"`
-		ExpireDays int    `json:"expireDays"`
+		ID          int64  `json:"id"` // 添加ID字段
+		AppId       string `json:"appId"`
+		Type        string `json:"type"`
+		Title       string `json:"title"`
+		Content     string `json:"content"`
+		Rewards     string `json:"rewards"`
+		Status      string `json:"status"`
+		TargetType  string `json:"targetType"`
+		ExpireDays  int    `json:"expireDays"`
+		PublishTime int64  `json:"publishTime"`
+		ExpireTime  int64  `json:"expireTime"`
 	}
 
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &requestData); err != nil {
+		log.Println("参数错误", err)
 		c.Data["json"] = map[string]interface{}{
 			"code":      4001,
 			"msg":       "参数错误",
@@ -285,10 +281,10 @@ func (c *MailController) UpdateMail() {
 	}
 
 	// 参数验证
-	if requestData.AppId == "" || requestData.MailId == "" {
+	if requestData.AppId == "" || requestData.ID == 0 {
 		c.Data["json"] = map[string]interface{}{
 			"code":      4001,
-			"msg":       "缺少必要参数：appId 和 mailId",
+			"msg":       "缺少必要参数：appId 和 id",
 			"timestamp": utils.UnixMilli(),
 			"data":      nil,
 		}
@@ -298,21 +294,36 @@ func (c *MailController) UpdateMail() {
 
 	// 构造更新的邮件对象
 	mail := &models.MailSystem{
+		ID:         requestData.ID, // 设置邮件ID
 		AppId:      requestData.AppId,
-		MailId:     requestData.MailId,
 		Title:      requestData.Title,
 		Content:    requestData.Content,
 		Rewards:    requestData.Rewards,
 		Status:     requestData.Status,
 		TargetType: requestData.TargetType,
-		Type:       "system", // 目前只支持系统邮件更新
-		CreatedBy:  "admin",  // 默认创建者为admin
+		Type:       requestData.Type,
+		CreatedBy:  "admin", // 默认创建者为admin
+	}
+
+	// 设置发布时间
+	if requestData.PublishTime != 0 {
+		// 将字符串转换为时间, 时间戳转换为时间
+		publishTime := time.Unix(requestData.PublishTime, 0)
+		mail.SendTime = &publishTime
 	}
 
 	// 设置过期时间
-	if requestData.ExpireDays > 0 {
-		expireTime := time.Now().AddDate(0, 0, requestData.ExpireDays)
+	if requestData.ExpireTime != 0 {
+		expireTime := time.Unix(requestData.ExpireTime, 0)
 		mail.ExpireTime = &expireTime
+	} else {
+		// 设置过期时间
+		if requestData.ExpireDays > 0 {
+			expireTime := time.Now().AddDate(0, 0, requestData.ExpireDays)
+			mail.ExpireTime = &expireTime
+		} else {
+			mail.ExpireTime = nil
+		}
 	}
 
 	if err := models.UpdateSystemMail(mail); err != nil {
@@ -338,9 +349,9 @@ func (c *MailController) UpdateMail() {
 // DeleteMail 删除邮件（支持动态邮件系统）
 func (c *MailController) DeleteMail() {
 	var requestData struct {
-		AppId  string `json:"appId"`
-		MailId string `json:"mailId"`
-		Type   string `json:"type"` // "system" 或 "personal"
+		AppId string `json:"appId"`
+		ID    int64  `json:"id"`
+		Type  string `json:"type"` // "system" 或 "personal"
 	}
 
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &requestData); err != nil {
@@ -355,10 +366,10 @@ func (c *MailController) DeleteMail() {
 	}
 
 	// 参数验证
-	if requestData.AppId == "" || requestData.MailId == "" {
+	if requestData.AppId == "" || requestData.ID == 0 {
 		c.Data["json"] = map[string]interface{}{
 			"code":      4001,
-			"msg":       "缺少必要参数：appId 和 mailId",
+			"msg":       "缺少必要参数：appId 和 id",
 			"timestamp": utils.UnixMilli(),
 			"data":      nil,
 		}
@@ -370,13 +381,13 @@ func (c *MailController) DeleteMail() {
 	var err error
 	if requestData.Type == "personal" {
 		// 删除个人邮件（只删除关联记录）
-		err = models.DeletePersonalMail(requestData.AppId, requestData.MailId)
+		err = models.DeletePersonalMail(requestData.AppId, requestData.ID)
 	} else {
 		// 删除系统邮件（删除邮件内容和所有关联记录）
-		err = models.DeleteSystemMail(requestData.AppId, requestData.MailId)
+		err = models.DeleteSystemMail(requestData.AppId, requestData.ID)
 		if err == nil {
 			// 同时删除所有相关的个人邮件关联记录
-			_ = models.DeletePersonalMail(requestData.AppId, requestData.MailId)
+			_ = models.DeletePersonalMail(requestData.AppId, requestData.ID)
 		}
 	}
 
@@ -648,6 +659,78 @@ func (c *MailController) SendBroadcastMail() {
 	c.Data["json"] = map[string]interface{}{
 		"code":      0,
 		"msg":       "发送成功",
+		"timestamp": utils.UnixMilli(),
+		"data":      nil,
+	}
+	c.ServeJSON()
+}
+
+// PublishExisting 发布已存在的邮件
+func (c *MailController) PublishExisting() {
+	var requestData struct {
+		Id    int    `json:"id"`
+		AppId string `json:"appId"`
+	}
+
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &requestData); err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4001,
+			"msg":       "参数错误",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	fmt.Printf("DEBUG: 发布邮件请求 - ID: %d, AppId: %s\n", requestData.Id, requestData.AppId)
+
+	// 查找邮件
+	mail, err := models.GetSystemMailById(requestData.Id)
+	if err != nil {
+		fmt.Printf("DEBUG: 查找邮件失败: %v\n", err)
+		c.Data["json"] = map[string]interface{}{
+			"code":      5001,
+			"msg":       "邮件不存在",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	// 检查邮件是否已经发布
+	if mail.Status == "sent" {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4002,
+			"msg":       "邮件已经发布",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	fmt.Printf("DEBUG: 准备发布邮件 - 当前状态: %s\n", mail.Status)
+
+	// 发布邮件给所有用户
+	if err := models.PublishSystemMail(int64(requestData.Id), requestData.AppId); err != nil {
+		fmt.Printf("DEBUG: PublishSystemMail failed: %v\n", err)
+		c.Data["json"] = map[string]interface{}{
+			"code":      5002,
+			"msg":       "发布邮件失败",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	fmt.Printf("DEBUG: 邮件发布成功 - ID: %d\n", requestData.Id)
+
+	c.Data["json"] = map[string]interface{}{
+		"code":      0,
+		"msg":       "邮件发布成功",
 		"timestamp": utils.UnixMilli(),
 		"data":      nil,
 	}

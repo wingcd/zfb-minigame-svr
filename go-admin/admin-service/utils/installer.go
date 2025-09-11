@@ -726,8 +726,6 @@ func getMySQLTables() []string {
 		// 计数器配置表
 		`CREATE TABLE IF NOT EXISTS counter_config (
 			id BIGINT PRIMARY KEY AUTO_INCREMENT,
-			created_at DATETIME NOT NULL,
-			updated_at DATETIME NOT NULL,
 			app_id VARCHAR(100) NOT NULL COMMENT '应用ID',
 			counter_key VARCHAR(100) NOT NULL COMMENT '计数器键',
 			reset_type VARCHAR(20) NOT NULL DEFAULT 'permanent' COMMENT '重置类型: daily/weekly/monthly/custom/permanent',
@@ -735,6 +733,8 @@ func getMySQLTables() []string {
 			next_reset_time DATETIME NULL COMMENT '下次重置时间',
 			description TEXT NULL COMMENT '描述',
 			is_active TINYINT NOT NULL DEFAULT 1 COMMENT '是否启用',
+			created_at DATETIME NOT NULL,
+			updated_at DATETIME NOT NULL,
 			INDEX idx_app_id (app_id),
 			INDEX idx_counter_key (counter_key),
 			INDEX idx_reset_type (reset_type),

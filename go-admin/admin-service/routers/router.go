@@ -129,6 +129,8 @@ func init() {
 	web.Router("/counter/create", &controllers.CounterController{}, "post:CreateCounter")
 	web.Router("/counter/update", &controllers.CounterController{}, "post:UpdateCounter")
 	web.Router("/counter/delete", &controllers.CounterController{}, "post:DeleteCounter")
+	web.Router("/counter/restore", &controllers.CounterController{}, "post:RestoreCounter")
+	web.Router("/counter/toggleStatus", &controllers.CounterController{}, "post:ToggleCounterStatus")
 	web.Router("/counter/getAllStats", &controllers.CounterController{}, "post:GetAllCounterStats")
 	// 统计模块
 	web.Router("/stat/dashboard", &controllers.StatsController{}, "post:GetDashboardStats")
@@ -144,6 +146,7 @@ func init() {
 	web.Router("/mail/update", &controllers.MailController{}, "post:UpdateMail")
 	web.Router("/mail/delete", &controllers.MailController{}, "post:DeleteMail")
 	web.Router("/mail/publish", &controllers.MailController{}, "post:PublishMail")
+	web.Router("/mail/publishExisting", &controllers.MailController{}, "post:PublishExisting")
 	web.Router("/mail/send", &controllers.MailController{}, "post:SendMail")
 	web.Router("/mail/getStats", &controllers.MailController{}, "post:GetMailStats")
 	web.Router("/mail/getUserMails", &controllers.MailController{}, "post:GetUserMails")

@@ -710,8 +710,8 @@ func syncLeaderboardToRedis(appId, leaderboardType, playerId string, score int64
 	// 2. 只有当extraData不为空时才存储详细信息
 	if extraData != "" {
 		userDetails := map[string]interface{}{
-			"extra_data":  extraData,
-			"update_time": time.Now().Unix(),
+			"extra_data": extraData,
+			"updated_at": time.Now().Unix(),
 		}
 
 		// 序列化用户详情为JSON

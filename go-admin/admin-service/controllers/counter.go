@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/beego/beego/v2/client/orm"
 	"github.com/beego/beego/v2/server/web"
 )
 
@@ -358,10 +359,11 @@ func (c *CounterController) GetCounterList() {
 				"totalValue":    totalValue,
 				"resetType":     counter.ResetType,
 				"resetValue":    counter.ResetValue,
+				"isActive":      counter.IsActive,
 				"resetTime":     resetTime,
 				"description":   counter.Description,
-				"gmtCreate":     counter.CreatedAt,
-				"gmtModify":     counter.UpdatedAt,
+				"createdAt":     counter.CreatedAt,
+				"updatedAt":     counter.UpdatedAt,
 			})
 		}
 
@@ -583,6 +585,7 @@ func (c *CounterController) DeleteCounter() {
 	var err error
 	// 如果指定了location，则只删除特定点位的数据
 	if req.Location != "" {
+		fmt.Printf("删除特定点位: AppId=%s, Key=%s, Location=%s\n", req.AppId, req.Key, req.Location)
 		err = models.DeleteCounterLocation(req.AppId, req.Key, req.Location)
 		if err != nil {
 			c.Data["json"] = map[string]interface{}{
@@ -596,6 +599,7 @@ func (c *CounterController) DeleteCounter() {
 		}
 	} else {
 		// 删除整个计数器配置和所有数据
+		fmt.Printf("删除整个计数器: AppId=%s, Key=%s\n", req.AppId, req.Key)
 		err = models.DeleteCounterConfig(req.AppId, req.Key)
 		if err != nil {
 			c.Data["json"] = map[string]interface{}{
@@ -717,6 +721,63 @@ func (c *CounterController) GetCounterConfig() {
 	c.ServeJSON()
 }
 
+// RestoreCounterRequest 恢复计数器请求结构
+type RestoreCounterRequest struct {
+	AppId string `json:"appId"`
+	Key   string `json:"key"`
+}
+
+// RestoreCounter 恢复软删除的计数器
+func (c *CounterController) RestoreCounter() {
+	var req RestoreCounterRequest
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4001,
+			"msg":       "参数解析失败",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	// 参数校验
+	if req.AppId == "" || req.Key == "" {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4001,
+			"msg":       "参数[appId]或[key]不能为空",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	fmt.Printf("恢复计数器: AppId=%s, Key=%s\n", req.AppId, req.Key)
+
+	// 恢复计数器配置
+	err := models.RestoreCounterConfig(req.AppId, req.Key)
+	if err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      5001,
+			"msg":       "恢复计数器失败: " + err.Error(),
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	// 返回成功响应
+	c.Data["json"] = map[string]interface{}{
+		"code":      0,
+		"msg":       "恢复计数器成功",
+		"timestamp": utils.UnixMilli(),
+		"data":      nil,
+	}
+	c.ServeJSON()
+}
+
 // GetCounterValue 获取计数器指定位置的值
 func (c *CounterController) GetCounterValue() {
 	var req struct {
@@ -795,6 +856,93 @@ func (c *CounterController) UpdateCounterValue() {
 		"msg":       "更新成功",
 		"timestamp": utils.UnixMilli(),
 		"data":      nil,
+	}
+	c.ServeJSON()
+}
+
+// ToggleCounterStatusRequest 切换计数器状态请求结构
+type ToggleCounterStatusRequest struct {
+	AppId string `json:"appId"`
+	Key   string `json:"key"`
+}
+
+// ToggleCounterStatus 切换计数器启用/禁用状态
+func (c *CounterController) ToggleCounterStatus() {
+	var req ToggleCounterStatusRequest
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4001,
+			"msg":       "参数解析失败",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	// 参数校验
+	if req.AppId == "" || req.Key == "" {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4001,
+			"msg":       "参数[appId]或[key]不能为空",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	fmt.Printf("切换计数器状态: AppId=%s, Key=%s\n", req.AppId, req.Key)
+
+	// 先获取当前配置状态（注意：这里需要获取包括已禁用的配置）
+	o := orm.NewOrm()
+	config := &models.CounterConfig{}
+	err := o.QueryTable("counter_config").
+		Filter("app_id", req.AppId).
+		Filter("counter_key", req.Key).
+		One(config)
+	if err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      4004,
+			"msg":       "计数器配置不存在",
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	// 切换状态
+	newStatus := !config.IsActive
+	err = models.UpdateCounterConfig(req.AppId, req.Key, map[string]interface{}{
+		"is_active": newStatus,
+	})
+	if err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code":      5001,
+			"msg":       "切换计数器状态失败: " + err.Error(),
+			"timestamp": utils.UnixMilli(),
+			"data":      nil,
+		}
+		c.ServeJSON()
+		return
+	}
+
+	// 返回成功响应
+	statusText := "禁用"
+	if newStatus {
+		statusText = "启用"
+	}
+
+	c.Data["json"] = map[string]interface{}{
+		"code":      0,
+		"msg":       fmt.Sprintf("计数器已%s", statusText),
+		"timestamp": utils.UnixMilli(),
+		"data": map[string]interface{}{
+			"appId":    req.AppId,
+			"key":      req.Key,
+			"isActive": newStatus,
+		},
 	}
 	c.ServeJSON()
 }

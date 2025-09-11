@@ -22,7 +22,7 @@ func init() {
 	web.InsertFilter("/*", web.BeforeExec, middlewares.RateLimitMiddleware)
 
 	// 健康检查
-	web.Router("/health", &controllers.HealthController{}, "get:Health")
+	web.Router("/health", &controllers.HealthController{}, "post:Health")
 
 	// 心跳接口
 	web.Router("/heartbeat", &controllers.HealthController{}, "post:Heartbeat")
@@ -46,10 +46,10 @@ func init() {
 
 	// 计数器接口（对齐zy-sdk/counter.ts）
 	web.Router("/counter/increment", &controllers.CounterController{}, "post:IncrementCounter")
-	web.Router("/counter/get", &controllers.CounterController{}, "get:GetCounter")
+	web.Router("/counter/get", &controllers.CounterController{}, "post:GetCounter")
 
 	// 邮件接口（对齐zy-sdk/mail.ts）
-	web.Router("/mail/getUserMails", &controllers.MailController{}, "get:GetUserMails")
+	web.Router("/mail/getUserMails", &controllers.MailController{}, "post:GetUserMails")
 	web.Router("/mail/updateStatus", &controllers.MailController{}, "post:UpdateMailStatus")
 
 	// ===== 向后兼容接口（保留原有接口）=====

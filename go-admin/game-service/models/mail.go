@@ -2,6 +2,7 @@ package models
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
 	"game-service/utils"
@@ -9,21 +10,8 @@ import (
 	"github.com/beego/beego/v2/client/orm"
 )
 
-// Mail 邮件模型 - 兼容旧版本API
+// Mail 邮件系统模型 - 对应数据库设计的mail_[appid]表
 type Mail struct {
-	Id        int64     `orm:"auto" json:"id"`
-	UserId    string    `orm:"size(100)" json:"user_id"`
-	Title     string    `orm:"size(200)" json:"title"`
-	Content   string    `orm:"type(text)" json:"content"`
-	Rewards   string    `orm:"type(text)" json:"rewards"`
-	Status    int       `orm:"default(0)" json:"status"` // 0:未读 1:已读 2:已领取
-	ExpireAt  time.Time `orm:"null" json:"expire_at"`
-	CreatedAt string    `orm:"auto_now_add;type(datetime)" json:"create_time"`
-	UpdatedAt string    `orm:"auto_now;type(datetime)" json:"update_time"`
-}
-
-// MailSystem 邮件系统模型 - 对应数据库设计的mail_[appid]表
-type MailSystem struct {
 	ID         int64      `orm:"pk;auto" json:"id"`
 	AppId      string     `orm:"-" json:"appId"`                                              // 应用ID（仅用于逻辑，不存储到数据库）
 	Title      string     `orm:"size(200)" json:"title"`                                      // 邮件标题
@@ -57,12 +45,7 @@ type MailPlayerRelation struct {
 	UpdatedAt  time.Time  `orm:"auto_now;type(datetime);column(updated_at)" json:"updatedAt"`
 }
 
-// GetTableName 获取动态表名
-func (m *Mail) GetTableName(appId string) string {
-	return utils.GetMailTableName(appId)
-}
-
-func (ms *MailSystem) GetTableName(appId string) string {
+func (ms *Mail) GetTableName(appId string) string {
 	return utils.GetMailTableName(appId)
 }
 
@@ -98,6 +81,8 @@ func GetMailList(appId, userId string, page, pageSize int) ([]Mail, int64, error
 		INNER JOIN %s r ON m.id = r.mail_id
 		WHERE r.player_id = ?
 		  AND (m.expire_time IS NULL OR m.expire_time > NOW())
+		  AND send_time IS NOT NULL AND send_time <= NOW()
+		  AND status = 'sent'
 		ORDER BY m.created_at DESC
 		LIMIT ? OFFSET ?
 	`, mailTableName, relationTableName)
@@ -112,12 +97,12 @@ func GetMailList(appId, userId string, page, pageSize int) ([]Mail, int64, error
 	var mails []Mail
 	for _, result := range results {
 		mail := Mail{
-			UserId: userId,
+			AppId: appId,
 		}
 
 		if id, ok := result["id"]; ok {
 			if idInt, ok := id.(int64); ok {
-				mail.Id = idInt
+				mail.ID = idInt
 			}
 		}
 		if title, ok := result["title"].(string); ok {
@@ -131,36 +116,24 @@ func GetMailList(appId, userId string, page, pageSize int) ([]Mail, int64, error
 		}
 		if status, ok := result["status"]; ok {
 			if statusInt, ok := status.(int64); ok {
-				mail.Status = int(statusInt)
+				mail.Status = strconv.Itoa(int(statusInt))
 			}
 		}
 		if createTime, ok := result["create_time"].(time.Time); ok {
-			mail.CreatedAt = createTime.Format("2006-01-02 15:04:05")
+			mail.CreatedAt = createTime
 		}
 		if updateTime, ok := result["update_time"].(time.Time); ok {
-			mail.UpdatedAt = updateTime.Format("2006-01-02 15:04:05")
+			mail.UpdatedAt = updateTime
 		}
 		if expireAt, ok := result["expire_at"].(time.Time); ok {
-			mail.ExpireAt = expireAt
+			mail.ExpireTime = &expireAt
 		}
 
 		mails = append(mails, mail)
 	}
 
 	// 查询总数
-	countSQL := fmt.Sprintf(`
-		SELECT COUNT(*)
-		FROM %s m
-		INNER JOIN %s r ON m.id = r.mail_id
-		WHERE r.player_id = ?
-		  AND (m.expire_time IS NULL OR m.expire_time > NOW())
-	`, mailTableName, relationTableName)
-
-	var total int64
-	err = o.Raw(countSQL, userId).QueryRow(&total)
-	if err != nil {
-		return nil, 0, err
-	}
+	var total int64 = int64(len(mails))
 
 	return mails, total, nil
 }
@@ -267,19 +240,20 @@ func DeleteMail(appId, userId string, mailId int64) error {
 }
 
 // SendMail 发送邮件（管理后台使用）
-func SendMail(appId, userId, title, content, rewards string, expireHours int) error {
+func SendMail(appId, plyaerId, title, content, rewards string, expireHours int) error {
 	o := orm.NewOrm()
 
 	mail := &Mail{}
 
-	mail.UserId = userId
+	mail.AppId = appId
 	mail.Title = title
 	mail.Content = content
 	mail.Rewards = rewards
-	mail.Status = 0
+	mail.Status = "sent"
 
 	if expireHours > 0 {
-		mail.ExpireAt = time.Now().Add(time.Duration(expireHours) * time.Hour)
+		expireTime := time.Now().Add(time.Duration(expireHours) * time.Hour)
+		mail.ExpireTime = &expireTime
 	}
 
 	_, err := o.Insert(mail)
@@ -298,22 +272,22 @@ func GetMailDetails(appId string, mailId int64) (*Mail, error) {
 }
 
 // GetAllMailList 获取所有邮件列表（管理后台使用）
-func GetAllMailList(appId string, page, pageSize int, userId string) ([]Mail, int64, error) {
+func GetAllMailList(appId string, page, pageSize int, plyaerId string) ([]Mail, int64, error) {
 	o := orm.NewOrm()
 
 	mail := &Mail{}
 	tableName := mail.GetTableName(appId)
 
 	qs := o.QueryTable(tableName)
-	if userId != "" {
-		qs = qs.Filter("user_id", userId)
+	if plyaerId != "" {
+		qs = qs.Filter("player_id", plyaerId)
 	}
 
 	total, _ := qs.Count()
 
 	var mails []Mail
 	offset := (page - 1) * pageSize
-	_, err := qs.OrderBy("-create_time").Limit(pageSize, offset).All(&mails)
+	_, err := qs.OrderBy("-created_at").Limit(pageSize, offset).All(&mails)
 
 	return mails, total, err
 }
@@ -393,6 +367,8 @@ func HasNewMail(appId, userId string) (bool, error) {
 		WHERE r.player_id = ?
 		  AND r.status = 0
 		  AND (m.expire_time IS NULL OR m.expire_time > NOW())
+		  AND send_time IS NOT NULL AND send_time <= NOW()
+		  AND status = 'sent'
 	`, mailTableName, relationTableName)
 
 	var count int64

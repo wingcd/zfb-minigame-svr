@@ -134,6 +134,13 @@
             </div>
           </template>
         </el-table-column>
+        <el-table-column label="激活状态" width="100" align="center">
+          <template #default="scope">
+            <el-tag :type="scope.row.isActive ? 'success' : 'danger'" size="small">
+              {{ scope.row.isActive ? '激活' : '已停用' }}
+            </el-tag>
+          </template>
+        </el-table-column>
         <el-table-column label="重置类型" width="120" align="center">
           <template #default="scope">
             <el-tag :type="getResetTypeTagType(scope.row.resetType)">
@@ -146,16 +153,23 @@
             {{ scope.row.resetType === 'custom' ? `${scope.row.resetValue}小时` : '-' }}
           </template>
         </el-table-column>
-        <el-table-column prop="CreatedAt" label="创建时间" width="180" align="center">
+        <el-table-column prop="createdAt" label="创建时间" width="180" align="center">
           <template #default="scope">
-            {{ formatDate(scope.row.CreatedAt) }}
+            {{ formatDate(scope.row.createdAt) }}
           </template>
         </el-table-column>
-                        <el-table-column label="操作" width="240" align="center" fixed="right">
+                        <el-table-column label="操作" width="300" align="center" fixed="right">
           <template #default="scope">
             <el-button link @click="editCounterConfig(scope.row)">编辑配置</el-button>
             <el-button link type="warning" @click="deleteCounterAllLocations(scope.row)">删除全部点位</el-button>
-            <el-button link class="danger" @click="deleteCounterConfig(scope.row)">删除配置</el-button>
+            <!-- 根据激活状态显示不同按钮 -->
+            <template v-if="scope.row.isActive">
+              <el-button link type="warning" @click="deactivateCounterConfig(scope.row)">停用</el-button>
+            </template>
+            <template v-else>
+              <el-button link type="success" @click="activateCounterConfig(scope.row)">激活</el-button>
+              <el-button link class="danger" @click="deleteCounterConfig(scope.row)">删除</el-button>
+            </template>
           </template>
         </el-table-column>
       </el-table>
@@ -203,10 +217,17 @@
             {{ formatDate(scope.row.CreatedAt) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="200" align="center" fixed="right">
+        <el-table-column label="操作" width="250" align="center" fixed="right">
           <template #default="scope">
             <el-button link @click="editCounter(scope.row)">编辑</el-button>
-            <el-button link class="danger" @click="deleteCounter(scope.row)">删除</el-button>
+            <!-- 根据激活状态显示不同按钮 -->
+            <template v-if="scope.row.IsActive">
+              <el-button link type="warning" @click="deactivateCounter(scope.row)">停用</el-button>
+            </template>
+            <template v-else>
+              <el-button link type="success" @click="activateCounter(scope.row)">激活</el-button>
+              <el-button link class="danger" @click="deleteCounter(scope.row)">删除</el-button>
+            </template>
           </template>
         </el-table-column>
       </el-table>
@@ -661,6 +682,72 @@ export default {
       }
     }
     
+    // 激活计数器配置
+    const activateCounterConfig = async (counter) => {
+      try {
+        await ElMessageBox.confirm(
+          `确定要激活计数器配置 "${counter.key}" 吗？`,
+          '确认激活',
+          {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            type: 'info'
+          }
+        )
+        
+        const response = await counterAPI.toggleStatus({
+          appId: selectedAppId.value,
+          key: counter.key
+        })
+        
+        if (response.code === 0) {
+          ElMessage.success(response.msg || '操作成功')
+          loadCounters()
+          loadStats()
+        } else {
+          ElMessage.error(response.msg || '操作失败')
+        }
+      } catch (error) {
+        if (error !== 'cancel') {
+          console.error('切换计数器状态失败:', error)
+          ElMessage.error('操作失败')
+        }
+      }
+    }
+    
+    // 停用计数器配置
+    const deactivateCounterConfig = async (counter) => {
+      try {
+        await ElMessageBox.confirm(
+          `确定要停用计数器配置 "${counter.key}" 吗？停用后该计数器将无法被访问。`,
+          '确认停用',
+          {
+            confirmButtonText: '确定',
+            cancelButtonText: '取消',
+            type: 'warning'
+          }
+        )
+        
+        const response = await counterAPI.toggleStatus({
+          appId: selectedAppId.value,
+          key: counter.key
+        })
+        
+        if (response.code === 0) {
+          ElMessage.success(response.msg || '操作成功')
+          loadCounters()
+          loadStats()
+        } else {
+          ElMessage.error(response.msg || '操作失败')
+        }
+      } catch (error) {
+        if (error !== 'cancel') {
+          console.error('切换计数器状态失败:', error)
+          ElMessage.error('操作失败')
+        }
+      }
+    }
+    
     // 获取重置类型标签类型
     const getResetTypeTagType = (resetType) => {
       const types = {
@@ -751,6 +838,8 @@ export default {
       deleteCounter,
       deleteCounterAllLocations,
       deleteCounterConfig,
+      activateCounterConfig,
+      deactivateCounterConfig,
       getResetTypeTagType,
       getResetTypeLabel,
       handleResetTypeChange,

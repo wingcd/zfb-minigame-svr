@@ -3,6 +3,7 @@ package models
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -148,14 +149,14 @@ func GetPlayerMailList(appId, playerId string, page, pageSize int) ([]orm.Params
 			m.title,
 			m.content,
 			m.rewards,
-			m.expire_at,
+			m.expire_time as expire_at,
 			m.created_at,
 			r.status,
 			r.updated_at as read_at
 		FROM %s m
 		INNER JOIN %s r ON m.id = r.mail_id
 		WHERE r.player_id = ?
-		  AND (m.expire_at IS NULL OR m.expire_at > NOW())
+		  AND (m.expire_time IS NULL OR m.expire_time > NOW())
 		ORDER BY m.created_at DESC
 		LIMIT ? OFFSET ?
 	`, mailTableName, relationTableName)
@@ -172,7 +173,7 @@ func GetPlayerMailList(appId, playerId string, page, pageSize int) ([]orm.Params
 		FROM %s m
 		INNER JOIN %s r ON m.id = r.mail_id
 		WHERE r.player_id = ?
-		  AND (m.expire_at IS NULL OR m.expire_at > NOW())
+		  AND (m.expire_time IS NULL OR m.expire_time > NOW())
 	`, mailTableName, relationTableName)
 
 	var total int64
@@ -354,9 +355,9 @@ func GetMailStats(appId string) (map[string]interface{}, error) {
 		return nil, err
 	}
 
-	// 草稿邮件数 (status = 'draft' 或 'pending')
+	// 草稿邮件数 (status = 'draft', 'pending' 或 'scheduled')
 	var draft int64
-	sql = fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE status IN ('draft', 'pending')", tableName)
+	sql = fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE status IN ('draft', 'pending', 'scheduled')", tableName)
 	err = o.Raw(sql).QueryRow(&draft)
 	if err != nil {
 		return nil, err
@@ -452,9 +453,12 @@ func CreateSystemMail(mail *MailSystem) error {
 	o := orm.NewOrm()
 
 	// 设置默认值
+	fmt.Printf("DEBUG: CreateSystemMail 收到状态: %s\n", mail.Status)
 	if mail.Status == "" {
 		mail.Status = "draft"
+		fmt.Printf("DEBUG: 状态为空，设置为默认值: draft\n")
 	}
+	fmt.Printf("DEBUG: 最终状态: %s\n", mail.Status)
 	if mail.Sender == "" {
 		mail.Sender = "system"
 	}
@@ -469,8 +473,8 @@ func CreateSystemMail(mail *MailSystem) error {
 
 	// 使用新的表结构插入系统邮件
 	sql := fmt.Sprintf(`
-		INSERT INTO %s (title, content, type, sender, targets, target_type, rewards, status, expire_time, created_at, updated_at, created_by)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), ?)
+		INSERT INTO %s (title, content, type, sender, targets, target_type, rewards, status, send_time, expire_time, created_at, updated_at, created_by)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), ?)
 	`, tableName)
 
 	// 序列化奖励
@@ -483,6 +487,14 @@ func CreateSystemMail(mail *MailSystem) error {
 	targetsJSON := ""
 	if len(mail.Targets) > 0 {
 		targetsJSON = mail.Targets
+	}
+
+	// 处理发布时间 - 如果为 nil 则传递 nil 给数据库
+	var sendTimeValue interface{}
+	if mail.SendTime != nil {
+		sendTimeValue = mail.SendTime
+	} else {
+		sendTimeValue = nil
 	}
 
 	// 处理过期时间 - 如果为 nil 则传递 nil 给数据库
@@ -507,6 +519,7 @@ func CreateSystemMail(mail *MailSystem) error {
 		mail.TargetType,
 		rewardsJSON,
 		mail.Status,
+		sendTimeValue,
 		expireTimeValue,
 		mail.CreatedBy,
 	).Exec()
@@ -532,19 +545,20 @@ func UpdateSystemMail(mail *MailSystem) error {
 	// 使用动态表名
 	tableName := mail.GetTableName(mail.AppId)
 
-	// Use the simple table schema that actually exists
+	// 完整的更新语句，包含所有可能更新的字段
 	sql := fmt.Sprintf(`
 		UPDATE %s SET 
-			title = ?, content = ?, rewards = ?, status = ?, expire_at = ?, updated_at = NOW()
+			title = ?, content = ?, rewards = ?, status = ?, 
+			target_type = ?, send_time = ?, expire_time = ?, updated_at = NOW()
 		WHERE id = ?
 	`, tableName)
 
-	// Convert status from string to int (draft=0, sent=1, expired=2)
-	statusInt := 0
-	if mail.Status == "sent" {
-		statusInt = 1
-	} else if mail.Status == "expired" {
-		statusInt = 2
+	// 处理发布时间 - 如果为 nil 则传递 nil 给数据库
+	var sendTimeValue interface{}
+	if mail.SendTime != nil {
+		sendTimeValue = mail.SendTime
+	} else {
+		sendTimeValue = nil
 	}
 
 	// 处理过期时间 - 如果为 nil 则传递 nil 给数据库
@@ -556,7 +570,8 @@ func UpdateSystemMail(mail *MailSystem) error {
 	}
 
 	_, err := o.Raw(sql,
-		mail.Title, mail.Content, mail.Rewards, statusInt, expireTimeValue,
+		mail.Title, mail.Content, mail.Rewards, mail.Status,
+		mail.TargetType, sendTimeValue, expireTimeValue,
 		mail.ID,
 	).Exec()
 
@@ -564,7 +579,7 @@ func UpdateSystemMail(mail *MailSystem) error {
 }
 
 // DeleteSystemMail 删除系统邮件
-func DeleteSystemMail(appId, mailId string) error {
+func DeleteSystemMail(appId string, mailId int64) error {
 	o := orm.NewOrm()
 	mail := &MailSystem{}
 	tableName := mail.GetTableName(appId)
@@ -577,7 +592,7 @@ func DeleteSystemMail(appId, mailId string) error {
 }
 
 // DeletePersonalMail 删除个人邮件（删除用户邮件关系记录）
-func DeletePersonalMail(appId, mailId string) error {
+func DeletePersonalMail(appId string, mailId int64) error {
 	o := orm.NewOrm()
 	relationTableName := getMailRelationTableName(appId)
 
@@ -684,11 +699,14 @@ func GetAllMailList(appId string, page, pageSize int) ([]map[string]interface{},
 		for k, v := range result {
 			item[k] = v
 		}
+		// string转换为int64
+		id, _ := strconv.ParseInt(item["id"].(string), 10, 64)
+		item["id"] = id
 		// 添加appId字段
 		item["appId"] = appId
 		// 确保mailId字段存在（兼容性）
-		if item["id"] != nil {
-			item["mailId"] = item["id"]
+		if item["mailId"] != nil {
+			item["mailId"] = item["mailId"]
 		}
 		list = append(list, item)
 	}

@@ -1,10 +1,9 @@
 package controllers
 
 import (
+	"encoding/json"
 	"game-service/models"
 	"game-service/utils"
-
-	"strconv"
 
 	"github.com/beego/beego/v2/server/web"
 )
@@ -13,163 +12,264 @@ type CounterController struct {
 	web.Controller
 }
 
-// GetCounter 获取计数器
+// JSON请求结构体（对齐JS接口）
+type GetCounterRequest struct {
+	Key string `json:"key"`
+}
+
+type IncrementCounterRequest struct {
+	Key       string `json:"key"`
+	Location  string `json:"location,omitempty"`
+	Increment int64  `json:"increment,omitempty"`
+}
+
+type DecrementCounterRequest struct {
+	Key       string `json:"key"`
+	Location  string `json:"location,omitempty"`
+	Decrement int64  `json:"decrement,omitempty"`
+}
+
+type SetCounterRequest struct {
+	Key      string `json:"key"`
+	Location string `json:"location,omitempty"`
+	Value    int64  `json:"value"`
+}
+
+type ResetCounterRequest struct {
+	Key      string `json:"key"`
+	Location string `json:"location,omitempty"`
+}
+
+// GetCounter 获取计数器（对齐JS getCounter功能）
+// 传入key，获取所有location数值
 func (c *CounterController) GetCounter() {
 	// 从中间件获取应用ID
 	appId := c.Ctx.Input.GetData("app_id").(string)
 
-	// 获取参数
-	counterName := c.GetString("counterName")
-	if counterName == "" {
-		utils.ErrorResponse(c.Ctx, 1002, "counterName参数不能为空", nil)
+	// 解析JSON请求体
+	var req GetCounterRequest
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
+		utils.ErrorResponse(c.Ctx, 4001, "参数解析失败: "+err.Error(), nil)
 		return
 	}
 
-	// 获取全局计数器
-	value, err := models.GetGlobalCounter(appId, counterName)
+	// 验证参数
+	if req.Key == "" {
+		utils.ErrorResponse(c.Ctx, 4001, "参数[key]错误", nil)
+		return
+	}
+
+	// 获取计数器值
+	value, err := models.GetCounterValues(appId, req.Key)
 	if err != nil {
-		utils.ErrorResponse(c.Ctx, 1003, "获取计数器失败: "+err.Error(), nil)
+		if err.Error() == "计数器配置不存在" {
+			utils.ErrorResponse(c.Ctx, 4004, "计数器["+req.Key+"]不存在，请先在管理后台创建", nil)
+		} else {
+			utils.ErrorResponse(c.Ctx, 5001, err.Error(), nil)
+		}
 		return
 	}
 
 	result := map[string]interface{}{
-		"counterName": counterName,
-		"value":       value,
+		"key":       req.Key,
+		"locations": value,
 	}
 
-	utils.SuccessResponse(c.Ctx, "获取成功", result)
+	utils.SuccessResponse(c.Ctx, "success", result)
 }
 
-// IncrementCounter 增加计数器
+// IncrementCounter 增加计数器（对齐JS incrementCounter功能）
 func (c *CounterController) IncrementCounter() {
 	// 从中间件获取应用ID
 	appId := c.Ctx.Input.GetData("app_id").(string)
 
-	// 获取参数
-	counterName := c.GetString("counterName")
-	incrementStr := c.GetString("increment", "1")
-
-	if counterName == "" {
-		utils.ErrorResponse(c.Ctx, 1002, "counterName参数不能为空", nil)
+	// 解析JSON请求体
+	var req IncrementCounterRequest
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
+		utils.ErrorResponse(c.Ctx, 4001, "参数解析失败: "+err.Error(), nil)
 		return
 	}
 
-	increment, err := strconv.ParseInt(incrementStr, 10, 64)
-	if err != nil {
-		utils.ErrorResponse(c.Ctx, 1002, "increment参数格式错误", nil)
+	// 验证参数
+	if req.Key == "" {
+		utils.ErrorResponse(c.Ctx, 4001, "参数[key]错误", nil)
 		return
 	}
 
-	// 增加全局计数器
-	newValue, err := models.IncrementGlobalCounter(appId, counterName, increment)
+	// 设置默认值
+	location := req.Location
+	if location == "" {
+		location = "default"
+	}
+
+	increment := req.Increment
+	if increment <= 0 {
+		increment = 1
+	}
+
+	// 增加计数器值
+	newValue, err := models.IncrementCounterValue(appId, req.Key, location, increment)
 	if err != nil {
-		utils.ErrorResponse(c.Ctx, 1003, "增加计数器失败: "+err.Error(), nil)
+		if err.Error() == "计数器配置不存在" {
+			utils.ErrorResponse(c.Ctx, 4004, "计数器["+req.Key+"]不存在，请先在管理后台创建", nil)
+		} else if err.Error() == "点位不存在" {
+			utils.ErrorResponse(c.Ctx, 4004, "计数器["+req.Key+"]的点位["+location+"]不存在", nil)
+		} else {
+			utils.ErrorResponse(c.Ctx, 5001, err.Error(), nil)
+		}
 		return
 	}
 
 	result := map[string]interface{}{
-		"counterName": counterName,
-		"value":       newValue,
+		"key":          req.Key,
+		"location":     location,
+		"currentValue": newValue,
 	}
 
-	utils.SuccessResponse(c.Ctx, "增加成功", result)
+	utils.SuccessResponse(c.Ctx, "success", result)
 }
 
-// DecrementCounter 减少计数器
+// DecrementCounter 减少计数器（对齐JS decrementCounter功能）
 func (c *CounterController) DecrementCounter() {
 	// 从中间件获取应用ID
 	appId := c.Ctx.Input.GetData("app_id").(string)
 
-	// 获取参数
-	counterName := c.GetString("counterName")
-	decrementStr := c.GetString("decrement", "1")
-
-	if counterName == "" {
-		utils.ErrorResponse(c.Ctx, 1002, "counterName参数不能为空", nil)
+	// 解析JSON请求体
+	var req DecrementCounterRequest
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
+		utils.ErrorResponse(c.Ctx, 4001, "参数解析失败: "+err.Error(), nil)
 		return
 	}
 
-	decrement, err := strconv.ParseInt(decrementStr, 10, 64)
-	if err != nil {
-		utils.ErrorResponse(c.Ctx, 1002, "decrement参数格式错误", nil)
+	// 验证参数
+	if req.Key == "" {
+		utils.ErrorResponse(c.Ctx, 4001, "参数[key]错误", nil)
 		return
 	}
 
-	// 减少全局计数器
-	newValue, err := models.DecrementGlobalCounter(appId, counterName, decrement)
+	// 设置默认值
+	location := req.Location
+	if location == "" {
+		location = "default"
+	}
+
+	decrement := req.Decrement
+	if decrement <= 0 {
+		decrement = 1
+	}
+
+	// 减少计数器值
+	newValue, err := models.DecrementCounterValue(appId, req.Key, location, decrement)
 	if err != nil {
-		utils.ErrorResponse(c.Ctx, 1003, "减少计数器失败: "+err.Error(), nil)
+		if err.Error() == "计数器配置不存在" {
+			utils.ErrorResponse(c.Ctx, 4004, "计数器["+req.Key+"]不存在，请先在管理后台创建", nil)
+		} else if err.Error() == "点位不存在" {
+			utils.ErrorResponse(c.Ctx, 4004, "计数器["+req.Key+"]的点位["+location+"]不存在", nil)
+		} else {
+			utils.ErrorResponse(c.Ctx, 5001, err.Error(), nil)
+		}
 		return
 	}
 
 	result := map[string]interface{}{
-		"counterName": counterName,
-		"value":       newValue,
+		"key":          req.Key,
+		"location":     location,
+		"currentValue": newValue,
 	}
 
-	utils.SuccessResponse(c.Ctx, "减少成功", result)
+	utils.SuccessResponse(c.Ctx, "success", result)
 }
 
-// SetCounter 设置计数器
+// SetCounter 设置计数器（对齐JS setCounter功能）
 func (c *CounterController) SetCounter() {
 	// 从中间件获取应用ID
 	appId := c.Ctx.Input.GetData("app_id").(string)
 
-	// 获取参数
-	counterName := c.GetString("counterName")
-	valueStr := c.GetString("value")
-
-	if counterName == "" || valueStr == "" {
-		utils.ErrorResponse(c.Ctx, 1002, "counterName和value参数不能为空", nil)
+	// 解析JSON请求体
+	var req SetCounterRequest
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
+		utils.ErrorResponse(c.Ctx, 4001, "参数解析失败: "+err.Error(), nil)
 		return
 	}
 
-	value, err := strconv.ParseInt(valueStr, 10, 64)
-	if err != nil {
-		utils.ErrorResponse(c.Ctx, 1002, "value参数格式错误", nil)
+	// 验证参数
+	if req.Key == "" {
+		utils.ErrorResponse(c.Ctx, 4001, "参数[key]错误", nil)
 		return
 	}
 
-	// 设置全局计数器
-	err = models.SetGlobalCounter(appId, counterName, value)
+	// 设置默认location
+	location := req.Location
+	if location == "" {
+		location = "default"
+	}
+
+	// 设置计数器值
+	newValue, err := models.SetCounterValue(appId, req.Key, location, req.Value)
 	if err != nil {
-		utils.ErrorResponse(c.Ctx, 1003, "设置计数器失败: "+err.Error(), nil)
+		if err.Error() == "计数器配置不存在" {
+			utils.ErrorResponse(c.Ctx, 4004, "计数器["+req.Key+"]不存在，请先在管理后台创建", nil)
+		} else if err.Error() == "点位不存在" {
+			utils.ErrorResponse(c.Ctx, 4004, "计数器["+req.Key+"]的点位["+location+"]不存在", nil)
+		} else {
+			utils.ErrorResponse(c.Ctx, 5001, err.Error(), nil)
+		}
 		return
 	}
 
 	result := map[string]interface{}{
-		"counterName": counterName,
-		"value":       value,
+		"key":          req.Key,
+		"location":     location,
+		"currentValue": newValue,
 	}
 
-	utils.SuccessResponse(c.Ctx, "设置成功", result)
+	utils.SuccessResponse(c.Ctx, "success", result)
 }
 
-// ResetCounter 重置计数器
+// ResetCounter 重置计数器（对齐JS resetCounter功能）
 func (c *CounterController) ResetCounter() {
 	// 从中间件获取应用ID
 	appId := c.Ctx.Input.GetData("app_id").(string)
 
-	// 获取参数
-	counterName := c.GetString("counterName")
-	if counterName == "" {
-		utils.ErrorResponse(c.Ctx, 1002, "counterName参数不能为空", nil)
+	// 解析JSON请求体
+	var req ResetCounterRequest
+	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
+		utils.ErrorResponse(c.Ctx, 4001, "参数解析失败: "+err.Error(), nil)
 		return
 	}
 
-	// 重置全局计数器
-	err := models.ResetGlobalCounter(appId, counterName)
+	// 验证参数
+	if req.Key == "" {
+		utils.ErrorResponse(c.Ctx, 4001, "参数[key]错误", nil)
+		return
+	}
+
+	// 设置默认location
+	location := req.Location
+	if location == "" {
+		location = "default"
+	}
+
+	// 重置计数器值
+	newValue, err := models.ResetCounterValue(appId, req.Key, location)
 	if err != nil {
-		utils.ErrorResponse(c.Ctx, 1003, "重置计数器失败: "+err.Error(), nil)
+		if err.Error() == "计数器配置不存在" {
+			utils.ErrorResponse(c.Ctx, 4004, "计数器["+req.Key+"]不存在，请先在管理后台创建", nil)
+		} else if err.Error() == "点位不存在" {
+			utils.ErrorResponse(c.Ctx, 4004, "计数器["+req.Key+"]的点位["+location+"]不存在", nil)
+		} else {
+			utils.ErrorResponse(c.Ctx, 5001, err.Error(), nil)
+		}
 		return
 	}
 
 	result := map[string]interface{}{
-		"counterName": counterName,
-		"value":       0,
+		"key":          req.Key,
+		"location":     location,
+		"currentValue": newValue,
 	}
 
-	utils.SuccessResponse(c.Ctx, "重置成功", result)
+	utils.SuccessResponse(c.Ctx, "success", result)
 }
 
 // GetAllCounters 获取所有计数器

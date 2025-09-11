@@ -469,9 +469,16 @@
                         <div class="form-group">
                             <label for="counterName">
                                 <i class="fas fa-tag"></i>
-                                计数器名称
+                                计数器名称 (key)
                             </label>
                             <input type="text" id="counterName" value="test_counter" placeholder="计数器名称">
+                        </div>
+                        <div class="form-group">
+                            <label for="counterLocation">
+                                <i class="fas fa-map-marker-alt"></i>
+                                位置 (location)
+                            </label>
+                            <input type="text" id="counterLocation" value="default" placeholder="计数器位置">
                         </div>
                         <div class="form-group">
                             <label for="increment">
@@ -494,12 +501,21 @@
                     </button>
                 </div>
                 <div class="test-body">
-                    <div class="form-group">
-                        <label for="getCounterName">
-                            <i class="fas fa-tag"></i>
-                            计数器名称
-                        </label>
-                        <input type="text" id="getCounterName" value="test_counter" placeholder="计数器名称">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="getCounterName">
+                                <i class="fas fa-tag"></i>
+                                计数器名称 (key)
+                            </label>
+                            <input type="text" id="getCounterName" value="test_counter" placeholder="计数器名称">
+                        </div>
+                        <div class="form-group">
+                            <label for="getCounterLocation">
+                                <i class="fas fa-map-marker-alt"></i>
+                                位置 (location)
+                            </label>
+                            <input type="text" id="getCounterLocation" value="default" placeholder="计数器位置">
+                        </div>
                     </div>
                     <div id="getCounter-result" class="result-container"></div>
                 </div>

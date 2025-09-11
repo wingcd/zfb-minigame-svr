@@ -134,21 +134,18 @@ CREATE TABLE IF NOT EXISTS leaderboard_%s (
   KEY idx_updated_at (updated_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='排行榜数据表_%s'`, cleanAppId, cleanAppId)
 
-	// 创建计数器表
+	// 创建计数器表（简化结构，对齐JS功能）
 	counterSQL := fmt.Sprintf(`
 CREATE TABLE IF NOT EXISTS counter_%s (
   id bigint(20) NOT NULL AUTO_INCREMENT,
-  counter_name varchar(100) NOT NULL COMMENT '计数器名称',
-  player_id varchar(100) DEFAULT NULL COMMENT '用户ID（全局计数器为空）',
-  count bigint(20) NOT NULL DEFAULT 0 COMMENT '计数值',
-  reset_time datetime DEFAULT NULL COMMENT '重置时间',
-  reset_interval int(11) DEFAULT NULL COMMENT '重置间隔（秒）',
+  counter_key varchar(100) NOT NULL COMMENT '计数器名称',
+  location varchar(100) NOT NULL DEFAULT 'default' COMMENT '点位标识',
+  value bigint(20) NOT NULL DEFAULT 0 COMMENT '计数值',
   created_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
-  UNIQUE KEY uk_counter_user (counter_name, player_id),
-  KEY idx_counter_name (counter_name),
-  KEY idx_reset_time (reset_time)
+  UNIQUE KEY uk_location (counter_key, location),
+  KEY idx_location (location)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='计数器数据表_%s'`, cleanAppId, cleanAppId)
 
 	// 创建邮件表（存储邮件内容）

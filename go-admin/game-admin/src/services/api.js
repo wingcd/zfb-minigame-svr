@@ -268,7 +268,9 @@ const unifiedAPI = {
     create: (data) => api.post('/counter/create', data),
     update: (data) => api.post('/counter/update', data),
     delete: (params) => api.post('/counter/delete', params),
+    restore: (params) => api.post('/counter/restore', params),
     getAllStats: (params) => api.post('/counter/getAllStats', params),
+    toggleStatus: (params) => api.post('/counter/toggleStatus', params),
   },
   
   // 统计相关
@@ -289,6 +291,7 @@ const unifiedAPI = {
     update: (data) => api.post('/mail/update', data),
     delete: (params) => api.post('/mail/delete', params),
     publish: (mailData) => api.post('/mail/publish', mailData),
+    publishExisting: (params) => api.post('/mail/publishExisting', params),
     getStats: (params) => api.post('/mail/getStats', params || {}),
     getUserMails: (params) => api.post('/mail/getUserMails', params),
     initSystem: (params) => api.post('/mail/initSystem', params || {})
@@ -388,6 +391,7 @@ export const createCounter = unifiedAPI.counter.create
 export const updateCounter = unifiedAPI.counter.update
 export const deleteCounter = unifiedAPI.counter.delete
 export const getCounterStats = unifiedAPI.counter.getAllStats
+export const toggleCounterStatus = unifiedAPI.counter.toggleStatus
 
 export const getDashboardStats = unifiedAPI.stats.getDashboardStats
 export const getTopApps = unifiedAPI.stats.getTopApps

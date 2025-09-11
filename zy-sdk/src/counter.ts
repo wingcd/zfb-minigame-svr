@@ -49,12 +49,7 @@ export class Counter {
                 [locationKey: string]: {
                     value: number
                 }
-            },
-            resetType: string,
-            resetValue?: number,
-            resetTime?: string,
-            timeToReset?: number,
-            description: string
+            }
         }
     }> {
         const params = {
@@ -121,10 +116,6 @@ export class Counter {
             key: string,
             location: string,
             value: number,
-            resetType: string,
-            resetValue?: number,
-            resetTime?: string,
-            timeToReset?: number
         }
     }> {
         const result = await this.getCounter(key);
@@ -151,10 +142,6 @@ export class Counter {
                 key: result.data.key,
                 location: location,
                 value: locationData.value,
-                resetType: result.data.resetType,
-                resetValue: result.data.resetValue,
-                resetTime: result.data.resetTime,
-                timeToReset: result.data.timeToReset
             }
         };
     }

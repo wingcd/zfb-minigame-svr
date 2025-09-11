@@ -145,7 +145,7 @@
         <template #default="scope">
           <div class="mail-info">
             <div class="mail-title">{{ scope.row.title }}</div>
-            <div class="mail-id">ID: {{ scope.row.mailId }}</div>
+            <div class="mail-id">ID: {{ scope.row.id }}</div>
           </div>
         </template>
       </el-table-column>
@@ -165,8 +165,8 @@
       </el-table-column>
       <el-table-column label="奖励" width="100">
         <template #default="scope">
-          <el-tag v-if="scope.row.rewards && scope.row.rewards.length > 0" type="warning">
-            {{ scope.row.rewards.length }} 项
+          <el-tag v-if="getRewardsCount(scope.row.rewards) > 0" type="warning">
+            {{ getRewardsCount(scope.row.rewards) }} 项
           </el-tag>
           <span v-else class="text-muted">无</span>
         </template>
@@ -206,9 +206,17 @@
           </el-button>
           <el-button 
             link 
+            class="warning"
+            @click="modifyMail(scope.row)" 
+            v-if="hasPermission(PERMISSIONS.MAIL_MANAGE)"
+          >
+            修改
+          </el-button>
+          <el-button 
+            link 
             class="success"
             @click="publishMail(scope.row)" 
-            v-if="(scope.row.status === 'pending' || scope.row.status === 'scheduled') && hasPermission(PERMISSIONS.MAIL_MANAGE)"
+            v-if="scope.row.status === 'draft' && hasPermission(PERMISSIONS.MAIL_MANAGE)"
           >
             发布
           </el-button>
@@ -216,7 +224,7 @@
             link 
             class="warning"
             @click="expireMail(scope.row)" 
-            v-if="scope.row.status === 'active' && hasPermission(PERMISSIONS.MAIL_MANAGE)"
+            v-if="scope.row.status === 'sent' && hasPermission(PERMISSIONS.MAIL_MANAGE)"
           >
             下线
           </el-button>
@@ -268,16 +276,16 @@
         </el-form-item>
         <el-form-item label="邮件类型" prop="type">
           <el-radio-group v-model="mailDialog.form.type">
-            <el-radio label="system">系统邮件</el-radio>
-            <el-radio label="notice">公告邮件</el-radio>
-            <el-radio label="reward">奖励邮件</el-radio>
+            <el-radio value="system">系统邮件</el-radio>
+            <el-radio value="notice">公告邮件</el-radio>
+            <el-radio value="reward">奖励邮件</el-radio>
           </el-radio-group>
         </el-form-item>
         <el-form-item label="目标类型" prop="targetType">
           <el-radio-group v-model="mailDialog.form.targetType" @change="onTargetTypeChange">
-            <el-radio label="all">全部玩家</el-radio>
-            <el-radio label="user">指定玩家</el-radio>
-            <el-radio label="level">等级范围</el-radio>
+            <el-radio value="all">全部玩家</el-radio>
+            <el-radio value="user">指定玩家</el-radio>
+            <el-radio value="level">等级范围</el-radio>
           </el-radio-group>
         </el-form-item>
         <el-form-item label="目标用户" v-if="mailDialog.form.targetType === 'user'" prop="targetUsers">
@@ -365,9 +373,9 @@
           <el-descriptions-item label="内容" :span="2">{{ detailDialog.mail.content }}</el-descriptions-item>
         </el-descriptions>
         
-        <div v-if="detailDialog.mail.rewards && detailDialog.mail.rewards.length > 0" style="margin-top: 20px;">
+        <div v-if="getRewardsArray(detailDialog.mail.rewards).length > 0" style="margin-top: 20px;">
           <h4>奖励列表</h4>
-          <el-table :data="detailDialog.mail.rewards" style="width: 100%">
+          <el-table :data="getRewardsArray(detailDialog.mail.rewards)" style="width: 100%">
             <el-table-column prop="type" label="类型" width="120"></el-table-column>
             <el-table-column prop="name" label="名称" width="150"></el-table-column>
             <el-table-column prop="amount" label="数量" width="100"></el-table-column>
@@ -456,6 +464,7 @@ export default {
     const mailSystemInitialized = ref(false) // 邮件系统初始化状态，默认为未知，需要检测
     const selectedMails = ref([]) // 选中的邮件列表
     const mailTableRef = ref(null) // 表格引用
+    const mailFormRef = ref(null) // 表单引用
     
     const searchForm = reactive({
       title: '',
@@ -593,6 +602,25 @@ export default {
     
     // 工具函数
     
+    // 获取奖励数组（处理JSON字符串和数组两种格式）
+    const getRewardsArray = (rewards) => {
+      if (!rewards) return []
+      if (typeof rewards === 'string') {
+        try {
+          return JSON.parse(rewards)
+        } catch (e) {
+          console.warn('奖励数据解析失败:', e)
+          return []
+        }
+      }
+      return Array.isArray(rewards) ? rewards : []
+    }
+    
+    // 获取奖励数量
+    const getRewardsCount = (rewards) => {
+      return getRewardsArray(rewards).length
+    }
+    
     const getTypeText = (type) => {
       const types = {
         'system': '系统邮件',
@@ -622,22 +650,18 @@ export default {
     
     const getStatusText = (status) => {
       const statuses = {
-        'pending': '待发布',
-        'scheduled': '定时发布',
-        'active': '已发布',
+        'draft': '草稿',
+        'sent': '已发送',
         'expired': '已过期',
-        'draft': '草稿' // 保留兼容性
       }
       return statuses[status] || status
     }
     
     const getStatusColor = (status) => {
       const colors = {
-        'pending': 'warning',
-        'scheduled': 'info',
-        'active': 'success',
+        'draft': 'info',
+        'sent': 'warning',
         'expired': 'danger',
-        'draft': 'info' // 保留兼容性
       }
       return colors[status] || 'info'
     }
@@ -668,10 +692,56 @@ export default {
         ...mail,
         appId: selectedAppId.value // 使用当前选择的应用ID，而不是邮件原有的应用ID
       }
+      
+      // 解析奖励数据：如果是JSON字符串则转换为数组，否则保持原状
+      if (mail.rewards && typeof mail.rewards === 'string') {
+        try {
+          mailDialog.form.rewards = JSON.parse(mail.rewards)
+        } catch (e) {
+          console.warn('奖励数据解析失败:', e)
+          mailDialog.form.rewards = []
+        }
+      } else {
+        mailDialog.form.rewards = mail.rewards || []
+      }
+      
       if (mail.targetUsers && mail.targetUsers.length > 0) {
         targetUsersText.value = mail.targetUsers.join('\n')
       }
       mailDialog.visible = true
+    }
+    
+    const modifyMail = (mail) => {
+      // 修改邮件 - 允许修改任何状态的邮件
+      mailDialog.isEdit = true
+      mailDialog.form = { 
+        ...mail,
+        appId: selectedAppId.value // 使用当前选择的应用ID
+      }
+      
+      // 解析奖励数据：如果是JSON字符串则转换为数组，否则保持原状
+      if (mail.rewards && typeof mail.rewards === 'string') {
+        try {
+          mailDialog.form.rewards = JSON.parse(mail.rewards)
+        } catch (e) {
+          console.warn('奖励数据解析失败:', e)
+          mailDialog.form.rewards = []
+        }
+      } else {
+        mailDialog.form.rewards = mail.rewards || []
+      }
+      
+      if (mail.targetUsers && mail.targetUsers.length > 0) {
+        targetUsersText.value = mail.targetUsers.join('\n')
+      } else {
+        targetUsersText.value = ''
+      }
+      mailDialog.visible = true
+      
+      // 如果是已发布的邮件，给出提示
+      if (mail.status === 'active') {
+        ElMessage.warning('注意：修改已发布的邮件可能会影响用户体验')
+      }
     }
     
     const onTargetTypeChange = () => {
@@ -706,6 +776,29 @@ export default {
         
         const data = { ...mailDialog.form }
         data.createBy = getAdminInfo().id
+        if(data.publishTime){
+          let date = new Date(data.publishTime)
+          // 转换为unix时间戳（秒）
+          data.publishTime = Math.floor(date.getTime() / 1000)
+        }
+        if(data.expireTime){
+          let date = new Date(data.expireTime)
+          // 转换为unix时间戳（秒）
+          data.expireTime = Math.floor(date.getTime() / 1000)
+        }
+        
+        // 将奖励转换为JSON字符串
+        if (data.rewards && data.rewards.length > 0) {
+          data.rewards = JSON.stringify(data.rewards)
+        } else {
+          data.rewards = ''
+        }
+        
+        // 设置邮件状态
+        if (!publish) {
+          // 保存草稿时，明确设置状态为 draft
+          data.status = 'draft'
+        }
         
         let result
         if (mailDialog.isEdit) {
@@ -730,9 +823,11 @@ export default {
               }
             }
           } else {
+            // 编辑时保存草稿，确保状态为 draft
+            data.status = 'draft'
             result = await mailAPI.update(data)
             if (result.code === 0) {
-              ElMessage.success('更新成功')
+              ElMessage.success('保存草稿成功')
             }
           }
         } else if (publish) {
@@ -744,7 +839,7 @@ export default {
             type: data.type,
             targetType: data.targetType,
             targets: data.targets,
-            rewards: data.rewards ? data.rewards.map(r => `${r.type}:${r.amount}:${r.name}`).join(',') : '',
+            rewards: data.rewards && data.rewards.length > 0 ? JSON.stringify(data.rewards) : '',
             expireDays: data.expireDays || 7
           }
           
@@ -753,9 +848,11 @@ export default {
             ElMessage.success('邮件发布成功')
           }
         } else {
+          // 新建邮件保存草稿
+          data.status = 'draft'
           result = await mailAPI.create(data)
           if (result.code === 0) {
-            ElMessage.success('创建成功')
+            ElMessage.success('草稿保存成功')
           }
         }
         
@@ -777,18 +874,15 @@ export default {
     const publishMail = async (mail) => {
       try {
         const title = mail.title || '该邮件'
-        await ElMessageBox.confirm(`确定要发布邮件 "${title}" 吗？发布后不可修改内容。`, '确认发布')
+        await ElMessageBox.confirm(`确定要发布邮件 "${title}" 吗？发布后将立即推送给所有用户。`, '确认发布')
         
-        // 准备发布数据，根据新的API要求
+        // 发布已存在的邮件，只需要邮件ID和应用ID
         const publishData = {
-          appId: selectedAppId.value,
-          title: mail.title,
-          content: mail.content,
-          rewards: mail.rewards ? mail.rewards.map(r => `${r.type}:${r.amount}:${r.name}`).join(',') : '',
-          expireDays: 7 // 默认7天过期
+          id: mail.id,
+          appId: selectedAppId.value
         }
         
-        const result = await mailAPI.publish(publishData)
+        const result = await mailAPI.publishExisting(publishData)
         
         if (result.code === 0) {
           ElMessage.success('邮件发布成功')
@@ -810,7 +904,8 @@ export default {
         await ElMessageBox.confirm(`确定要下线邮件 "${mail.title}" 吗？`, '确认下线')
         
         const result = await mailAPI.update({
-          mailId: mail.id,
+          id: mail.id,
+          appId: mail.appId,
           status: 'expired'
         })
         
@@ -839,7 +934,7 @@ export default {
         
         const result = await mailAPI.delete({
           appId: selectedAppId.value,
-          mailId: mail.id
+          id: mail.id
         })
         
         if (result.code === 0) {
@@ -859,6 +954,20 @@ export default {
     
     const copyMail = (mail) => {
       mailDialog.isEdit = false
+      
+      // 解析奖励数据：如果是JSON字符串则转换为数组，否则深拷贝
+      let rewardsData = []
+      if (mail.rewards && typeof mail.rewards === 'string') {
+        try {
+          rewardsData = JSON.parse(mail.rewards)
+        } catch (e) {
+          console.warn('奖励数据解析失败:', e)
+          rewardsData = []
+        }
+      } else {
+        rewardsData = mail.rewards ? JSON.parse(JSON.stringify(mail.rewards)) : []
+      }
+      
       mailDialog.form = {
         appId: selectedAppId.value, // 使用当前选择的应用ID
         title: `${mail.title} - 副本`,
@@ -868,7 +977,7 @@ export default {
         targetUsers: mail.targetUsers ? [...mail.targetUsers] : [],
         minLevel: mail.minLevel || 1,
         maxLevel: mail.maxLevel || 999,
-        rewards: mail.rewards ? JSON.parse(JSON.stringify(mail.rewards)) : [],
+        rewards: rewardsData,
         publishTime: '', // 清空发布时间
         expireTime: ''   // 清空过期时间
       }
@@ -892,7 +1001,8 @@ export default {
         
         // 更新邮件状态为已发布，并重置发布时间
         const result = await mailAPI.update({
-          mailId: mail.id,
+          id: mail.id,
+          appId: mail.appId,
           status: 'active',
           publishTime: new Date().toISOString().replace('T', ' ').substring(0, 19),
           // 重新设置过期时间（7天后）
@@ -921,7 +1031,7 @@ export default {
     
     const viewMailStats = async (mail) => {
       try {
-        const result = await mailAPI.getStats({ mailId: mail.id })
+        const result = await mailAPI.getStats({ id: mail.id })
         if (result.code === 0) {
           statsDialog.stats = result.data.stats
           statsDialog.visible = true
@@ -1036,7 +1146,7 @@ export default {
               appId: selectedAppId.value,
               title: mail.title,
               content: mail.content,
-              rewards: mail.rewards ? mail.rewards.map(r => `${r.type}:${r.amount}:${r.name}`).join(',') : '',
+              rewards: mail.rewards && mail.rewards.length > 0 ? JSON.stringify(mail.rewards) : '',
               expireDays: 7
             }
             const result = await mailAPI.publish(publishData)
@@ -1085,7 +1195,8 @@ export default {
         for (const mail of activeMails) {
           try {
             const result = await mailAPI.update({
-              mailId: mail.id,
+              id: mail.id,
+              appId: mail.appId,
               status: 'expired'
             })
             if (result.code === 0) {
@@ -1137,7 +1248,7 @@ export default {
           try {
             const result = await mailAPI.delete({
               appId: selectedAppId.value,
-              mailId: mail.id
+              id: mail.id
             })
             if (result.code === 0) {
               successCount++
@@ -1178,6 +1289,7 @@ export default {
       mailSystemInitialized,
       selectedMails,
       mailTableRef,
+      mailFormRef,
       appList,
       searchForm,
       pagination,
@@ -1190,6 +1302,8 @@ export default {
       canBatchExpire,
       canBatchDelete,
       getAppName,
+      getRewardsArray,
+      getRewardsCount,
       getTypeText,
       getTypeColor,
       getTargetTypeText,
@@ -1197,6 +1311,7 @@ export default {
       getStatusColor,
       showCreateDialog,
       editMail,
+      modifyMail,
       onTargetTypeChange,
       addReward,
       removeReward,
