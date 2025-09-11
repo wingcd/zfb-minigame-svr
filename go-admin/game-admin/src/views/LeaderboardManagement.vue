@@ -397,7 +397,7 @@ export default {
         
         if (result.code === 0) {
           // 确保数据是数组格式，防止迭代错误
-          const dataList = result.data?.scores
+          const dataList = result.data?.list
           leaderboardData.value = Array.isArray(dataList) ? dataList : []
         } else {
           leaderboardData.value = []

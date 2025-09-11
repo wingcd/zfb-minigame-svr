@@ -1,14 +1,17 @@
 package models
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"time"
 
 	"admin-service/utils"
 
 	"github.com/beego/beego/v2/client/orm"
 	"github.com/beego/beego/v2/core/logs"
+	"github.com/go-redis/redis/v8"
 )
 
 // LeaderboardConfig 排行榜配置结构（管理表）
@@ -36,7 +39,7 @@ type LeaderboardConfig struct {
 // Leaderboard 排行榜数据结构
 type Leaderboard struct {
 	Id        int64  `orm:"auto" json:"id"`
-	Type      string `orm:"size(50)" json:"type"`
+	Type      int64  `orm:"column(type)" json:"type"`
 	UserId    string `orm:"size(100);column(player_id)" json:"userId"`
 	Score     int64  `orm:"default(0)" json:"score"`
 	ExtraData string `orm:"type(text);column(extra_data)" json:"extraData"`
@@ -137,28 +140,48 @@ func getLeaderboardConfigId(appId, leaderboardType string) (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	return result[0]["id"].(uint64), nil
+
+	if len(result) == 0 {
+		return 0, fmt.Errorf("未找到排行榜配置")
+	}
+
+	// 处理字符串到uint64的转换
+	idValue := result[0]["id"]
+	switch v := idValue.(type) {
+	case string:
+		// 如果是字符串，需要转换
+		id, err := strconv.ParseUint(v, 10, 64)
+		if err != nil {
+			return 0, fmt.Errorf("ID格式错误: %v", err)
+		}
+		return id, nil
+	case int64:
+		return uint64(v), nil
+	case uint64:
+		return v, nil
+	case int:
+		return uint64(v), nil
+	default:
+		return 0, fmt.Errorf("未知的ID类型: %T", v)
+	}
 }
 
 // DeleteLeaderboard 删除排行榜
 func DeleteLeaderboard(appId, leaderboardType string) error {
 	o := orm.NewOrm()
 
-	// 先获取排行榜配置ID（在删除配置之前）
-	configId, err := getLeaderboardConfigId(appId, leaderboardType)
-	if err != nil {
-		return err
-	}
-
 	// 删除动态表中的排行榜数据
 	leaderboardData := &Leaderboard{}
 	tableName := leaderboardData.GetTableName(appId)
 
 	deleteSQL := fmt.Sprintf("DELETE FROM %s WHERE type = ?", tableName)
-	_, err = o.Raw(deleteSQL, configId).Exec()
+	_, err := o.Raw(deleteSQL, leaderboardType).Exec()
 	if err != nil {
 		return err
 	}
+
+	// 清空Redis缓存
+	clearLeaderboardFromRedis(appId, leaderboardType)
 
 	// 最后删除排行榜配置
 	_, err = o.QueryTable("leaderboard_config").
@@ -173,12 +196,6 @@ func DeleteLeaderboard(appId, leaderboardType string) error {
 func GetLeaderboardData(appId, leaderboardType string, page, pageSize int) ([]map[string]interface{}, int64, error) {
 	o := orm.NewOrm()
 
-	// 获取排行榜配置ID
-	configId, err := getLeaderboardConfigId(appId, leaderboardType)
-	if err != nil {
-		return nil, 0, err
-	}
-
 	// 使用动态表
 	leaderboardData := &Leaderboard{}
 	tableName := leaderboardData.GetTableName(appId)
@@ -186,7 +203,7 @@ func GetLeaderboardData(appId, leaderboardType string, page, pageSize int) ([]ma
 	// 获取总数
 	countSQL := fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE type = ?", tableName)
 	var total int64
-	err = o.Raw(countSQL, configId).QueryRow(&total)
+	err := o.Raw(countSQL, leaderboardType).QueryRow(&total)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -194,7 +211,7 @@ func GetLeaderboardData(appId, leaderboardType string, page, pageSize int) ([]ma
 	// 获取分页数据
 	offset := (page - 1) * pageSize
 	querySQL := fmt.Sprintf(`
-		SELECT id, type, player_id, score, extra_data, created_at as createdAt, updated_at as updatedAt 
+		SELECT id, type, player_id, score, extra_data as extraData, created_at as createdAt, updated_at as updatedAt 
 		FROM %s 
 		WHERE type = ? 
 		ORDER BY score DESC, created_at ASC 
@@ -202,7 +219,7 @@ func GetLeaderboardData(appId, leaderboardType string, page, pageSize int) ([]ma
 	`, tableName)
 
 	var results []orm.Params
-	_, err = o.Raw(querySQL, configId, pageSize, offset).Values(&results)
+	_, err = o.Raw(querySQL, leaderboardType, pageSize, offset).Values(&results)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -213,10 +230,10 @@ func GetLeaderboardData(appId, leaderboardType string, page, pageSize int) ([]ma
 
 	for i, row := range results {
 		var playerId string
-		if pid, ok := row["playerId"].(string); ok {
+		if pid, ok := row["player_id"].(string); ok {
 			playerId = pid
 		} else {
-			playerId = fmt.Sprintf("%v", row["playerId"])
+			playerId = fmt.Sprintf("%v", row["player_id"])
 		}
 
 		// 获取玩家详细信息
@@ -300,12 +317,6 @@ func GetLeaderboardData(appId, leaderboardType string, page, pageSize int) ([]ma
 func UpdateLeaderboardScore(appId, leaderboardType, playerId string, score int64) error {
 	o := orm.NewOrm()
 
-	// 获取排行榜配置ID
-	configId, err := getLeaderboardConfigId(appId, leaderboardType)
-	if err != nil {
-		return err
-	}
-
 	// 使用动态表
 	leaderboardData := &Leaderboard{}
 	tableName := leaderboardData.GetTableName(appId)
@@ -313,22 +324,27 @@ func UpdateLeaderboardScore(appId, leaderboardType, playerId string, score int64
 	// 检查记录是否存在
 	var existingId int64
 	checkSQL := fmt.Sprintf("SELECT id FROM %s WHERE type = ? AND player_id = ?", tableName)
-	err = o.Raw(checkSQL, configId, playerId).QueryRow(&existingId)
+	err := o.Raw(checkSQL, leaderboardType, playerId).QueryRow(&existingId)
 
 	if err == orm.ErrNoRows {
 		// 插入新记录
 		insertSQL := fmt.Sprintf(`
-			INSERT INTO %s (type, type, player_id, score, created_at, updated_at) 
-			VALUES (?, ?, ?, ?, NOW(), NOW())
+			INSERT INTO %s (type, player_id, score, created_at, updated_at) 
+			VALUES (?, ?, ?, NOW(), NOW())
 		`, tableName)
-		_, err = o.Raw(insertSQL, configId, leaderboardType, playerId, score).Exec()
+		_, err = o.Raw(insertSQL, leaderboardType, playerId, score).Exec()
 	} else if err == nil {
 		// 更新现有记录
 		updateSQL := fmt.Sprintf(`
 			UPDATE %s SET score = ?, updated_at = NOW() 
 			WHERE type = ? AND player_id = ?
 		`, tableName)
-		_, err = o.Raw(updateSQL, score, configId, playerId).Exec()
+		_, err = o.Raw(updateSQL, score, leaderboardType, playerId).Exec()
+	}
+
+	// 如果数据库操作成功，同步到Redis
+	if err == nil {
+		syncLeaderboardToRedis(appId, leaderboardType, playerId, score, "")
 	}
 
 	return err
@@ -338,18 +354,12 @@ func UpdateLeaderboardScore(appId, leaderboardType, playerId string, score int64
 func DeleteLeaderboardScore(appId, leaderboardType, playerId string) error {
 	o := orm.NewOrm()
 
-	// 获取排行榜配置ID
-	configId, err := getLeaderboardConfigId(appId, leaderboardType)
-	if err != nil {
-		return err
-	}
-
 	// 使用动态表
 	leaderboardData := &Leaderboard{}
 	tableName := leaderboardData.GetTableName(appId)
 
 	deleteSQL := fmt.Sprintf("DELETE FROM %s WHERE type = ? AND player_id = ?", tableName)
-	_, err = o.Raw(deleteSQL, configId, playerId).Exec()
+	_, err := o.Raw(deleteSQL, leaderboardType, playerId).Exec()
 
 	return err
 }
@@ -438,12 +448,6 @@ func CommitLeaderboardScore(appId, leaderboardType, playerId string, score int64
 func QueryLeaderboardScore(appId, leaderboardType, playerId string) (int64, int, error) {
 	o := orm.NewOrm()
 
-	// 获取排行榜配置ID
-	configId, err := getLeaderboardConfigId(appId, leaderboardType)
-	if err != nil {
-		return 0, 0, err
-	}
-
 	// 使用动态表
 	leaderboardData := &Leaderboard{}
 	tableName := leaderboardData.GetTableName(appId)
@@ -451,7 +455,7 @@ func QueryLeaderboardScore(appId, leaderboardType, playerId string) (int64, int,
 	// 获取用户分数
 	var userScore int64
 	scoreSQL := fmt.Sprintf("SELECT score FROM %s WHERE type = ? AND player_id = ?", tableName)
-	err = o.Raw(scoreSQL, configId, playerId).QueryRow(&userScore)
+	err := o.Raw(scoreSQL, leaderboardType, playerId).QueryRow(&userScore)
 
 	if err != nil {
 		if err == orm.ErrNoRows {
@@ -463,7 +467,7 @@ func QueryLeaderboardScore(appId, leaderboardType, playerId string) (int64, int,
 	// 计算排名
 	rankSQL := fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE type = ? AND score > ?", tableName)
 	var rank int64
-	err = o.Raw(rankSQL, configId, userScore).QueryRow(&rank)
+	err = o.Raw(rankSQL, leaderboardType, userScore).QueryRow(&rank)
 
 	if err != nil {
 		return userScore, 0, err
@@ -573,7 +577,6 @@ func createLeaderboardTable(appId string) error {
 			CREATE TABLE %s (
 				id BIGINT AUTO_INCREMENT PRIMARY KEY,
 				type BIGINT NOT NULL COMMENT '排行榜配置ID，关联leaderboard_config.id',
-				type VARCHAR(50) NOT NULL COMMENT '排行榜类型',
 				player_id VARCHAR(100) NOT NULL,
 				score BIGINT DEFAULT 0,
 				extra_data TEXT,
@@ -620,16 +623,9 @@ func UpdateLeaderboardScoreWithExtra(appId, leaderboardType, playerId string, sc
 	leaderboardData := &Leaderboard{}
 	tableName := leaderboardData.GetTableName(appId)
 
-	// 获取排行榜配置ID
-	configId, err := getLeaderboardConfigId(appId, leaderboardType)
-	if err != nil {
-		return err
-	}
-
 	// 查找现有记录 - 使用原生SQL查询
 	var existingRecord struct {
 		ID        int64  `json:"id"`
-		ConfigId  int64  `json:"type"`
 		Type      string `json:"type"`
 		PlayerId  string `json:"player_id"`
 		Score     int64  `json:"score"`
@@ -638,11 +634,11 @@ func UpdateLeaderboardScoreWithExtra(appId, leaderboardType, playerId string, sc
 		UpdatedAt string `json:"updated_at"`
 	}
 
-	err = o.Raw(fmt.Sprintf("SELECT id, type, type, player_id, score, extra_data, created_at, updated_at FROM %s WHERE type = ? AND player_id = ?", tableName), configId, playerId).QueryRow(&existingRecord)
+	err = o.Raw(fmt.Sprintf("SELECT id, type, player_id, score, extra_data, created_at, updated_at FROM %s WHERE type = ? AND player_id = ?", tableName), leaderboardType, playerId).QueryRow(&existingRecord)
 
 	if err == orm.ErrNoRows {
 		// 新增记录 - 使用原生SQL插入
-		_, err = o.Raw(fmt.Sprintf("INSERT INTO %s (type, type, player_id, score, extra_data) VALUES (?, ?, ?, ?, ?)", tableName), configId, leaderboardType, playerId, score, extraDataJson).Exec()
+		_, err = o.Raw(fmt.Sprintf("INSERT INTO %s (type, player_id, score, extra_data) VALUES (?, ?, ?, ?)", tableName), leaderboardType, playerId, score, extraDataJson).Exec()
 		if err != nil {
 			return fmt.Errorf("插入排行榜数据失败: %v", err)
 		}
@@ -675,5 +671,191 @@ func UpdateLeaderboardScoreWithExtra(appId, leaderboardType, playerId string, sc
 		}
 	}
 
+	return nil
+}
+
+// =============================================================================
+// Redis缓存同步功能 - 与game-service保持一致
+// =============================================================================
+
+// getLeaderboardRedisKey 获取排行榜Redis键名（与game-service保持一致）
+func getLeaderboardRedisKey(appId, leaderboardType string) string {
+	return fmt.Sprintf("leaderboard:%s:%s", appId, leaderboardType)
+}
+
+// syncLeaderboardToRedis 同步单个排行榜记录到Redis
+func syncLeaderboardToRedis(appId, leaderboardType, playerId string, score int64, extraData string) error {
+	if RedisClient == nil {
+		logs.Warning("Redis客户端未初始化，跳过缓存同步")
+		return nil
+	}
+
+	ctx := context.Background()
+
+	// 排行榜有序集合的key（用于存储分数排名）
+	scoreKey := getLeaderboardRedisKey(appId, leaderboardType)
+
+	// 1. 更新有序集合中的分数（使用用户ID作为member，分数作为score）
+	member := &redis.Z{
+		Score:  float64(score),
+		Member: playerId,
+	}
+
+	err := RedisClient.ZAdd(ctx, scoreKey, member).Err()
+	if err != nil {
+		logs.Error("Redis ZAdd失败: %v", err)
+		return err
+	}
+
+	// 2. 只有当extraData不为空时才存储详细信息
+	if extraData != "" {
+		userDetails := map[string]interface{}{
+			"extra_data":  extraData,
+			"update_time": time.Now().Unix(),
+		}
+
+		// 序列化用户详情为JSON
+		detailsJSON, err := json.Marshal(userDetails)
+		if err != nil {
+			logs.Error("序列化用户详情失败: %v", err)
+			return err
+		}
+
+		// 用户详情哈希表的key（用于存储额外数据）
+		detailKey := getLeaderboardRedisKey(appId, leaderboardType) + ":details"
+
+		err = RedisClient.HSet(ctx, detailKey, playerId, string(detailsJSON)).Err()
+		if err != nil {
+			logs.Error("Redis HSet失败: %v", err)
+			return err
+		}
+	}
+
+	logs.Info("同步排行榜数据到Redis成功: %s:%s:%s", appId, leaderboardType, playerId)
+	return nil
+}
+
+// removeLeaderboardFromRedis 从Redis中删除排行榜记录
+func removeLeaderboardFromRedis(appId, leaderboardType, playerId string) error {
+	if RedisClient == nil {
+		logs.Warning("Redis客户端未初始化，跳过缓存清理")
+		return nil
+	}
+
+	ctx := context.Background()
+
+	// 排行榜有序集合的key
+	scoreKey := getLeaderboardRedisKey(appId, leaderboardType)
+	// 用户详情哈希表的key
+	detailKey := getLeaderboardRedisKey(appId, leaderboardType) + ":details"
+
+	// 1. 从有序集合中移除用户
+	err := RedisClient.ZRem(ctx, scoreKey, playerId).Err()
+	if err != nil {
+		logs.Error("Redis ZRem失败: %v", err)
+		return err
+	}
+
+	// 2. 从详情哈希表中移除用户
+	err = RedisClient.HDel(ctx, detailKey, playerId).Err()
+	if err != nil {
+		logs.Error("Redis HDel失败: %v", err)
+		return err
+	}
+
+	logs.Info("从Redis中删除排行榜数据: %s:%s:%s", appId, leaderboardType, playerId)
+	return nil
+}
+
+// clearLeaderboardFromRedis 清空整个排行榜的Redis缓存
+func clearLeaderboardFromRedis(appId, leaderboardType string) error {
+	if RedisClient == nil {
+		logs.Warning("Redis客户端未初始化，跳过缓存清理")
+		return nil
+	}
+
+	ctx := context.Background()
+
+	// 排行榜有序集合的key
+	scoreKey := getLeaderboardRedisKey(appId, leaderboardType)
+	// 用户详情哈希表的key
+	detailKey := getLeaderboardRedisKey(appId, leaderboardType) + ":details"
+
+	// 删除排行榜有序集合
+	err := RedisClient.Del(ctx, scoreKey).Err()
+	if err != nil {
+		logs.Error("Redis Del scoreKey失败: %v", err)
+		return err
+	}
+
+	// 删除排行榜详情哈希表
+	err = RedisClient.Del(ctx, detailKey).Err()
+	if err != nil {
+		logs.Error("Redis Del detailKey失败: %v", err)
+		return err
+	}
+
+	logs.Info("清空Redis排行榜缓存: %s:%s", appId, leaderboardType)
+	return nil
+}
+
+// refreshLeaderboardToRedis 刷新整个排行榜到Redis
+func refreshLeaderboardToRedis(appId, leaderboardType string) error {
+	if RedisClient == nil {
+		logs.Warning("Redis客户端未初始化，跳过缓存刷新")
+		return nil
+	}
+
+	// 先清空Redis缓存
+	err := clearLeaderboardFromRedis(appId, leaderboardType)
+	if err != nil {
+		return err
+	}
+
+	// 从数据库重新加载排行榜数据
+	o := orm.NewOrm()
+	leaderboardData := &Leaderboard{}
+	tableName := leaderboardData.GetTableName(appId)
+
+	// 查询所有排行榜数据
+	querySQL := fmt.Sprintf(`
+		SELECT player_id, score, extra_data 
+		FROM %s 
+		WHERE type = ? 
+		ORDER BY score DESC
+	`, tableName)
+
+	var results []orm.Params
+	_, err = o.Raw(querySQL, leaderboardType).Values(&results)
+	if err != nil {
+		logs.Error("查询排行榜数据失败: %v", err)
+		return err
+	}
+
+	// 批量同步到Redis
+	for _, row := range results {
+		playerId := fmt.Sprintf("%v", row["player_id"])
+		score := int64(0)
+		if s, ok := row["score"].(string); ok {
+			if scoreVal, err := strconv.ParseInt(s, 10, 64); err == nil {
+				score = scoreVal
+			}
+		} else if s, ok := row["score"].(int64); ok {
+			score = s
+		}
+
+		extraData := ""
+		if ed, ok := row["extra_data"].(string); ok {
+			extraData = ed
+		}
+
+		err = syncLeaderboardToRedis(appId, leaderboardType, playerId, score, extraData)
+		if err != nil {
+			logs.Error("同步排行榜记录到Redis失败: %v", err)
+			// 继续处理其他记录，不中断整个过程
+		}
+	}
+
+	logs.Info("刷新排行榜到Redis完成: %s:%s (%d条记录)", appId, leaderboardType, len(results))
 	return nil
 }

@@ -1,6 +1,7 @@
 package models
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strconv"
@@ -165,20 +166,23 @@ func calculateNextResetTime(resetType string, resetValue int) *time.Time {
 
 	switch resetType {
 	case "daily":
-		nextReset = now.Truncate(24 * time.Hour).Add(24 * time.Hour)
+		// 计算下一个午夜（明天00:00:00）
+		tomorrow := now.Add(24 * time.Hour)
+		nextReset = time.Date(tomorrow.Year(), tomorrow.Month(), tomorrow.Day(), 0, 0, 0, 0, now.Location())
 	case "weekly":
-		// 获取本周一的开始时间，然后加一周
+		// 获取下周一的00:00:00
 		weekday := int(now.Weekday())
 		if weekday == 0 {
 			weekday = 7 // 将周日从0改为7
 		}
-		daysToMonday := weekday - 1
-		startOfWeek := now.AddDate(0, 0, -daysToMonday).Truncate(24 * time.Hour)
-		nextReset = startOfWeek.Add(7 * 24 * time.Hour)
+		daysUntilNextMonday := 7 - weekday + 1
+		nextMonday := now.AddDate(0, 0, daysUntilNextMonday)
+		nextReset = time.Date(nextMonday.Year(), nextMonday.Month(), nextMonday.Day(), 0, 0, 0, 0, now.Location())
 	case "monthly":
-		// 下个月的第一天
+		// 下个月的第一天00:00:00
 		year, month, _ := now.Date()
-		nextReset = time.Date(year, month+1, 1, 0, 0, 0, 0, now.Location())
+		nextMonth := time.Date(year, month+1, 1, 0, 0, 0, 0, now.Location())
+		nextReset = nextMonth
 	case "custom":
 		if resetValue > 0 {
 			nextReset = now.Add(time.Duration(resetValue) * time.Hour)
@@ -383,8 +387,12 @@ func syncScoreToRedis(appId, userId, leaderboardName string, score int64, extraD
 
 	// 排行榜有序集合的key（用于存储分数排名）
 	scoreKey := getLeaderboardRedisKey(appId, leaderboardName)
-	// 用户详情哈希表的key（用于存储额外数据）
-	detailKey := getLeaderboardRedisKey(appId, leaderboardName) + ":details"
+
+	// 获取排行榜配置以确定过期策略
+	config, err := getLeaderboardConfig(appId, leaderboardName)
+	if err != nil {
+		return fmt.Errorf("获取排行榜配置失败: %v", err)
+	}
 
 	// 1. 更新有序集合中的分数（使用用户ID作为member，分数作为score）
 	member := &redis.Z{
@@ -392,34 +400,96 @@ func syncScoreToRedis(appId, userId, leaderboardName string, score int64, extraD
 		Member: userId,
 	}
 
-	err := RedisClient.ZAdd(ctx, scoreKey, member).Err()
+	err = RedisClient.ZAdd(ctx, scoreKey, member).Err()
 	if err != nil {
 		return err
 	}
 
-	// 2. 更新用户详情（存储额外数据和更新时间）
-	userDetails := map[string]interface{}{
-		"extra_data":  extraData,
-		"update_time": time.Now().Unix(),
-		"score":       score, // 冗余存储，方便查询时减少Redis操作
+	// 2. 只有当extraData不为空时才存储详细信息
+	if extraData != "" {
+		userDetails := map[string]interface{}{
+			"extra_data":  extraData,
+			"update_time": time.Now().Unix(),
+		}
+
+		// 序列化用户详情为JSON
+		detailsJSON, err := json.Marshal(userDetails)
+		if err != nil {
+			return err
+		}
+
+		// 用户详情哈希表的key（用于存储额外数据）
+		detailKey := getLeaderboardRedisKey(appId, leaderboardName) + ":details"
+
+		err = RedisClient.HSet(ctx, detailKey, userId, string(detailsJSON)).Err()
+		if err != nil {
+			return err
+		}
+
+		// 根据排行榜类型设置详情数据过期时间
+		setRedisExpiry(ctx, detailKey, config)
 	}
 
-	// 序列化用户详情为JSON
-	detailsJSON, err := json.Marshal(userDetails)
-	if err != nil {
-		return err
-	}
-
-	err = RedisClient.HSet(ctx, detailKey, userId, string(detailsJSON)).Err()
-	if err != nil {
-		return err
-	}
-
-	// 3. 设置过期时间（24小时）
-	RedisClient.Expire(ctx, scoreKey, 24*time.Hour)
-	RedisClient.Expire(ctx, detailKey, 24*time.Hour)
+	// 3. 根据排行榜类型设置分数数据过期时间
+	setRedisExpiry(ctx, scoreKey, config)
 
 	return nil
+}
+
+// setRedisExpiry 根据排行榜配置设置Redis过期时间
+func setRedisExpiry(ctx context.Context, key string, config *LeaderboardConfig) {
+	switch config.ResetType {
+	case "permanent":
+		// 永久排行榜：设置较长的过期时间（7天），定期刷新
+		RedisClient.Expire(ctx, key, 7*24*time.Hour)
+	case "daily":
+		// 每日重置：设置到下次重置时间 + 1小时的缓冲
+		if !config.ResetTime.IsZero() {
+			duration := time.Until(config.ResetTime) + time.Hour
+			if duration > 0 {
+				RedisClient.Expire(ctx, key, duration)
+			} else {
+				RedisClient.Expire(ctx, key, 25*time.Hour) // 默认25小时
+			}
+		} else {
+			RedisClient.Expire(ctx, key, 25*time.Hour)
+		}
+	case "weekly":
+		// 每周重置：设置到下次重置时间 + 1小时的缓冲
+		if !config.ResetTime.IsZero() {
+			duration := time.Until(config.ResetTime) + time.Hour
+			if duration > 0 {
+				RedisClient.Expire(ctx, key, duration)
+			} else {
+				RedisClient.Expire(ctx, key, 8*24*time.Hour) // 默认8天
+			}
+		} else {
+			RedisClient.Expire(ctx, key, 8*24*time.Hour)
+		}
+	case "monthly":
+		// 每月重置：设置到下次重置时间 + 1小时的缓冲
+		if !config.ResetTime.IsZero() {
+			duration := time.Until(config.ResetTime) + time.Hour
+			if duration > 0 {
+				RedisClient.Expire(ctx, key, duration)
+			} else {
+				RedisClient.Expire(ctx, key, 32*24*time.Hour) // 默认32天
+			}
+		} else {
+			RedisClient.Expire(ctx, key, 32*24*time.Hour)
+		}
+	case "custom":
+		// 自定义重置：根据重置间隔设置过期时间
+		if config.ResetValue > 0 {
+			duration := time.Duration(config.ResetValue) * time.Hour
+			RedisClient.Expire(ctx, key, duration+time.Hour) // 加1小时缓冲
+		} else {
+			RedisClient.Expire(ctx, key, 24*time.Hour) // 默认24小时
+		}
+	default:
+		// 默认24小时过期
+		RedisClient.Expire(ctx, key, 24*time.Hour)
+	}
 }
 
 func UpdateScore(appId, userId, leaderboardName string, score int64, extraData string) error {
@@ -504,12 +574,11 @@ func getLeaderboardFromRedis(appId, leaderboardName string, limit int) ([]Leader
 		userId := result.Member.(string)
 		score := int64(result.Score)
 
-		// 获取该用户的详情
-		userDetail, err := RedisClient.HGet(ctx, detailKey, userId).Result()
-
 		var extraData string
-		var updateTime int64
+		var updateTime int64 = time.Now().Unix()
 
+		// 只有当详情key存在时才尝试获取额外数据
+		userDetail, err := RedisClient.HGet(ctx, detailKey, userId).Result()
 		if err == nil && userDetail != "" {
 			// 解析用户详情JSON
 			var detailMap map[string]interface{}
@@ -521,10 +590,6 @@ func getLeaderboardFromRedis(appId, leaderboardName string, limit int) ([]Leader
 					updateTime = int64(ut)
 				}
 			}
-		}
-
-		if updateTime == 0 {
-			updateTime = time.Now().Unix()
 		}
 
 		lb := Leaderboard{
