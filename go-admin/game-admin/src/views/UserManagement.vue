@@ -89,9 +89,9 @@
           </el-button>
         </template>
       </el-table-column>
-      <el-table-column prop="CreatedAt" label="注册时间" width="160" sortable="custom">
+      <el-table-column prop="createdAt" label="注册时间" width="160" sortable="custom">
       </el-table-column>
-      <el-table-column prop="gmtModify" label="最后登录" width="160" sortable="custom">
+      <el-table-column prop="updatedAt" label="最后登录" width="160" sortable="custom">
       </el-table-column>
       <el-table-column label="状态" width="100">
         <template #default="scope">
@@ -138,7 +138,7 @@
           <h3>基本信息</h3>
           <p>玩家ID: {{ userDataDialog.user.playerId }}</p>
           <p>OpenID: {{ userDataDialog.user.openId }}</p>
-          <p>注册时间: {{ userDataDialog.user.CreatedAt }}</p>
+          <p>注册时间: {{ userDataDialog.user.createdAt }}</p>
         </div>
         <div class="game-data">
           <h3>游戏数据</h3>
@@ -252,8 +252,8 @@ export default {
         
         if (result.code === 0) {
           userDataDialog.user = user
-          userDataDialog.data = result.data
-          userDataDialog.dataStr = JSON.stringify(result.data, null, 2)
+          userDataDialog.data = result.data.data
+          userDataDialog.dataStr = result.data.data
           userDataDialog.visible = true
         } else {
           ElMessage.error(result.msg || '获取用户数据失败')
@@ -283,7 +283,7 @@ export default {
         
         const result = await userAPI.setDetail({
           appId: selectedAppId.value,
-          openId: userDataDialog.user.openId,
+          playerId: userDataDialog.user.playerId,
           userData: JSON.stringify(data)  // 后端期望的是 userData 字段，不是 data
         })
         

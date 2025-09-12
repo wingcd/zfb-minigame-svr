@@ -1,7 +1,6 @@
 package models
 
 import (
-	"encoding/json"
 	"fmt"
 	"math"
 	"strings"
@@ -14,6 +13,7 @@ import (
 // GameUser 游戏用户结构
 type GameUser struct {
 	ID        int64     `orm:"pk;auto" json:"id"`
+	OpenId    string    `orm:"size(100);unique" json:"openId"`
 	PlayerId  string    `orm:"size(100);unique" json:"playerId"`
 	Data      string    `orm:"type(longtext)" json:"data"`
 	Banned    bool      `orm:"default(false)" json:"banned"`
@@ -79,7 +79,7 @@ func (u *GameUser) GetTableName(appId string) string {
 }
 
 // GetAllGameUsers 获取游戏用户列表（分页、搜索）
-func GetAllGameUsers(appId string, page, pageSize int, keyword, status string) ([]GameUser, int64, error) {
+func GetAllGameUsers(appId string, page, pageSize int, status string, playerId, openId string) ([]GameUser, int64, error) {
 	o := orm.NewOrm()
 	tableName := fmt.Sprintf("user_%s", appId)
 
@@ -87,16 +87,19 @@ func GetAllGameUsers(appId string, page, pageSize int, keyword, status string) (
 	var whereConditions []string
 	var params []interface{}
 
-	if keyword != "" {
+	if playerId != "" {
 		whereConditions = append(whereConditions, "player_id LIKE ?")
-		params = append(params, "%"+keyword+"%")
+		params = append(params, "%"+playerId+"%")
+	}
+
+	if openId != "" {
+		whereConditions = append(whereConditions, "open_id LIKE ?")
+		params = append(params, "%"+openId+"%")
 	}
 
 	// 根据状态筛选
 	if status == "banned" {
 		whereConditions = append(whereConditions, "banned = true")
-	} else if status == "normal" {
-		whereConditions = append(whereConditions, "banned = false")
 	}
 
 	var whereClause string
@@ -125,19 +128,6 @@ func GetAllGameUsers(appId string, page, pageSize int, keyword, status string) (
 		return nil, 0, err
 	}
 
-	// 解析用户数据并获取封禁状态
-	for i := range users {
-		// 解析JSON数据
-		if users[i].Data != "" {
-			var playerInfo map[string]interface{}
-			if err := json.Unmarshal([]byte(users[i].Data), &playerInfo); err == nil {
-				users[i].PlayerInfo = playerInfo
-			}
-		}
-
-		// 封禁状态信息直接从用户表的banned字段获取
-	}
-
 	return users, total, nil
 }
 
@@ -157,16 +147,6 @@ func GetGameUserDetail(appId, playerId string) (*GameUser, error) {
 		logs.Error("获取用户详情失败:", err)
 		return nil, err
 	}
-
-	// 解析JSON数据
-	if user.Data != "" {
-		var playerInfo map[string]interface{}
-		if err := json.Unmarshal([]byte(user.Data), &playerInfo); err == nil {
-			user.PlayerInfo = playerInfo
-		}
-	}
-
-	// 封禁状态信息直接从用户表的banned字段获取
 
 	return &user, nil
 }
@@ -199,8 +179,15 @@ func BanGameUser(appId, playerId string, adminId int64, banType, banReason strin
 	}
 
 	// 直接更新用户表的封禁状态
-	sql := fmt.Sprintf("UPDATE %s SET banned = true, ban_reason = ?, ban_expire = ?, gmt_modify = NOW() WHERE player_id = ?", tableName)
-	_, err := o.Raw(sql, banReason, banExpire, playerId).Exec()
+	var sql string
+	var err error
+	if banExpire != nil {
+		sql = fmt.Sprintf("UPDATE %s SET banned = true, ban_reason = ?, ban_expire = ?, updated_at = NOW() WHERE player_id = ?", tableName)
+		_, err = o.Raw(sql, banReason, banExpire, playerId).Exec()
+	} else {
+		sql = fmt.Sprintf("UPDATE %s SET banned = true, ban_reason = ?, ban_expire = NULL, updated_at = NOW() WHERE player_id = ?", tableName)
+		_, err = o.Raw(sql, banReason, playerId).Exec()
+	}
 	if err != nil {
 		logs.Error("更新用户封禁状态失败:", err)
 		return err
@@ -215,7 +202,7 @@ func UnbanGameUser(appId, playerId string, adminId int64, unbanReason string) er
 	tableName := fmt.Sprintf("user_%s", appId)
 
 	// 直接更新用户表的封禁状态
-	sql := fmt.Sprintf("UPDATE %s SET banned = false, ban_reason = NULL, ban_expire = NULL, gmt_modify = NOW() WHERE player_id = ?", tableName)
+	sql := fmt.Sprintf("UPDATE %s SET banned = false, ban_reason = NULL, ban_expire = NULL, updated_at = NOW() WHERE player_id = ?", tableName)
 	_, err := o.Raw(sql, playerId).Exec()
 	if err != nil {
 		logs.Error("更新用户解封状态失败:", err)
@@ -246,7 +233,7 @@ func CheckUserBanStatus(appId, playerId string) (bool, error) {
 	// 如果用户被封禁，检查是否过期
 	if banned && banExpire != nil && banExpire.Before(time.Now()) {
 		// 自动解封过期的临时封禁
-		sql = fmt.Sprintf("UPDATE %s SET banned = false, ban_reason = NULL, ban_expire = NULL, gmt_modify = NOW() WHERE player_id = ?", tableName)
+		sql = fmt.Sprintf("UPDATE %s SET banned = false, ban_reason = NULL, ban_expire = NULL, updated_at = NOW() WHERE player_id = ?", tableName)
 		_, err = o.Raw(sql, playerId).Exec()
 		if err != nil {
 			logs.Error("自动解封过期用户失败:", err)
@@ -458,8 +445,8 @@ func GetUserRegistrationStats(appId string, days int) ([]RegistrationStats, erro
 }
 
 // GetUserList 获取用户列表（别名）
-func GetUserList(page, pageSize int, keyword, status, appId string) ([]GameUser, int64, error) {
-	return GetAllGameUsers(appId, page, pageSize, keyword, status)
+func GetUserList(page, pageSize int, status, appId, playerId, openId string) ([]GameUser, int64, error) {
+	return GetAllGameUsers(appId, page, pageSize, status, playerId, openId)
 }
 
 // BanUser 封禁用户（别名）

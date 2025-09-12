@@ -195,7 +195,7 @@
       <el-table-column label="操作" width="320" fixed="right">
         <template #default="scope">
           <el-button link @click="viewMailDetail(scope.row)">详情</el-button>
-          <el-button link @click="viewMailStats(scope.row)" v-if="scope.row.status === 'active'">统计</el-button>
+          <el-button link @click="viewMailStats(scope.row)" v-if="scope.row.status === 'sent'">统计</el-button>
           <el-button link @click="copyMail(scope.row)" v-if="hasPermission(PERMISSIONS.MAIL_MANAGE)">复制</el-button>
           <el-button 
             link 
@@ -515,7 +515,7 @@ export default {
     })
     
     const canBatchExpire = computed(() => {
-      return selectedMails.value.some(mail => mail.status === 'active')
+      return selectedMails.value.some(mail => mail.status === 'sent')
     })
     
     const canBatchDelete = computed(() => {
@@ -739,7 +739,7 @@ export default {
       mailDialog.visible = true
       
       // 如果是已发布的邮件，给出提示
-      if (mail.status === 'active') {
+      if (mail.status === 'sent') {
         ElMessage.warning('注意：修改已发布的邮件可能会影响用户体验')
       }
     }
@@ -780,11 +780,15 @@ export default {
           let date = new Date(data.publishTime)
           // 转换为unix时间戳（秒）
           data.publishTime = Math.floor(date.getTime() / 1000)
+        }else{
+          data.publishTime = 0
         }
         if(data.expireTime){
           let date = new Date(data.expireTime)
           // 转换为unix时间戳（秒）
           data.expireTime = Math.floor(date.getTime() / 1000)
+        }else{
+          data.expireTime = 0
         }
         
         // 将奖励转换为JSON字符串
@@ -1003,10 +1007,7 @@ export default {
         const result = await mailAPI.update({
           id: mail.id,
           appId: mail.appId,
-          status: 'active',
-          publishTime: new Date().toISOString().replace('T', ' ').substring(0, 19),
-          // 重新设置过期时间（7天后）
-          expireTime: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().replace('T', ' ').substring(0, 19)
+          status: 'sent',
         })
         
         if (result.code === 0) {
@@ -1177,7 +1178,7 @@ export default {
     }
     
     const batchExpire = async () => {
-      const activeMails = selectedMails.value.filter(mail => mail.status === 'active')
+      const activeMails = selectedMails.value.filter(mail => mail.status === 'sent')
       if (activeMails.length === 0) {
         ElMessage.warning('没有可下线的邮件')
         return

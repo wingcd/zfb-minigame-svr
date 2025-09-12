@@ -294,15 +294,19 @@ func (c *MailController) UpdateMail() {
 
 	// 构造更新的邮件对象
 	mail := &models.MailSystem{
-		ID:         requestData.ID, // 设置邮件ID
-		AppId:      requestData.AppId,
-		Title:      requestData.Title,
-		Content:    requestData.Content,
-		Rewards:    requestData.Rewards,
-		Status:     requestData.Status,
-		TargetType: requestData.TargetType,
-		Type:       requestData.Type,
-		CreatedBy:  "admin", // 默认创建者为admin
+		ID:    requestData.ID, // 设置邮件ID
+		AppId: requestData.AppId,
+	}
+
+	var oldMail *models.MailSystem
+	oldMail, err := models.GetMailById(requestData.AppId, requestData.ID)
+	if err != nil {
+		c.Data["json"] = map[string]interface{}{
+			"code": 5001,
+			"msg":  "获取邮件失败",
+		}
+		c.ServeJSON()
+		return
 	}
 
 	// 设置发布时间
@@ -310,6 +314,8 @@ func (c *MailController) UpdateMail() {
 		// 将字符串转换为时间, 时间戳转换为时间
 		publishTime := time.Unix(requestData.PublishTime, 0)
 		mail.SendTime = &publishTime
+	} else {
+		mail.SendTime = oldMail.SendTime
 	}
 
 	// 设置过期时间
@@ -322,8 +328,39 @@ func (c *MailController) UpdateMail() {
 			expireTime := time.Now().AddDate(0, 0, requestData.ExpireDays)
 			mail.ExpireTime = &expireTime
 		} else {
-			mail.ExpireTime = nil
+			mail.ExpireTime = oldMail.ExpireTime
 		}
+	}
+
+	if requestData.Title != "" {
+		mail.Title = requestData.Title
+	} else {
+		mail.Title = oldMail.Title
+	}
+	if requestData.Content != "" {
+		mail.Content = requestData.Content
+	} else {
+		mail.Content = oldMail.Content
+	}
+	if requestData.Rewards != "" {
+		mail.Rewards = requestData.Rewards
+	} else {
+		mail.Rewards = oldMail.Rewards
+	}
+	if requestData.Status != "" {
+		mail.Status = requestData.Status
+	} else {
+		mail.Status = oldMail.Status
+	}
+	if requestData.TargetType != "" {
+		mail.TargetType = requestData.TargetType
+	} else {
+		mail.TargetType = oldMail.TargetType
+	}
+	if requestData.Type != "" {
+		mail.Type = requestData.Type
+	} else {
+		mail.Type = oldMail.Type
 	}
 
 	if err := models.UpdateSystemMail(mail); err != nil {
@@ -668,7 +705,7 @@ func (c *MailController) SendBroadcastMail() {
 // PublishExisting 发布已存在的邮件
 func (c *MailController) PublishExisting() {
 	var requestData struct {
-		Id    int    `json:"id"`
+		Id    int64  `json:"id"`
 		AppId string `json:"appId"`
 	}
 
@@ -686,7 +723,7 @@ func (c *MailController) PublishExisting() {
 	fmt.Printf("DEBUG: 发布邮件请求 - ID: %d, AppId: %s\n", requestData.Id, requestData.AppId)
 
 	// 查找邮件
-	mail, err := models.GetSystemMailById(requestData.Id)
+	mail, err := models.GetMailById(requestData.AppId, requestData.Id)
 	if err != nil {
 		fmt.Printf("DEBUG: 查找邮件失败: %v\n", err)
 		c.Data["json"] = map[string]interface{}{

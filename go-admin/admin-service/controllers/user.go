@@ -18,8 +18,9 @@ func (c *UserController) GetAllUsers() {
 		AppId    string `json:"appId"`
 		Page     int    `json:"page"`
 		PageSize int    `json:"pageSize"`
-		Keyword  string `json:"keyword"`
 		Status   string `json:"status"`
+		PlayerId string `json:"playerId"`
+		OpenId   string `json:"openId"`
 	}
 
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &req); err != nil {
@@ -41,7 +42,7 @@ func (c *UserController) GetAllUsers() {
 		req.PageSize = 20
 	}
 
-	users, total, err := models.GetUserList(req.Page, req.PageSize, req.Keyword, req.Status, req.AppId)
+	users, total, err := models.GetUserList(req.Page, req.PageSize, req.Status, req.AppId, req.PlayerId, req.OpenId)
 	if err != nil {
 		c.Data["json"] = map[string]interface{}{
 			"code":      5001,
@@ -239,9 +240,9 @@ func (c *UserController) GetUserDetail() {
 // SetUserDetail 设置用户详情
 func (c *UserController) SetUserDetail() {
 	var requestData struct {
-		AppId    string                 `json:"appId"`
-		PlayerId string                 `json:"playerId"`
-		UserData map[string]interface{} `json:"userData"`
+		AppId    string `json:"appId"`
+		PlayerId string `json:"playerId"`
+		UserData string `json:"userData"`
 	}
 
 	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &requestData); err != nil {
@@ -249,14 +250,7 @@ func (c *UserController) SetUserDetail() {
 		return
 	}
 
-	// 将UserData转换为JSON字符串
-	userDataJSON, err := json.Marshal(requestData.UserData)
-	if err != nil {
-		utils.ErrorResponse(&c.Controller, utils.CodeBadRequest, "用户数据格式错误", nil)
-		return
-	}
-
-	if err := models.SetUserDetail(requestData.AppId, requestData.PlayerId, string(userDataJSON)); err != nil {
+	if err := models.SetUserDetail(requestData.AppId, requestData.PlayerId, requestData.UserData); err != nil {
 		utils.ErrorResponse(&c.Controller, utils.CodeServerError, "设置用户详情失败", nil)
 		return
 	}

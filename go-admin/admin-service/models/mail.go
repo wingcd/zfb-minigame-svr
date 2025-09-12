@@ -3,6 +3,7 @@ package models
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 	"time"
@@ -947,4 +948,18 @@ func createMailForConditionUsers(o orm.Ormer, mail *MailSystem) error {
 	// 但不应该重复插入邮件内容
 
 	return nil
+}
+
+func GetMailById(appId string, id int64) (*MailSystem, error) {
+	o := orm.NewOrm()
+	mail := &MailSystem{}
+	mail.ID = id
+	tableName := mail.GetTableName(appId)
+	sql := fmt.Sprintf("SELECT * FROM %s WHERE id = ?", tableName)
+	err := o.Raw(sql, id).QueryRow(mail)
+	if err != nil {
+		log.Println("GetMailById error: ", err)
+		return nil, err
+	}
+	return mail, nil
 }
