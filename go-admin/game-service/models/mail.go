@@ -2,6 +2,7 @@ package models
 
 import (
 	"fmt"
+	"log"
 	"strconv"
 	"time"
 
@@ -82,7 +83,8 @@ func GetMailList(appId, userId string, page, pageSize int) ([]Mail, int64, error
 		WHERE r.player_id = ?
 		  AND (m.expire_time IS NULL OR m.expire_time > NOW())
 		  AND send_time IS NOT NULL AND send_time <= NOW()
-		  AND status = 'sent'
+		  AND m.status = 'sent'
+		  AND r.status != 3
 		ORDER BY m.created_at DESC
 		LIMIT ? OFFSET ?
 	`, mailTableName, relationTableName)
@@ -90,6 +92,7 @@ func GetMailList(appId, userId string, page, pageSize int) ([]Mail, int64, error
 	var results []orm.Params
 	_, err = o.Raw(sql, userId, pageSize, offset).Values(&results)
 	if err != nil {
+		log.Println("GetMailList error: ", err)
 		return nil, 0, err
 	}
 
@@ -100,11 +103,9 @@ func GetMailList(appId, userId string, page, pageSize int) ([]Mail, int64, error
 			AppId: appId,
 		}
 
-		if id, ok := result["id"]; ok {
-			if idInt, ok := id.(int64); ok {
-				mail.ID = idInt
-			}
-		}
+		var id, _ = strconv.ParseInt(result["id"].(string), 10, 64)
+		mail.ID = id
+
 		if title, ok := result["title"].(string); ok {
 			mail.Title = title
 		}
@@ -114,26 +115,35 @@ func GetMailList(appId, userId string, page, pageSize int) ([]Mail, int64, error
 		if rewards, ok := result["rewards"].(string); ok {
 			mail.Rewards = rewards
 		}
-		if status, ok := result["status"]; ok {
-			if statusInt, ok := status.(int64); ok {
-				mail.Status = strconv.Itoa(int(statusInt))
+		mail.Status = result["status"].(string)
+
+		if result["expire_at"] != nil {
+			expireAt, err := time.Parse(time.RFC3339, result["expire_at"].(string))
+			if err == nil {
+				mail.ExpireTime = &expireAt
 			}
-		}
-		if createTime, ok := result["create_time"].(time.Time); ok {
-			mail.CreatedAt = createTime
-		}
-		if updateTime, ok := result["update_time"].(time.Time); ok {
-			mail.UpdatedAt = updateTime
-		}
-		if expireAt, ok := result["expire_at"].(time.Time); ok {
-			mail.ExpireTime = &expireAt
 		}
 
 		mails = append(mails, mail)
 	}
 
-	// 查询总数
-	var total int64 = int64(len(mails))
+	// 查询总数（单独查询，不受分页限制）
+	countSQL := fmt.Sprintf(`
+		SELECT COUNT(*)
+		FROM %s m
+		INNER JOIN %s r ON m.id = r.mail_id
+		WHERE r.player_id = ?
+		  AND (m.expire_time IS NULL OR m.expire_time > NOW())
+		  AND send_time IS NOT NULL AND send_time <= NOW()
+		  AND m.status = 'sent'
+		  AND r.status != 3
+	`, mailTableName, relationTableName)
+
+	var total int64
+	err = o.Raw(countSQL, userId).QueryRow(&total)
+	if err != nil {
+		return nil, 0, fmt.Errorf("查询邮件总数失败: %v", err)
+	}
 
 	return mails, total, nil
 }
@@ -143,7 +153,7 @@ func ReadMail(appId, userId string, mailId int64) error {
 	o := orm.NewOrm()
 	relationTableName := utils.GetMailRelationTableName(appId)
 
-	// 标记邮件为已读
+	// 标记邮件为已读（只有未读状态才能标记为已读）
 	sql := fmt.Sprintf(`
 		UPDATE %s 
 		SET status = 1, read_at = NOW(), updated_at = NOW()
@@ -152,6 +162,7 @@ func ReadMail(appId, userId string, mailId int64) error {
 
 	result, err := o.Raw(sql, mailId, userId).Exec()
 	if err != nil {
+		log.Println("ReadMail error: ", err)
 		return err
 	}
 
@@ -194,8 +205,13 @@ func ClaimRewards(appId, userId string, mailId int64) (string, error) {
 	mailData := result[0]
 
 	// 检查状态
-	if status, ok := mailData["status"].(int64); ok && status == 2 {
-		return "", fmt.Errorf("奖励已领取")
+	if status, ok := mailData["status"].(int64); ok {
+		if status == 2 {
+			return "", fmt.Errorf("奖励已领取")
+		}
+		if status == 3 {
+			return "", fmt.Errorf("邮件已删除")
+		}
 	}
 
 	// 检查过期时间
@@ -224,15 +240,16 @@ func ClaimRewards(appId, userId string, mailId int64) (string, error) {
 	return rewards, nil
 }
 
-// DeleteMail 删除邮件（删除关联关系）
+// DeleteMail 删除邮件（软删除，状态改为3）
 func DeleteMail(appId, userId string, mailId int64) error {
 	o := orm.NewOrm()
 	relationTableName := utils.GetMailRelationTableName(appId)
 
-	// 删除邮件关联关系
+	// 软删除邮件关联关系，将状态改为3（已删除）
 	sql := fmt.Sprintf(`
-		DELETE FROM %s 
-		WHERE mail_id = ? AND player_id = ?
+		UPDATE %s 
+		SET status = 3, updated_at = NOW()
+		WHERE mail_id = ? AND player_id = ? AND status != 3
 	`, relationTableName)
 
 	_, err := o.Raw(sql, mailId, userId).Exec()

@@ -668,7 +668,7 @@ class ApiTester {
         const mailId = document.getElementById('mailId').value || 'test_mail_001';
         const action = document.getElementById('mailAction').value;
         
-        const data = { mailId: mailId, status: action };
+        const data = { mailId: parseInt(mailId), status: action };
         const result = await this.makeApiRequest('/mail/updateStatus', 'POST', data, true);
         this.displayResult('updateMailStatus-result', result, '更新邮件状态');
     }

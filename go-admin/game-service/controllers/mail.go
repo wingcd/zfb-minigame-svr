@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"game-service/models"
 	"game-service/utils"
+	"strconv"
 
 	"github.com/beego/beego/v2/server/web"
 )
@@ -219,8 +220,37 @@ func (c *MailController) GetUserMails() {
 		return
 	}
 
+	resultMails := []map[string]interface{}{}
+	for _, mail := range mails {
+		var mailMap map[string]interface{}
+		mailMap = make(map[string]interface{})
+		mailMap["id"] = mail.ID
+		mailMap["title"] = mail.Title
+		mailMap["content"] = mail.Content
+		mailMap["rewards"] = mail.Rewards
+		if mail.ExpireTime != nil {
+			mailMap["expireTime"] = mail.ExpireTime.Unix()
+		} else {
+			mailMap["expireTime"] = 0
+		}
+		status, _ := strconv.ParseInt(mail.Status, 10, 64)
+		statusStr := ""
+		switch status {
+		case 1:
+			statusStr = "read"
+		case 2:
+			statusStr = "claimed"
+		case 3:
+			statusStr = "deleted"
+		default:
+			statusStr = "unread"
+		}
+		mailMap["status"] = statusStr
+		resultMails = append(resultMails, mailMap)
+	}
+
 	result := map[string]interface{}{
-		"mails":    mails,
+		"mails":    resultMails,
 		"total":    total,
 		"page":     page,
 		"pageSize": pageSize,

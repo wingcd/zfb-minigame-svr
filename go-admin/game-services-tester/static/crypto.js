@@ -268,6 +268,7 @@ function generateZySign(obj) {
         signStr += key + newObj[key];
    }
     
+   console.log(signStr);
     // 计算MD5
     return md5(signStr);
 }

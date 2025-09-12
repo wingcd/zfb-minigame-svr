@@ -194,6 +194,9 @@ func generateSign(params map[string]interface{}) string {
 			if _, ok := v.(string); !ok {
 				v = fmt.Sprintf("%v", v)
 			}
+			if v == "0" {
+				continue
+			}
 			signStr.WriteString(fmt.Sprintf("%s%s", k, v))
 		}
 	}
