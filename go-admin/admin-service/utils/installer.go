@@ -450,10 +450,7 @@ func MigrateDatabase() error {
 		return fmt.Errorf("读取配置文件失败: %v", err)
 	}
 
-	dbType, _ := cfg.String("database::type")
-	if dbType == "" {
-		dbType = "mysql" // 默认为MySQL
-	}
+	dbType := getConfigString(cfg, "database_type", "mysql")
 
 	if dbType == "mysql" {
 		return migrateMySQLDatabase(cfg)
@@ -464,19 +461,15 @@ func MigrateDatabase() error {
 
 // migrateMySQLDatabase 迁移MySQL数据库
 func migrateMySQLDatabase(cfg config.Configer) error {
-	// 构建连接字符串
-	host, _ := cfg.String("database::host")
-	port, _ := cfg.String("database::port")
-	user, _ := cfg.String("database::user")
-	password, _ := cfg.String("database::password")
-	dbname, _ := cfg.String("database::name")
+	// 构建连接字符串 - 使用正确的配置键名
+	host := getConfigString(cfg, "mysql_host", "127.0.0.1")
+	port := getConfigString(cfg, "mysql_port", "3306")
+	user := getConfigString(cfg, "mysql_user", "root")
+	password := getConfigString(cfg, "mysql_password", "")
+	dbname := getConfigString(cfg, "mysql_database", "minigame_game")
 
 	if host == "" || user == "" || dbname == "" {
-		return fmt.Errorf("MySQL配置不完整")
-	}
-
-	if port == "" {
-		port = "3306"
+		return fmt.Errorf("MySQL配置不完整: host=%s, user=%s, dbname=%s", host, user, dbname)
 	}
 
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
@@ -487,6 +480,11 @@ func migrateMySQLDatabase(cfg config.Configer) error {
 		return fmt.Errorf("连接MySQL数据库失败: %v", err)
 	}
 	defer db.Close()
+
+	// 测试连接
+	if err := db.Ping(); err != nil {
+		return fmt.Errorf("MySQL数据库连接测试失败: %v", err)
+	}
 
 	// 检查并创建缺失的表
 	return executeMigrations(db, "mysql")
@@ -512,71 +510,6 @@ func migrateSQLiteDatabase(cfg config.Configer) error {
 // executeMigrations 执行数据库迁移
 func executeMigrations(db *sql.DB, dbType string) error {
 	log.Println("检查并创建缺失的表...")
-
-	// 检查counter_config表是否存在
-	if !tableExists(db, "counter_config", dbType) {
-		log.Println("counter_config表不存在，开始创建...")
-
-		var createSQL string
-		if dbType == "mysql" {
-			createSQL = `CREATE TABLE IF NOT EXISTS counter_config (
-				id BIGINT PRIMARY KEY AUTO_INCREMENT,
-				created_at DATETIME NOT NULL,
-				updated_at DATETIME NOT NULL,
-				app_id VARCHAR(100) NOT NULL COMMENT '应用ID',
-				counter_key VARCHAR(100) NOT NULL COMMENT '计数器键',
-				reset_type VARCHAR(20) NOT NULL DEFAULT 'permanent' COMMENT '重置类型: daily/weekly/monthly/custom/permanent',
-				reset_value INT NULL COMMENT '自定义重置时间(小时)',
-				next_reset_time DATETIME NULL COMMENT '下次重置时间',
-				description TEXT NULL COMMENT '描述',
-				is_active TINYINT NOT NULL DEFAULT 1 COMMENT '是否启用',
-				INDEX idx_app_id (app_id),
-				INDEX idx_counter_key (counter_key),
-				INDEX idx_reset_type (reset_type),
-				INDEX idx_is_active (is_active),
-				UNIQUE KEY uk_app_counter (app_id, counter_key)
-			) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
-		} else {
-			createSQL = `CREATE TABLE IF NOT EXISTS counter_config (
-				id INTEGER PRIMARY KEY AUTOINCREMENT,
-				created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-				updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-				app_id TEXT NOT NULL,
-				counter_key TEXT NOT NULL,
-				reset_type TEXT NOT NULL DEFAULT 'permanent',
-				reset_value INTEGER NULL,
-				next_reset_time DATETIME NULL,
-				description TEXT NULL,
-				is_active INTEGER NOT NULL DEFAULT 1,
-				UNIQUE(app_id, counter_key)
-			)`
-		}
-
-		if _, err := db.Exec(createSQL); err != nil {
-			return fmt.Errorf("创建counter_config表失败: %v", err)
-		}
-
-		// 为SQLite创建索引
-		if dbType == "sqlite" {
-			indexes := []string{
-				"CREATE INDEX IF NOT EXISTS idx_counter_config_app_id ON counter_config(app_id)",
-				"CREATE INDEX IF NOT EXISTS idx_counter_config_counter_key ON counter_config(counter_key)",
-				"CREATE INDEX IF NOT EXISTS idx_counter_config_reset_type ON counter_config(reset_type)",
-				"CREATE INDEX IF NOT EXISTS idx_counter_config_is_active ON counter_config(is_active)",
-			}
-
-			for _, indexSQL := range indexes {
-				if _, err := db.Exec(indexSQL); err != nil {
-					log.Printf("创建索引失败: %v", err)
-				}
-			}
-		}
-
-		log.Println("counter_config表创建成功")
-	} else {
-		log.Println("counter_config表已存在，跳过创建")
-	}
-
 	log.Println("数据库迁移完成")
 	return nil
 }
@@ -740,6 +673,64 @@ func getMySQLTables() []string {
 			INDEX idx_reset_type (reset_type),
 			INDEX idx_is_active (is_active),
 			UNIQUE KEY uk_app_counter (app_id, counter_key)
+		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+
+		// Yalla配置表
+		`CREATE TABLE IF NOT EXISTS yalla_config (
+			id BIGINT PRIMARY KEY AUTO_INCREMENT,
+			created_at DATETIME NOT NULL,
+			updated_at DATETIME NOT NULL,
+			app_id VARCHAR(100) NOT NULL COMMENT '应用ID',
+			api_key VARCHAR(255) NOT NULL COMMENT 'API密钥',
+			secret_key VARCHAR(255) NOT NULL COMMENT '秘钥',
+			base_url VARCHAR(255) NOT NULL COMMENT 'API基础URL',
+			environment VARCHAR(50) NOT NULL DEFAULT 'sandbox' COMMENT '环境: sandbox/production',
+			timeout INT NOT NULL DEFAULT 30 COMMENT '超时时间（秒）',
+			retry_count INT NOT NULL DEFAULT 3 COMMENT '重试次数',
+			description VARCHAR(500) NULL COMMENT '配置描述',
+			is_active TINYINT NOT NULL DEFAULT 1 COMMENT '是否启用',
+			INDEX idx_app_id (app_id),
+			INDEX idx_environment (environment),
+			INDEX idx_is_active (is_active),
+			UNIQUE KEY uk_app_id (app_id)
+		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+
+		// Yalla API调用日志表
+		`CREATE TABLE IF NOT EXISTS yalla_call_logs (
+			id BIGINT PRIMARY KEY AUTO_INCREMENT,
+			created_at DATETIME NOT NULL,
+			app_id VARCHAR(50) NOT NULL COMMENT '应用ID',
+			user_id VARCHAR(100) NULL COMMENT '用户ID',
+			method VARCHAR(20) NOT NULL COMMENT '请求方法',
+			endpoint VARCHAR(200) NOT NULL COMMENT '接口端点',
+			request_data TEXT NULL COMMENT '请求数据',
+			response_data TEXT NULL COMMENT '响应数据',
+			status_code INT NULL COMMENT 'HTTP状态码',
+			duration BIGINT NULL COMMENT '请求耗时(毫秒)',
+			success TINYINT NOT NULL DEFAULT 0 COMMENT '是否成功',
+			error_msg VARCHAR(500) NULL COMMENT '错误信息',
+			INDEX idx_app_id (app_id),
+			INDEX idx_user_id (user_id),
+			INDEX idx_created_at (created_at),
+			INDEX idx_success (success)
+		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+
+		// Yalla用户绑定表
+		`CREATE TABLE IF NOT EXISTS yalla_user_bindings (
+			id BIGINT PRIMARY KEY AUTO_INCREMENT,
+			created_at DATETIME NOT NULL,
+			updated_at DATETIME NOT NULL,
+			app_id VARCHAR(50) NOT NULL COMMENT '应用ID',
+			game_user_id VARCHAR(100) NOT NULL COMMENT '游戏用户ID',
+			yalla_user_id VARCHAR(100) NOT NULL COMMENT 'Yalla用户ID',
+			yalla_token VARCHAR(500) NULL COMMENT 'Yalla用户令牌',
+			expires_at DATETIME NULL COMMENT '令牌过期时间',
+			status INT NOT NULL DEFAULT 1 COMMENT '状态 1有效 0无效',
+			bind_at DATETIME NOT NULL COMMENT '绑定时间',
+			INDEX idx_app_id (app_id),
+			INDEX idx_yalla_user_id (yalla_user_id),
+			INDEX idx_status (status),
+			UNIQUE KEY uk_app_game_user (app_id, game_user_id)
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
 	}
 }
@@ -915,6 +906,54 @@ func getSQLiteTables() []string {
 			UNIQUE(app_id, counter_key)
 		)`,
 
+		// Yalla配置表 - 对齐MySQL版本
+		`CREATE TABLE IF NOT EXISTS yalla_config (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			app_id TEXT NOT NULL,
+			api_key TEXT NOT NULL,
+			secret_key TEXT NOT NULL,
+			base_url TEXT NOT NULL,
+			environment TEXT NOT NULL DEFAULT 'sandbox',
+			timeout INTEGER NOT NULL DEFAULT 30,
+			retry_count INTEGER NOT NULL DEFAULT 3,
+			description TEXT NULL,
+			is_active INTEGER NOT NULL DEFAULT 1,
+			UNIQUE(app_id)
+		)`,
+
+		// Yalla API调用日志表 - 对齐MySQL版本
+		`CREATE TABLE IF NOT EXISTS yalla_call_logs (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			app_id TEXT NOT NULL,
+			user_id TEXT NULL,
+			method TEXT NOT NULL,
+			endpoint TEXT NOT NULL,
+			request_data TEXT NULL,
+			response_data TEXT NULL,
+			status_code INTEGER NULL,
+			duration INTEGER NULL,
+			success INTEGER NOT NULL DEFAULT 0,
+			error_msg TEXT NULL
+		)`,
+
+		// Yalla用户绑定表 - 对齐MySQL版本
+		`CREATE TABLE IF NOT EXISTS yalla_user_bindings (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			app_id TEXT NOT NULL,
+			game_user_id TEXT NOT NULL,
+			yalla_user_id TEXT NOT NULL,
+			yalla_token TEXT NULL,
+			expires_at DATETIME NULL,
+			status INTEGER NOT NULL DEFAULT 1,
+			bind_at DATETIME NOT NULL,
+			UNIQUE(app_id, game_user_id)
+		)`,
+
 		// 创建索引 - 对齐MySQL版本
 		`CREATE INDEX IF NOT EXISTS idx_admin_users_username ON admin_users(username)`,
 		`CREATE INDEX IF NOT EXISTS idx_admin_users_email ON admin_users(email)`,
@@ -948,6 +987,16 @@ func getSQLiteTables() []string {
 		`CREATE INDEX IF NOT EXISTS idx_counter_config_counter_key ON counter_config(counter_key)`,
 		`CREATE INDEX IF NOT EXISTS idx_counter_config_reset_type ON counter_config(reset_type)`,
 		`CREATE INDEX IF NOT EXISTS idx_counter_config_is_active ON counter_config(is_active)`,
+		`CREATE INDEX IF NOT EXISTS idx_yalla_config_app_id ON yalla_config(app_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_yalla_config_environment ON yalla_config(environment)`,
+		`CREATE INDEX IF NOT EXISTS idx_yalla_config_is_active ON yalla_config(is_active)`,
+		`CREATE INDEX IF NOT EXISTS idx_yalla_call_logs_app_id ON yalla_call_logs(app_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_yalla_call_logs_user_id ON yalla_call_logs(user_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_yalla_call_logs_created_at ON yalla_call_logs(created_at)`,
+		`CREATE INDEX IF NOT EXISTS idx_yalla_call_logs_success ON yalla_call_logs(success)`,
+		`CREATE INDEX IF NOT EXISTS idx_yalla_user_bindings_app_id ON yalla_user_bindings(app_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_yalla_user_bindings_yalla_user_id ON yalla_user_bindings(yalla_user_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_yalla_user_bindings_status ON yalla_user_bindings(status)`,
 	}
 }
 

@@ -20,6 +20,7 @@ func init() {
 	web.InsertFilter("/stat/*", web.BeforeRouter, middlewares.AuthMiddleware)
 	web.InsertFilter("/mail/*", web.BeforeRouter, middlewares.AuthMiddleware)
 	web.InsertFilter("/gameConfig/*", web.BeforeRouter, middlewares.AuthMiddleware)
+	web.InsertFilter("/yallaConfig/*", web.BeforeRouter, middlewares.AuthMiddleware)
 	// 新API路径的认证中间件（具体指定需要认证的路径）
 	web.InsertFilter("/api/applications*", web.BeforeRouter, middlewares.AuthMiddleware)
 	web.InsertFilter("/api/game-data*", web.BeforeRouter, middlewares.AuthMiddleware)
@@ -44,6 +45,7 @@ func init() {
 	web.InsertFilter("/stat/*", web.BeforeExec, middlewares.PermissionMiddleware)
 	web.InsertFilter("/mail/*", web.BeforeExec, middlewares.PermissionMiddleware)
 	web.InsertFilter("/gameConfig/*", web.BeforeExec, middlewares.PermissionMiddleware)
+	web.InsertFilter("/yallaConfig/*", web.BeforeExec, middlewares.PermissionMiddleware)
 	// 新API路径的权限检查中间件（具体指定需要权限检查的路径）
 	web.InsertFilter("/api/applications*", web.BeforeExec, middlewares.PermissionMiddleware)
 	web.InsertFilter("/api/game-data*", web.BeforeExec, middlewares.PermissionMiddleware)
@@ -165,6 +167,14 @@ func init() {
 	web.Router("/gameConfig/add", &controllers.GameConfigController{}, "post:AddGameConfig")
 	web.Router("/gameConfig/batchUpdate", &controllers.GameConfigController{}, "post:BatchUpdateGameConfigs")
 	web.Router("/gameConfig/deleteByAppId", &controllers.GameConfigController{}, "post:DeleteGameConfigsByAppId")
+
+	// Yalla配置模块
+	web.Router("/yallaConfig/getList", &controllers.YallaConfigController{}, "post:GetList")
+	web.Router("/yallaConfig/create", &controllers.YallaConfigController{}, "post:Create")
+	web.Router("/yallaConfig/update", &controllers.YallaConfigController{}, "post:Update")
+	web.Router("/yallaConfig/delete", &controllers.YallaConfigController{}, "post:Delete")
+	web.Router("/yallaConfig/get", &controllers.YallaConfigController{}, "post:Get")
+	web.Router("/yallaConfig/test", &controllers.YallaConfigController{}, "post:TestConnection")
 
 	apiNamespace := web.NewNamespace("/api",
 		// 认证相关

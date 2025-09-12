@@ -13,6 +13,7 @@ import RoleManagement from '../views/RoleManagement.vue'
 import MailManagement from '../views/MailManagement.vue'
 import MailTest from '../views/MailTest.vue'
 import GameConfigManagement from '../views/GameConfigManagement.vue'
+import YallaConfigManagement from '../views/YallaConfigManagement.vue'
 import Login from '../views/Login.vue'
 
 const routes = [
@@ -122,15 +123,29 @@ const routes = [
       groupIcon: 'Grid'
     }
   },
+  // {
+  //   path: '/mail-test',
+  //   name: 'MailTest',
+  //   component: MailTest,
+  //   meta: { 
+  //     title: '邮件测试',
+  //     requiresAuth: true,
+  //     icon: 'Monitor',
+  //     permissions: ['mail_manage'],
+  //     group: 'game',
+  //     groupTitle: '游戏管理',
+  //     groupIcon: 'Grid'
+  //   }
+  // },
   {
-    path: '/mail-test',
-    name: 'MailTest',
-    component: MailTest,
+    path: '/yalla-config',
+    name: 'YallaConfigManagement',
+    component: YallaConfigManagement,
     meta: { 
-      title: '邮件测试',
+      title: 'Yalla配置',
       requiresAuth: true,
-      icon: 'Monitor',
-      permissions: ['mail_manage'],
+      icon: 'Connection',
+      permissions: ['app_manage'],
       group: 'game',
       groupTitle: '游戏管理',
       groupIcon: 'Grid'

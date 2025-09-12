@@ -304,6 +304,16 @@ const unifiedAPI = {
     update: (data) => api.post('/gameConfig/update', data),
     delete: (data) => api.post('/gameConfig/delete', data),
     get: (params) => api.post('/gameConfig/get', params || {})
+  },
+  
+  // Yalla配置相关
+  yallaConfig: {
+    getList: (params) => api.post('/yallaConfig/getList', params || {}),
+    create: (data) => api.post('/yallaConfig/create', data),
+    update: (data) => api.post('/yallaConfig/update', data),
+    delete: (data) => api.post('/yallaConfig/delete', data),
+    get: (params) => api.post('/yallaConfig/get', params || {}),
+    testConnection: (params) => api.post('/yallaConfig/testConnection', params || {})
   }
 }
 
@@ -337,6 +347,9 @@ export const mailAPI = unifiedAPI.mail
 
 // 游戏配置管理API
 export const gameConfigAPI = unifiedAPI.gameConfig
+
+// Yalla配置管理API
+export const yallaConfigAPI = unifiedAPI.yallaConfig
 
 // === 便捷方法导出（向后兼容） ===
 export const login = unifiedAPI.auth.login

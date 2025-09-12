@@ -535,7 +535,8 @@ class ApiTester {
             health: () => this.testHealth(),
             login: () => this.testLogin(),
             leaderboard: () => this.testCommitScore(),
-            mail: () => this.testGetUserMails()
+            mail: () => this.testGetUserMails(),
+            yalla: () => this.testYallaAuth()
         };
 
         if (tests[type]) {
@@ -686,6 +687,181 @@ class ApiTester {
         this.displayResult('getAllConfigs-result', result, '获取所有配置');
     }
 
+    // ========== Yalla SDK 测试方法 ==========
+    
+    async testYallaAuth() {
+        const userId = document.getElementById('yallaUserId').value || 'test_yalla_user_001';
+        const authToken = document.getElementById('yallaAuthToken').value || 'test_auth_token_123';
+        
+        const data = { 
+            app_id: this.config.appId,
+            user_id: userId,
+            auth_token: authToken 
+        };
+        
+        const result = await this.makeApiRequest('/api/yalla/auth', 'POST', data);
+        this.displayResult('yallaAuth-result', result, 'Yalla用户认证');
+    }
+
+    async testYallaGetUserInfo() {
+        const yallaUserId = document.getElementById('yallaUserIdInfo').value || 'test_yalla_user_001';
+        
+        const data = { 
+            app_id: this.config.appId,
+            yalla_user_id: yallaUserId 
+        };
+        
+        const result = await this.makeApiRequest('/api/yalla/user/info', 'GET', data);
+        this.displayResult('yallaGetUserInfo-result', result, '获取Yalla用户信息');
+    }
+
+    async testYallaSendReward() {
+        const yallaUserId = document.getElementById('yallaUserIdReward').value || 'test_yalla_user_001';
+        const rewardType = document.getElementById('rewardType').value;
+        const rewardAmount = parseInt(document.getElementById('rewardAmount').value) || 100;
+        const description = document.getElementById('rewardDescription').value || '测试奖励发放';
+        const rewardDataStr = document.getElementById('rewardData').value;
+        
+        const data = { 
+            app_id: this.config.appId,
+            yalla_user_id: yallaUserId,
+            reward_type: rewardType,
+            reward_amount: rewardAmount,
+            description: description
+        };
+        
+        if (rewardDataStr) {
+            try {
+                data.reward_data = JSON.stringify(JSON.parse(rewardDataStr));
+            } catch (e) {
+                this.showNotification('数据格式错误', 'reward_data 必须是有效的JSON格式', 'error');
+                return;
+            }
+        }
+        
+        const result = await this.makeApiRequest('/api/yalla/reward/send', 'POST', data);
+        this.displayResult('yallaSendReward-result', result, '发放Yalla奖励');
+    }
+
+    async testYallaSyncGameData() {
+        const yallaUserId = document.getElementById('yallaUserIdSync').value || 'test_yalla_user_001';
+        const dataType = document.getElementById('dataType').value;
+        const gameDataStr = document.getElementById('gameData').value;
+        
+        if (!gameDataStr) {
+            this.showNotification('数据缺失', '请填写游戏数据', 'error');
+            return;
+        }
+        
+        const data = { 
+            app_id: this.config.appId,
+            yalla_user_id: yallaUserId,
+            data_type: dataType
+        };
+        
+        try {
+            data.game_data = JSON.stringify(JSON.parse(gameDataStr));
+        } catch (e) {
+            this.showNotification('数据格式错误', 'game_data 必须是有效的JSON格式', 'error');
+            return;
+        }
+        
+        const result = await this.makeApiRequest('/api/yalla/data/sync', 'POST', data);
+        this.displayResult('yallaSyncGameData-result', result, '同步Yalla游戏数据');
+    }
+
+    async testYallaReportEvent() {
+        const yallaUserId = document.getElementById('yallaUserIdEvent').value || 'test_yalla_user_001';
+        const eventType = document.getElementById('eventType').value;
+        const eventDataStr = document.getElementById('eventData').value;
+        
+        const data = { 
+            app_id: this.config.appId,
+            yalla_user_id: yallaUserId,
+            event_type: eventType
+        };
+        
+        if (eventDataStr) {
+            try {
+                data.event_data = JSON.stringify(JSON.parse(eventDataStr));
+            } catch (e) {
+                this.showNotification('数据格式错误', 'event_data 必须是有效的JSON格式', 'error');
+                return;
+            }
+        }
+        
+        const result = await this.makeApiRequest('/api/yalla/event/report', 'POST', data);
+        this.displayResult('yallaReportEvent-result', result, '上报Yalla事件');
+    }
+
+    async testYallaGetUserBinding() {
+        const gameUserId = document.getElementById('gameUserId').value || this.config.playerId;
+        
+        const data = { 
+            app_id: this.config.appId,
+            game_user_id: gameUserId 
+        };
+        
+        const result = await this.makeApiRequest('/api/yalla/user/binding', 'GET', data);
+        this.displayResult('yallaGetUserBinding-result', result, '获取Yalla用户绑定');
+    }
+
+    async testYallaGetConfig() {
+        const data = { 
+            app_id: this.config.appId 
+        };
+        
+        const result = await this.makeApiRequest('/api/yalla/config', 'GET', data);
+        this.displayResult('yallaGetConfig-result', result, '获取Yalla配置');
+    }
+
+    // Yalla 示例数据填充函数
+    fillSampleReward() {
+        document.getElementById('rewardData').value = JSON.stringify({
+            "item_id": "sword_001",
+            "quality": "epic",
+            "level": 10,
+            "attributes": {
+                "attack": 150,
+                "defense": 50
+            }
+        }, null, 2);
+        this.showNotification('数据已填充', '奖励数据示例已填充', 'success');
+    }
+
+    fillSampleGameSync() {
+        document.getElementById('gameData').value = JSON.stringify({
+            "level": 25,
+            "exp": 12500,
+            "coins": 5000,
+            "achievements": ["first_win", "level_10", "daily_login"],
+            "inventory": {
+                "weapons": ["sword_001", "bow_002"],
+                "items": ["potion_health", "potion_mana"]
+            },
+            "settings": {
+                "sound_enabled": true,
+                "music_volume": 0.8,
+                "language": "zh-CN"
+            }
+        }, null, 2);
+        this.showNotification('数据已填充', '游戏数据示例已填充', 'success');
+    }
+
+    fillSampleEvent() {
+        document.getElementById('eventData').value = JSON.stringify({
+            "from_level": 24,
+            "to_level": 25,
+            "time_spent": 3600,
+            "exp_gained": 1500,
+            "coins_earned": 500,
+            "items_collected": ["rare_gem", "magic_scroll"],
+            "location": "dragon_cave",
+            "difficulty": "hard"
+        }, null, 2);
+        this.showNotification('数据已填充', '事件数据示例已填充', 'success');
+    }
+
     // 批量测试
     async runAllTests() {
         if (this.isRunningTests) {
@@ -713,7 +889,10 @@ class ApiTester {
             { name: '获取邮件列表', func: () => this.testGetUserMails() },
             { name: '更新邮件状态', func: () => this.testUpdateMailStatus() },
             { name: '获取配置', func: () => this.testGetConfig() },
-            { name: '获取所有配置', func: () => this.testGetAllConfigs() }
+            { name: '获取所有配置', func: () => this.testGetAllConfigs() },
+            { name: 'Yalla用户认证', func: () => this.testYallaAuth() },
+            { name: 'Yalla获取用户信息', func: () => this.testYallaGetUserInfo() },
+            { name: 'Yalla获取配置', func: () => this.testYallaGetConfig() }
         ];
         
         this.showNotification('开始批量测试', `将执行 ${tests.length} 个测试用例`, 'info');
@@ -773,4 +952,18 @@ document.addEventListener('DOMContentLoaded', function() {
     window.testUpdateMailStatus = () => apiTester.testUpdateMailStatus();
     window.testGetConfig = () => apiTester.testGetConfig();
     window.testGetAllConfigs = () => apiTester.testGetAllConfigs();
+    
+    // Yalla SDK 测试函数
+    window.testYallaAuth = () => apiTester.testYallaAuth();
+    window.testYallaGetUserInfo = () => apiTester.testYallaGetUserInfo();
+    window.testYallaSendReward = () => apiTester.testYallaSendReward();
+    window.testYallaSyncGameData = () => apiTester.testYallaSyncGameData();
+    window.testYallaReportEvent = () => apiTester.testYallaReportEvent();
+    window.testYallaGetUserBinding = () => apiTester.testYallaGetUserBinding();
+    window.testYallaGetConfig = () => apiTester.testYallaGetConfig();
+    
+    // Yalla 示例数据填充函数
+    window.fillSampleReward = () => apiTester.fillSampleReward();
+    window.fillSampleGameSync = () => apiTester.fillSampleGameSync();
+    window.fillSampleEvent = () => apiTester.fillSampleEvent();
 });

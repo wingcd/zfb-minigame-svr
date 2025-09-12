@@ -51,6 +51,10 @@
                 <i class="fas fa-database"></i>
                 <span>配置接口</span>
             </a>
+            <a href="#yalla" class="nav-item" data-section="yalla">
+                <i class="fas fa-plug"></i>
+                <span>Yalla SDK</span>
+            </a>
         </div>
         
         <div class="sidebar-footer">
@@ -167,6 +171,10 @@
                         <button class="quick-test-btn" onclick="quickTest('mail')">
                             <i class="fas fa-envelope"></i>
                             <span>邮件系统</span>
+                        </button>
+                        <button class="quick-test-btn" onclick="quickTest('yalla')">
+                            <i class="fas fa-plug"></i>
+                            <span>Yalla SDK</span>
                         </button>
                     </div>
                 </div>
@@ -620,6 +628,249 @@
                 <div class="test-body">
                     <p>获取应用的所有配置项</p>
                     <div id="getAllConfigs-result" class="result-container"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Yalla SDK面板 -->
+        <section id="yalla" class="content-section">
+            <div class="test-card">
+                <div class="test-header">
+                    <h3><i class="fas fa-user-check"></i> Yalla 用户认证</h3>
+                    <button class="btn btn-primary" onclick="testYallaAuth()">
+                        <i class="fas fa-play"></i>
+                        测试认证
+                    </button>
+                </div>
+                <div class="test-body">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="yallaUserId">
+                                <i class="fas fa-user"></i>
+                                用户ID
+                            </label>
+                            <input type="text" id="yallaUserId" value="test_yalla_user_001" placeholder="Yalla用户ID">
+                        </div>
+                        <div class="form-group">
+                            <label for="yallaAuthToken">
+                                <i class="fas fa-key"></i>
+                                认证Token
+                            </label>
+                            <input type="text" id="yallaAuthToken" value="test_auth_token_123" placeholder="认证令牌">
+                        </div>
+                    </div>
+                    <div id="yallaAuth-result" class="result-container"></div>
+                </div>
+            </div>
+            
+            <div class="test-card">
+                <div class="test-header">
+                    <h3><i class="fas fa-info-circle"></i> 获取用户信息</h3>
+                    <button class="btn btn-primary" onclick="testYallaGetUserInfo()">
+                        <i class="fas fa-play"></i>
+                        获取信息
+                    </button>
+                </div>
+                <div class="test-body">
+                    <div class="form-group">
+                        <label for="yallaUserIdInfo">
+                            <i class="fas fa-user"></i>
+                            Yalla用户ID
+                        </label>
+                        <input type="text" id="yallaUserIdInfo" value="test_yalla_user_001" placeholder="Yalla用户ID">
+                    </div>
+                    <div id="yallaGetUserInfo-result" class="result-container"></div>
+                </div>
+            </div>
+            
+            <div class="test-card">
+                <div class="test-header">
+                    <h3><i class="fas fa-gift"></i> 发放奖励</h3>
+                    <div class="test-actions">
+                        <button class="btn btn-small btn-secondary" onclick="fillSampleReward()">
+                            <i class="fas fa-magic"></i>
+                            填充示例数据
+                        </button>
+                        <button class="btn btn-primary" onclick="testYallaSendReward()">
+                            <i class="fas fa-play"></i>
+                            发放奖励
+                        </button>
+                    </div>
+                </div>
+                <div class="test-body">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="yallaUserIdReward">
+                                <i class="fas fa-user"></i>
+                                Yalla用户ID
+                            </label>
+                            <input type="text" id="yallaUserIdReward" value="test_yalla_user_001" placeholder="Yalla用户ID">
+                        </div>
+                        <div class="form-group">
+                            <label for="rewardType">
+                                <i class="fas fa-star"></i>
+                                奖励类型
+                            </label>
+                            <select id="rewardType">
+                                <option value="coins">金币</option>
+                                <option value="points">积分</option>
+                                <option value="items">道具</option>
+                                <option value="exp">经验值</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="rewardAmount">
+                                <i class="fas fa-coins"></i>
+                                奖励数量
+                            </label>
+                            <input type="number" id="rewardAmount" value="100" min="1">
+                        </div>
+                        <div class="form-group">
+                            <label for="rewardDescription">
+                                <i class="fas fa-comment"></i>
+                                奖励描述
+                            </label>
+                            <input type="text" id="rewardDescription" value="测试奖励发放" placeholder="奖励描述">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="rewardData">
+                            <i class="fas fa-database"></i>
+                            奖励数据 (JSON 格式)
+                        </label>
+                        <textarea id="rewardData" placeholder='{"item_id": "sword_001", "quality": "epic"}'></textarea>
+                    </div>
+                    <div id="yallaSendReward-result" class="result-container"></div>
+                </div>
+            </div>
+            
+            <div class="test-card">
+                <div class="test-header">
+                    <h3><i class="fas fa-sync-alt"></i> 同步游戏数据</h3>
+                    <div class="test-actions">
+                        <button class="btn btn-small btn-secondary" onclick="fillSampleGameSync()">
+                            <i class="fas fa-magic"></i>
+                            填充示例数据
+                        </button>
+                        <button class="btn btn-primary" onclick="testYallaSyncGameData()">
+                            <i class="fas fa-play"></i>
+                            同步数据
+                        </button>
+                    </div>
+                </div>
+                <div class="test-body">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="yallaUserIdSync">
+                                <i class="fas fa-user"></i>
+                                Yalla用户ID
+                            </label>
+                            <input type="text" id="yallaUserIdSync" value="test_yalla_user_001" placeholder="Yalla用户ID">
+                        </div>
+                        <div class="form-group">
+                            <label for="dataType">
+                                <i class="fas fa-tag"></i>
+                                数据类型
+                            </label>
+                            <select id="dataType">
+                                <option value="profile">用户档案</option>
+                                <option value="progress">游戏进度</option>
+                                <option value="achievements">成就数据</option>
+                                <option value="settings">设置数据</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="gameData">
+                            <i class="fas fa-database"></i>
+                            游戏数据 (JSON 格式)
+                        </label>
+                        <textarea id="gameData" placeholder='{"level": 10, "exp": 2500, "coins": 1000}'></textarea>
+                    </div>
+                    <div id="yallaSyncGameData-result" class="result-container"></div>
+                </div>
+            </div>
+            
+            <div class="test-card">
+                <div class="test-header">
+                    <h3><i class="fas fa-chart-line"></i> 上报事件</h3>
+                    <div class="test-actions">
+                        <button class="btn btn-small btn-secondary" onclick="fillSampleEvent()">
+                            <i class="fas fa-magic"></i>
+                            填充示例数据
+                        </button>
+                        <button class="btn btn-primary" onclick="testYallaReportEvent()">
+                            <i class="fas fa-play"></i>
+                            上报事件
+                        </button>
+                    </div>
+                </div>
+                <div class="test-body">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="yallaUserIdEvent">
+                                <i class="fas fa-user"></i>
+                                Yalla用户ID
+                            </label>
+                            <input type="text" id="yallaUserIdEvent" value="test_yalla_user_001" placeholder="Yalla用户ID">
+                        </div>
+                        <div class="form-group">
+                            <label for="eventType">
+                                <i class="fas fa-flag"></i>
+                                事件类型
+                            </label>
+                            <select id="eventType">
+                                <option value="level_up">升级事件</option>
+                                <option value="purchase">购买事件</option>
+                                <option value="achievement">成就事件</option>
+                                <option value="login">登录事件</option>
+                                <option value="game_start">游戏开始</option>
+                                <option value="game_end">游戏结束</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="eventData">
+                            <i class="fas fa-database"></i>
+                            事件数据 (JSON 格式)
+                        </label>
+                        <textarea id="eventData" placeholder='{"from_level": 9, "to_level": 10, "time_spent": 3600}'></textarea>
+                    </div>
+                    <div id="yallaReportEvent-result" class="result-container"></div>
+                </div>
+            </div>
+            
+            <div class="test-card">
+                <div class="test-header">
+                    <h3><i class="fas fa-link"></i> 获取用户绑定</h3>
+                    <button class="btn btn-primary" onclick="testYallaGetUserBinding()">
+                        <i class="fas fa-play"></i>
+                        获取绑定
+                    </button>
+                </div>
+                <div class="test-body">
+                    <div class="form-group">
+                        <label for="gameUserId">
+                            <i class="fas fa-gamepad"></i>
+                            游戏用户ID
+                        </label>
+                        <input type="text" id="gameUserId" value="test_code" placeholder="游戏用户ID">
+                    </div>
+                    <div id="yallaGetUserBinding-result" class="result-container"></div>
+                </div>
+            </div>
+            
+            <div class="test-card">
+                <div class="test-header">
+                    <h3><i class="fas fa-cogs"></i> 获取Yalla配置</h3>
+                    <button class="btn btn-primary" onclick="testYallaGetConfig()">
+                        <i class="fas fa-play"></i>
+                        获取配置
+                    </button>
+                </div>
+                <div class="test-body">
+                    <p>获取当前应用的Yalla SDK配置信息</p>
+                    <div id="yallaGetConfig-result" class="result-container"></div>
                 </div>
             </div>
         </section>

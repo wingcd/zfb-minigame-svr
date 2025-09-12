@@ -1,0 +1,46 @@
+# Yalla SDK 配置文件
+
+yalla:
+  # 默认配置
+  default:
+    base_url: "https://api.yalla.com"
+    timeout: 30
+    retry_count: 3
+    enable_log: true
+    
+  # 开发环境配置
+  development:
+    base_url: "https://dev-api.yalla.com"
+    timeout: 10
+    retry_count: 1
+    enable_log: true
+    
+  # 测试环境配置
+  testing:
+    base_url: "https://test-api.yalla.com"
+    timeout: 15
+    retry_count: 2
+    enable_log: true
+    
+  # 生产环境配置
+  production:
+    base_url: "https://api.yalla.com"
+    timeout: 30
+    retry_count: 3
+    enable_log: false
+    
+# 应用配置示例
+apps:
+  # 示例应用1
+  test_app_1:
+    app_id: "test_app_1"
+    api_key: "your_api_key_here"
+    secret_key: "your_secret_key_here"
+    environment: "development"
+    
+  # 示例应用2  
+  test_app_2:
+    app_id: "test_app_2"
+    api_key: "your_api_key_here"
+    secret_key: "your_secret_key_here"
+    environment: "testing"

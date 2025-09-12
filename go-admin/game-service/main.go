@@ -3,6 +3,7 @@ package main
 import (
 	_ "game-service/models"
 	_ "game-service/routers"
+	_ "game-service/yalla/models"
 
 	"github.com/beego/beego/v2/core/logs"
 	"github.com/beego/beego/v2/server/web"
