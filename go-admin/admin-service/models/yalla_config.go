@@ -11,9 +11,10 @@ import (
 type YallaConfig struct {
 	ID          int64     `orm:"column(id);auto;pk" json:"id"`
 	AppID       string    `orm:"column(app_id);size(100);unique" json:"appId"`
-	APIKey      string    `orm:"column(api_key);size(255)" json:"apiKey"`
+	AppGameID   string    `orm:"column(app_game_id);size(100)" json:"appGameId"`
 	SecretKey   string    `orm:"column(secret_key);size(255)" json:"secretKey"`
 	BaseURL     string    `orm:"column(base_url);size(255)" json:"baseUrl"`
+	PushURL     string    `orm:"column(push_url);size(255)" json:"pushUrl"`                        // 推送域名
 	Environment string    `orm:"column(environment);size(50);default(sandbox)" json:"environment"` // sandbox, production
 	Timeout     int       `orm:"column(timeout);default(30)" json:"timeout"`                       // 超时时间（秒）
 	RetryCount  int       `orm:"column(retry_count);default(3)" json:"retryCount"`                 // 重试次数

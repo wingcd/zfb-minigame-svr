@@ -34,6 +34,7 @@ func init() {
 	web.Router("/user/login/alipay", &login.AlipayLoginController{}, "post:AlipayLogin")
 	web.Router("/user/login/douyin", &login.DouyinLoginController{}, "post:DouyinLogin")
 	web.Router("/user/login/qq", &login.QQLoginController{}, "post:QQLogin")
+	web.Router("/user/login/yalla", &login.YallaLoginController{}, "post:YallaLogin")
 
 	// 用户数据接口（对齐zy-sdk/user.ts）
 	web.Router("/user/getData", &controllers.UserController{}, "post:GetData")

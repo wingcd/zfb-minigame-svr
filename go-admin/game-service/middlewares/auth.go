@@ -28,6 +28,7 @@ func SignAuthMiddleware(ctx *context.Context) {
 		"/user/login/alipay",
 		"/user/login/douyin",
 		"/user/login/qq",
+		"/user/login/yalla",
 	}
 
 	requestPath := ctx.Request.URL.Path

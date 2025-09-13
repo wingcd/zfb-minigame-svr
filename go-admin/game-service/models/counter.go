@@ -45,7 +45,7 @@ func (c *Counter) GetTableName(appId string) string {
 func GetCounterModel(appId string) (*Counter, string, error) {
 	tableName := utils.GetCounterTableName(appId)
 	counterModel := &Counter{}
-	if err := utils.EnsureCounterTableRegistered(tableName, appId, counterModel); err != nil {
+	if err := utils.EnsureTableRegistered(tableName, appId, counterModel); err != nil {
 		return nil, "", err
 	}
 	return counterModel, tableName, nil

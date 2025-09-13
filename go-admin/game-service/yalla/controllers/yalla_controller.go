@@ -258,7 +258,6 @@ func (c *YallaController) GetConfig() {
 	}
 
 	// 隐藏敏感信息
-	config.APIKey = "***"
 	config.SecretKey = "***"
 
 	c.SuccessResponse(config)

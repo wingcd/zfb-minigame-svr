@@ -95,8 +95,8 @@ func (c *YallaConfigController) Create() {
 		utils.ErrorResponse(&c.Controller, 4001, "应用ID不能为空", nil)
 		return
 	}
-	if config.APIKey == "" {
-		utils.ErrorResponse(&c.Controller, 4001, "API密钥不能为空", nil)
+	if config.AppGameID == "" {
+		utils.ErrorResponse(&c.Controller, 4001, "游戏ID不能为空", nil)
 		return
 	}
 	if config.SecretKey == "" {
@@ -105,6 +105,10 @@ func (c *YallaConfigController) Create() {
 	}
 	if config.BaseURL == "" {
 		utils.ErrorResponse(&c.Controller, 4001, "基础URL不能为空", nil)
+		return
+	}
+	if config.PushURL == "" {
+		utils.ErrorResponse(&c.Controller, 4001, "推送URL不能为空", nil)
 		return
 	}
 	if config.Environment == "" {
@@ -154,9 +158,9 @@ func (c *YallaConfigController) Update() {
 	var request struct {
 		ID          int64  `json:"id"`
 		AppID       string `json:"appId"`
-		APIKey      string `json:"apiKey"`
 		SecretKey   string `json:"secretKey"`
 		BaseURL     string `json:"baseUrl"`
+		PushURL     string `json:"pushUrl"`
 		Environment string `json:"environment"`
 		Timeout     int    `json:"timeout"`
 		RetryCount  int    `json:"retryCount"`
@@ -182,14 +186,14 @@ func (c *YallaConfigController) Update() {
 	}
 
 	// 更新字段
-	if request.APIKey != "" {
-		config.APIKey = request.APIKey
-	}
 	if request.SecretKey != "" {
 		config.SecretKey = request.SecretKey
 	}
 	if request.BaseURL != "" {
 		config.BaseURL = request.BaseURL
+	}
+	if request.PushURL != "" {
+		config.PushURL = request.PushURL
 	}
 	if request.Environment != "" {
 		config.Environment = request.Environment

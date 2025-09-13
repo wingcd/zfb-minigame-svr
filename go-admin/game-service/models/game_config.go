@@ -24,14 +24,25 @@ func (g *GameConfig) GetTableName(appId string) string {
 	return fmt.Sprintf("game_config_%s", utils.CleanAppId(appId))
 }
 
+func GetConfigModel(appId string) (*GameConfig, string, error) {
+	config := &GameConfig{}
+	tableName := config.GetTableName(appId)
+	if err := utils.EnsureTableRegistered(tableName, appId, config); err != nil {
+		return nil, tableName, err
+	}
+	return config, tableName, nil
+}
+
 // GetConfig 获取配置
 func GetConfig(appId, configKey string) (string, error) {
 	o := orm.NewOrm()
 
-	config := &GameConfig{}
-	tableName := config.GetTableName(appId)
+	config, tableName, err := GetConfigModel(appId)
+	if err != nil {
+		return "", err
+	}
 
-	err := o.QueryTable(tableName).Filter("config_key", configKey).One(config)
+	err = o.QueryTable(tableName).Filter("config_key", configKey).One(config)
 	if err == orm.ErrNoRows {
 		return "", nil // 配置不存在，返回空字符串
 	} else if err != nil {
@@ -76,8 +87,10 @@ func SetConfig(appId, configKey, configValue, version, description string) error
 func GetConfigsByVersion(appId, version string) (map[string]string, error) {
 	o := orm.NewOrm()
 
-	config := &GameConfig{}
-	tableName := config.GetTableName(appId)
+	_, tableName, err := GetConfigModel(appId)
+	if err != nil {
+		return nil, err
+	}
 
 	var configs []GameConfig
 	qs := o.QueryTable(tableName)
@@ -85,7 +98,7 @@ func GetConfigsByVersion(appId, version string) (map[string]string, error) {
 		qs = qs.Filter("version", version)
 	}
 
-	_, err := qs.All(&configs)
+	_, err = qs.All(&configs)
 	if err != nil {
 		return nil, err
 	}
@@ -107,10 +120,12 @@ func GetAllConfigs(appId string) (map[string]string, error) {
 func DeleteConfig(appId, configKey string) error {
 	o := orm.NewOrm()
 
-	config := &GameConfig{}
-	tableName := config.GetTableName(appId)
+	_, tableName, err := GetConfigModel(appId)
+	if err != nil {
+		return err
+	}
 
-	_, err := o.QueryTable(tableName).Filter("config_key", configKey).Delete()
+	_, err = o.QueryTable(tableName).Filter("config_key", configKey).Delete()
 	return err
 }
 
@@ -140,10 +155,12 @@ func GetConfigList(appId string, page, pageSize int, keyword string) ([]GameConf
 func GetConfigDetails(appId, configKey string) (*GameConfig, error) {
 	o := orm.NewOrm()
 
-	config := &GameConfig{}
-	tableName := config.GetTableName(appId)
+	config, tableName, err := GetConfigModel(appId)
+	if err != nil {
+		return nil, err
+	}
 
-	err := o.QueryTable(tableName).Filter("config_key", configKey).One(config)
+	err = o.QueryTable(tableName).Filter("config_key", configKey).One(config)
 	return config, err
 }
 
@@ -151,10 +168,12 @@ func GetConfigDetails(appId, configKey string) (*GameConfig, error) {
 func UpdateConfigDescription(appId, configKey, description string) error {
 	o := orm.NewOrm()
 
-	config := &GameConfig{}
-	tableName := config.GetTableName(appId)
+	config, tableName, err := GetConfigModel(appId)
+	if err != nil {
+		return err
+	}
 
-	err := o.QueryTable(tableName).Filter("config_key", configKey).One(config)
+	err = o.QueryTable(tableName).Filter("config_key", configKey).One(config)
 	if err != nil {
 		return err
 	}
@@ -168,11 +187,13 @@ func UpdateConfigDescription(appId, configKey, description string) error {
 func GetVersionList(appId string) ([]string, error) {
 	o := orm.NewOrm()
 
-	config := &GameConfig{}
-	tableName := config.GetTableName(appId)
+	_, tableName, err := GetConfigModel(appId)
+	if err != nil {
+		return nil, err
+	}
 
 	var versions []string
-	_, err := o.Raw(fmt.Sprintf("SELECT DISTINCT version FROM %s WHERE version IS NOT NULL AND version != '' ORDER BY version", tableName)).QueryRows(&versions)
+	_, err = o.Raw(fmt.Sprintf("SELECT DISTINCT version FROM %s WHERE version IS NOT NULL AND version != '' ORDER BY version", tableName)).QueryRows(&versions)
 
 	return versions, err
 }

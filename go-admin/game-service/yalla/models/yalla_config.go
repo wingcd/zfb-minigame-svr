@@ -2,23 +2,24 @@ package models
 
 import (
 	"time"
+
 	"github.com/beego/beego/v2/client/orm"
 )
 
 // YallaConfig Yalla SDK配置
 type YallaConfig struct {
-	ID          int       `orm:"auto;pk" json:"id"`
-	AppID       string    `orm:"size(50)" json:"app_id" description:"应用ID"`
-	APIKey      string    `orm:"size(200)" json:"api_key" description:"API密钥"`
-	SecretKey   string    `orm:"size(200)" json:"secret_key" description:"秘钥"`
-	BaseURL     string    `orm:"size(200)" json:"base_url" description:"API基础URL"`
-	Timeout     int       `orm:"default(30)" json:"timeout" description:"请求超时时间(秒)"`
-	RetryCount  int       `orm:"default(3)" json:"retry_count" description:"重试次数"`
-	EnableLog   bool      `orm:"default(true)" json:"enable_log" description:"是否开启日志"`
-	Status      int       `orm:"default(1)" json:"status" description:"状态 1启用 0禁用"`
-	Remark      string    `orm:"size(500)" json:"remark" description:"备注"`
-	CreatedAt   time.Time `orm:"auto_now_add;type(datetime)" json:"created_at"`
-	UpdatedAt   time.Time `orm:"auto_now;type(datetime)" json:"updated_at"`
+	ID         int       `orm:"auto;pk" json:"id"`
+	AppID      string    `orm:"size(50)" json:"app_id" description:"应用ID"`
+	SecretKey  string    `orm:"size(200)" json:"secret_key" description:"秘钥"`
+	BaseURL    string    `orm:"size(200)" json:"base_url" description:"API基础URL"`
+	PushURL    string    `orm:"size(200)" json:"push_url" description:"推送域名URL"`
+	Timeout    int       `orm:"default(30)" json:"timeout" description:"请求超时时间(秒)"`
+	RetryCount int       `orm:"default(3)" json:"retry_count" description:"重试次数"`
+	EnableLog  bool      `orm:"default(true)" json:"enable_log" description:"是否开启日志"`
+	Status     int       `orm:"default(1)" json:"status" description:"状态 1启用 0禁用"`
+	Remark     string    `orm:"size(500)" json:"remark" description:"备注"`
+	CreatedAt  time.Time `orm:"auto_now_add;type(datetime)" json:"created_at"`
+	UpdatedAt  time.Time `orm:"auto_now;type(datetime)" json:"updated_at"`
 }
 
 // YallaCallLog Yalla API调用日志
@@ -39,15 +40,15 @@ type YallaCallLog struct {
 
 // YallaUserBinding Yalla用户绑定
 type YallaUserBinding struct {
-	ID         int       `orm:"auto;pk" json:"id"`
-	AppID      string    `orm:"size(50)" json:"app_id" description:"应用ID"`
-	GameUserID string    `orm:"size(100)" json:"game_user_id" description:"游戏用户ID"`
-	YallaUserID string   `orm:"size(100)" json:"yalla_user_id" description:"Yalla用户ID"`
-	YallaToken string    `orm:"size(500)" json:"yalla_token" description:"Yalla用户令牌"`
-	ExpiresAt  time.Time `json:"expires_at" description:"令牌过期时间"`
-	Status     int       `orm:"default(1)" json:"status" description:"状态 1有效 0无效"`
-	BindAt     time.Time `orm:"auto_now_add;type(datetime)" json:"bind_at" description:"绑定时间"`
-	UpdatedAt  time.Time `orm:"auto_now;type(datetime)" json:"updated_at"`
+	ID          int       `orm:"auto;pk" json:"id"`
+	AppID       string    `orm:"size(50)" json:"app_id" description:"应用ID"`
+	GameUserID  string    `orm:"size(100)" json:"game_user_id" description:"游戏用户ID"`
+	YallaUserID string    `orm:"size(100)" json:"yalla_user_id" description:"Yalla用户ID"`
+	YallaToken  string    `orm:"size(500)" json:"yalla_token" description:"Yalla用户令牌"`
+	ExpiresAt   time.Time `json:"expires_at" description:"令牌过期时间"`
+	Status      int       `orm:"default(1)" json:"status" description:"状态 1有效 0无效"`
+	BindAt      time.Time `orm:"auto_now_add;type(datetime)" json:"bind_at" description:"绑定时间"`
+	UpdatedAt   time.Time `orm:"auto_now;type(datetime)" json:"updated_at"`
 }
 
 func init() {

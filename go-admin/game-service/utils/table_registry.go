@@ -38,8 +38,8 @@ func IsTableRegistered(tableName string) bool {
 	return registeredTables[tableName]
 }
 
-// EnsureCounterTableRegistered 确保计数器表已注册
-func EnsureCounterTableRegistered(tableName, appId string, model interface{}) error {
+// EnsureTableRegistered 确保计数器表已注册
+func EnsureTableRegistered(tableName, appId string, model interface{}) error {
 	if !IsTableRegistered(tableName) {
 		return RegisterCounterTable(tableName, appId, model)
 	}

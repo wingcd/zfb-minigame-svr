@@ -83,19 +83,9 @@
               <el-tag>{{ scope.row.appId }}</el-tag>
             </template>
           </el-table-column>
-          <el-table-column prop="apiKey" label="API密钥" width="150">
+          <el-table-column prop="appGameId" label="游戏ID" width="200">
             <template #default="scope">
-              <div class="sensitive-field">
-                <span v-if="!scope.row.showApiKey">{{ maskSensitiveData(scope.row.apiKey) }}</span>
-                <span v-else>{{ scope.row.apiKey }}</span>
-                <el-button 
-                  link 
-                  size="small" 
-                  @click="toggleShowSensitive(scope.row, 'showApiKey')"
-                  style="margin-left: 5px;">
-                  <el-icon><View v-if="!scope.row.showApiKey" /><Hide v-else /></el-icon>
-                </el-button>
-              </div>
+              <el-tag>{{ scope.row.appGameId }}</el-tag>
             </template>
           </el-table-column>
           <el-table-column prop="secretKey" label="密钥" width="150">
@@ -114,6 +104,8 @@
             </template>
           </el-table-column>
           <el-table-column prop="baseUrl" label="基础URL" width="200" show-overflow-tooltip>
+          </el-table-column>
+          <el-table-column prop="pushUrl" label="推送URL" width="200" show-overflow-tooltip>
           </el-table-column>
           <el-table-column prop="environment" label="环境" width="100">
             <template #default="scope">
@@ -176,11 +168,10 @@
             :disabled="configDialog.isEdit">
           </el-input>
         </el-form-item>
-        <el-form-item label="API密钥" prop="apiKey">
+        <el-form-item label="游戏ID" prop="appGameId">
           <el-input 
-            v-model="configDialog.form.apiKey" 
-            placeholder="输入Yalla API密钥"
-            show-password>
+            v-model="configDialog.form.appGameId" 
+            placeholder="输入游戏ID">
           </el-input>
         </el-form-item>
         <el-form-item label="密钥" prop="secretKey">
@@ -193,7 +184,13 @@
         <el-form-item label="基础URL" prop="baseUrl">
           <el-input 
             v-model="configDialog.form.baseUrl" 
-            placeholder="如: https://api.yalla.live">
+            placeholder="如: https://sdkapi.yallagame.com">
+          </el-input>
+        </el-form-item>
+        <el-form-item label="推送URL" prop="pushUrl">
+          <el-input 
+            v-model="configDialog.form.pushUrl" 
+            placeholder="如: https://sdklogapi.yallagame.com">
           </el-input>
         </el-form-item>
         <el-form-item label="环境" prop="environment">
@@ -253,6 +250,7 @@
           <p><strong>应用ID:</strong> {{ testDialog.config?.appId }}</p>
           <p><strong>环境:</strong> {{ testDialog.config?.environment === 'production' ? '生产环境' : '沙盒环境' }}</p>
           <p><strong>基础URL:</strong> {{ testDialog.config?.baseUrl }}</p>
+          <p><strong>推送URL:</strong> {{ testDialog.config?.pushUrl }}</p>
         </div>
         
         <div class="test-results" v-if="testDialog.results.length > 0">
@@ -314,9 +312,10 @@ export default {
       loading: false,
       form: {
         appId: '',
-        apiKey: '',
+        appGameId: '',
         secretKey: '',
-        baseUrl: 'https://api.yalla.live',
+        baseUrl: 'https://sdkapitest.yallagame.com',
+        pushUrl: 'https://sdklogapitest.yallagame.com',
         environment: 'sandbox',
         timeout: 30,
         retryCount: 3,
@@ -337,14 +336,22 @@ export default {
         { required: true, message: '请输入应用ID', trigger: 'blur' },
         { min: 2, max: 50, message: '应用ID长度在 2 到 50 个字符', trigger: 'blur' }
       ],
-      apiKey: [
-        { required: true, message: '请输入API密钥', trigger: 'blur' }
+      appGameId: [
+        { required: true, message: '请输入游戏ID', trigger: 'blur' }
       ],
       secretKey: [
         { required: true, message: '请输入密钥', trigger: 'blur' }
       ],
       baseUrl: [
         { required: true, message: '请输入基础URL', trigger: 'blur' },
+        { 
+          pattern: /^https?:\/\/.+/, 
+          message: '请输入有效的URL地址', 
+          trigger: 'blur' 
+        }
+      ],
+      pushUrl: [
+        { required: true, message: '请输入推送URL', trigger: 'blur' },
         { 
           pattern: /^https?:\/\/.+/, 
           message: '请输入有效的URL地址', 
@@ -445,9 +452,10 @@ export default {
       configDialog.form = {
         id: config.id,
         appId: config.appId,
-        apiKey: config.apiKey,
+        appGameId: config.appGameId,
         secretKey: config.secretKey,
         baseUrl: config.baseUrl,
+        pushUrl: config.pushUrl,
         environment: config.environment,
         timeout: config.timeout || 30,
         retryCount: config.retryCount || 3,
@@ -460,9 +468,10 @@ export default {
     const resetConfigForm = () => {
       configDialog.form = {
         appId: '',
-        apiKey: '',
+        appGameId: '',
         secretKey: '',
-        baseUrl: 'https://api.yalla.live',
+        baseUrl: 'https://sdkapitest.yallagame.com',
+        pushUrl: 'https://sdklogapitest.yallagame.com',
         environment: 'sandbox',
         timeout: 30,
         retryCount: 3,

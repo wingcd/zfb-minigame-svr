@@ -174,7 +174,7 @@ func init() {
 	web.Router("/yallaConfig/update", &controllers.YallaConfigController{}, "post:Update")
 	web.Router("/yallaConfig/delete", &controllers.YallaConfigController{}, "post:Delete")
 	web.Router("/yallaConfig/get", &controllers.YallaConfigController{}, "post:Get")
-	web.Router("/yallaConfig/test", &controllers.YallaConfigController{}, "post:TestConnection")
+	web.Router("/yallaConfig/testConnection", &controllers.YallaConfigController{}, "post:TestConnection")
 
 	apiNamespace := web.NewNamespace("/api",
 		// 认证相关
